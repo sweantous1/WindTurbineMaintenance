@@ -1,0 +1,69 @@
+{
+  "name": "wind-turbine-maintenance",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "vite --mode electron",
+    "build": "tsc -b && vite build",
+    "build:electron": "tsc -b && vite build --mode electron && electron-builder",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "electron:dev": "vite --mode electron",
+    "electron:build": "tsc -b && vite build --mode electron && electron-builder"
+  },
+  "dependencies": {
+    "i18next": "^26.3.6",
+    "i18next-browser-languagedetector": "^8.2.1",
+    "leaflet": "^1.9.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.10",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^7.18.1",
+    "react-toastify": "^11.1.0",
+    "uuid": "^14.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.71.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vite-plugin-electron": "^1.1.0",
+    "vite-plugin-electron-renderer": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.wtm.app",
+    "productName": "WTM Wind Turbine Maintenance",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon.png"
+    }
+  }
+}

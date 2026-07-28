@@ -1,0 +1,115 @@
+{
+  "app": {
+    "title": "WTM - Wind Turbine Maintenance",
+    "subtitle": "Professional Wind Turbine Inspection System"
+  },
+  "nav": {
+    "home": "Home",
+    "detection": "Detection",
+    "router": "Router",
+    "weather": "Weather",
+    "history": "History",
+    "docs": "Docs"
+  },
+  "home": {
+    "title": "Wind Turbine Maintenance",
+    "subtitle": "Professional Inspection and Defect Detection System",
+    "startDetection": "Start Detection",
+    "planRoute": "Plan Route",
+    "viewHistory": "View History",
+    "stats": {
+      "inspections": "Inspections",
+      "defects": "Defects Found",
+      "turbines": "Turbines",
+      "accuracy": "Accuracy"
+    }
+  },
+  "detection": {
+    "title": "Defect Detection",
+    "upload": "Upload Image",
+    "uploadHint": "Drag & drop or click to upload turbine blade photo",
+    "analyze": "Analyze",
+    "analyzing": "Analyzing...",
+    "results": "Analysis Results",
+    "defectsFound": "defects found",
+    "noDefects": "No defects detected",
+    "confidence": "Confidence",
+    "severity": "Severity",
+    "type": "Type",
+    "found": "Found",
+    "defect": "defect",
+    "defects": "defects",
+    "defectTypes": {
+      "crack": "Crack",
+      "corrosion": "Corrosion",
+      "delamination": "Delamination",
+      "erosion": "Erosion",
+      "lightning": "Lightning Strike"
+    }
+  },
+  "router": {
+    "title": "Drone Route Planner",
+    "newRoute": "New Route",
+    "saveRoute": "Save Route",
+    "export": "Export",
+    "importKml": "Import KML",
+    "point": "Point",
+    "altitude": "Altitude",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "lat": "Lat",
+    "lng": "Lng",
+    "alt": "Alt (m)",
+    "simulate3d": "3D Simulation",
+    "map": "Map"
+  },
+  "weather": {
+    "title": "Weather Conditions",
+    "temperature": "Temperature",
+    "windSpeed": "Wind Speed",
+    "windDirection": "Wind Direction",
+    "humidity": "Humidity",
+    "visibility": "Visibility",
+    "conditions": "Conditions",
+    "suitable": "Suitable for flight",
+    "unsuitable": "Unsuitable for flight"
+  },
+  "history": {
+    "title": "Inspection History",
+    "search": "Search by turbine ID...",
+    "filter": "Filter",
+    "export": "Export Report",
+    "date": "Date",
+    "turbine": "Turbine",
+    "defects": "Defects",
+    "status": "Status",
+    "actions": "Actions",
+    "view": "View",
+    "delete": "Delete"
+  },
+  "docs": {
+    "title": "Documentation",
+    "overview": "System Overview",
+    "detection": "Defect Detection Guide",
+    "router": "Route Planning Guide",
+    "api": "API Reference"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "noData": "No data available",
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish"
+  },
+  "profile": {
+    "settings": "Settings",
+    "logout": "Logout",
+    "language": "Language"
+  }
+}
