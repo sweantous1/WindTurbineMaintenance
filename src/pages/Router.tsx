@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'react-toastify'
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -14,6 +15,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
+const STORAGE_KEY = 'wtm_route_data'
+
+const loadSavedRoute = (): DroneRoute => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch {}
+  return {
+    id: uuidv4(),
+    name: 'New Route',
+    turbineId: 'WT-001',
+    points: [],
+    status: 'draft',
+  }
+}
+
 function ClickMarker({ onMapClick }: { onMapClick: (p: RoutePoint) => void }) {
   useMapEvents({
     click(e) {
@@ -25,13 +42,11 @@ function ClickMarker({ onMapClick }: { onMapClick: (p: RoutePoint) => void }) {
 
 export default function Router() {
   const { t } = useTranslation()
-  const [route, setRoute] = useState<DroneRoute>({
-    id: uuidv4(),
-    name: 'New Route',
-    turbineId: 'WT-001',
-    points: [],
-    status: 'draft',
-  })
+  const [route, setRoute] = useState<DroneRoute>(loadSavedRoute)
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(route))
+  }, [route])
 
   const addPoint = (point: RoutePoint) => {
     setRoute((prev) => ({
@@ -55,6 +70,11 @@ export default function Router() {
     })
   }
 
+  const handleSave = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(route))
+    toast.success(t('router.saved'))
+  }
+
   const center: [number, number] = [55.751244, 37.618423]
 
   return (
@@ -62,11 +82,10 @@ export default function Router() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t('router.title')}</h1>
-          <p className="text-gray-500 mt-1">Plan and visualize drone inspection routes</p>
+          <p className="text-gray-500 mt-1">{t('router.desc')}</p>
         </div>
         <div className="flex gap-2">
-          <Button>{t('router.saveRoute')}</Button>
-          <Button variant="secondary">{t('router.simulate3d')}</Button>
+          <Button onClick={handleSave}>{t('router.saveRoute')}</Button>
         </div>
       </div>
 
@@ -99,9 +118,9 @@ export default function Router() {
         </div>
 
         <div>
-          <Card title="Route Points" subtitle={`${route.points.length} points`}>
+          <Card title={t('router.routePoints')} subtitle={`${route.points.length} ${t('router.points')}`}>
             {route.points.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-8">Click on the map to add points</p>
+              <p className="text-sm text-gray-400 text-center py-8">{t('router.noPoints')}</p>
             ) : (
               <div className="space-y-2 max-h-[440px] overflow-y-auto">
                 {route.points.map((point, i) => (

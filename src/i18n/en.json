@@ -16,6 +16,9 @@
     "subtitle": "Professional Inspection and Defect Detection System",
     "startDetection": "Start Detection",
     "planRoute": "Plan Route",
+    "uploadDesc": "Upload and analyze turbine blade images",
+    "planDesc": "Plan drone inspection routes",
+    "historyDesc": "Browse inspection history",
     "viewHistory": "View History",
     "stats": {
       "inspections": "Inspections",
@@ -28,11 +31,14 @@
     "title": "Defect Detection",
     "upload": "Upload Image",
     "uploadHint": "Drag & drop or click to upload turbine blade photo",
+    "uploadDesc": "Upload a turbine blade photo for defect analysis",
+    "resultsHint": "Upload an image and click Analyze to see results",
     "analyze": "Analyze",
     "analyzing": "Analyzing...",
     "results": "Analysis Results",
     "defectsFound": "defects found",
     "noDefects": "No defects detected",
+    "legend": "Legend",
     "confidence": "Confidence",
     "severity": "Severity",
     "type": "Type",
@@ -51,6 +57,7 @@
     "title": "Drone Route Planner",
     "newRoute": "New Route",
     "saveRoute": "Save Route",
+    "saved": "Route saved",
     "export": "Export",
     "importKml": "Import KML",
     "point": "Point",
@@ -61,7 +68,12 @@
     "lng": "Lng",
     "alt": "Alt (m)",
     "simulate3d": "3D Simulation",
-    "map": "Map"
+    "map": "Map",
+    "desc": "Plan and visualize drone inspection routes",
+    "clickHint": "Click on the map to add points",
+    "routePoints": "Route Points",
+    "points": "points",
+    "noPoints": "No points yet"
   },
   "weather": {
     "title": "Weather Conditions",
@@ -72,7 +84,8 @@
     "visibility": "Visibility",
     "conditions": "Conditions",
     "suitable": "Suitable for flight",
-    "unsuitable": "Unsuitable for flight"
+    "unsuitable": "Unsuitable for flight",
+    "desc": "Current weather conditions for flight assessment"
   },
   "history": {
     "title": "Inspection History",
@@ -85,7 +98,14 @@
     "status": "Status",
     "actions": "Actions",
     "view": "View",
-    "delete": "Delete"
+    "delete": "Delete",
+    "desc": "Browse and manage inspection records",
+    "all": "All",
+    "statuses": {
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed"
+    }
   },
   "docs": {
     "title": "Documentation",
@@ -105,11 +125,25 @@
     "noData": "No data available",
     "back": "Back",
     "next": "Next",
-    "finish": "Finish"
+    "finish": "Finish",
+    "clear": "Clear",
+    "statuses": {
+      "completed": "Completed",
+      "processing": "Processing",
+      "failed": "Failed",
+      "draft": "Draft",
+      "ready": "Ready",
+      "in-progress": "In Progress",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    }
   },
   "profile": {
     "settings": "Settings",
     "logout": "Logout",
-    "language": "Language"
+    "language": "Language",
+    "admin": "Admin"
   }
 }

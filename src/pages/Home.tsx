@@ -43,19 +43,19 @@ export default function Home() {
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/detection')}>
           <div className="text-center py-6">
             <h3 className="font-semibold text-gray-900">{t('home.startDetection')}</h3>
-            <p className="text-sm text-gray-500 mt-1">Upload and analyze turbine blade images</p>
+            <p className="text-sm text-gray-500 mt-1">{t('home.uploadDesc')}</p>
           </div>
         </Card>
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/router')}>
           <div className="text-center py-6">
             <h3 className="font-semibold text-gray-900">{t('home.planRoute')}</h3>
-            <p className="text-sm text-gray-500 mt-1">Plan drone inspection routes</p>
+            <p className="text-sm text-gray-500 mt-1">{t('home.planDesc')}</p>
           </div>
         </Card>
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/history')}>
           <div className="text-center py-6">
             <h3 className="font-semibold text-gray-900">{t('home.viewHistory')}</h3>
-            <p className="text-sm text-gray-500 mt-1">Browse inspection history</p>
+            <p className="text-sm text-gray-500 mt-1">{t('home.historyDesc')}</p>
           </div>
         </Card>
       </div>

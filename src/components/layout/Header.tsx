@@ -57,7 +57,7 @@ export default function Header() {
           <div className="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
             A
           </div>
-          <span className="hidden sm:block">Admin</span>
+          <span className="hidden sm:block">{t('profile.admin')}</span>
         </div>
       </div>
     </header>
