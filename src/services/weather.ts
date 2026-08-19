@@ -12,7 +12,7 @@ export function getMockWeather(): WeatherData {
     temperature: null,
     windSpeed: null,
     windDirection: null,
-    humidity: null,
+    humidity: 1,
     visibility: null,
     conditions: null,
   }
