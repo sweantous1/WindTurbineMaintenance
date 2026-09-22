@@ -15,6 +15,9 @@
     "electron:build": "tsc -b && vite build --mode electron && electron-builder"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
     "i18next": "^26.3.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "leaflet": "^1.9.4",
@@ -24,7 +27,8 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.1",
     "react-toastify": "^11.1.0",
-    "uuid": "^14.0.1"
+    "uuid": "^14.0.1",
+    "yolo-ts": "^1.0.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -65,5 +69,9 @@
       "target": "AppImage",
       "icon": "public/icon.png"
     }
+  },
+  "allowScripts": {
+    "core-js@3.29.1": true,
+    "electron-winstaller@5.4.0": true
   }
 }
