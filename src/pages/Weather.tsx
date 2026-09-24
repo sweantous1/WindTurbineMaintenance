@@ -5,14 +5,15 @@ import { getMockWeather, type WeatherData } from '@/services/weather'
 
 type WeatherCard = {
   key: keyof WeatherData
-  unit?: string
+  // Ключ единицы в weather.units — подпись переводится вместе с интерфейсом
+  unitKey?: 'temperature' | 'windSpeed' | 'humidity' | 'visibility'
 }
 
 const cards: WeatherCard[] = [
-  { key: 'temperature', unit: '°C' },
-  { key: 'windSpeed', unit: 'm/s' },
-  { key: 'humidity', unit: '%' },
-  { key: 'visibility', unit: 'km' },
+  { key: 'temperature', unitKey: 'temperature' },
+  { key: 'windSpeed', unitKey: 'windSpeed' },
+  { key: 'humidity', unitKey: 'humidity' },
+  { key: 'visibility', unitKey: 'visibility' },
   { key: 'conditions' },
 ]
 
@@ -24,12 +25,10 @@ export default function Weather() {
     setWeather(getMockWeather())
   }, [])
 
-  const displayUnit = (unit?: string) => `— ${unit || ''}`.trim()
-
   const formatValue = (card: WeatherCard) => {
     const val = weather?.[card.key]
-    if (val === null || val === undefined) return card.unit ? displayUnit(card.unit) : '—'
-    return card.unit ? `${val} ${card.unit}` : val
+    if (val === null || val === undefined) return '—'
+    return card.unitKey ? `${val} ${t(`weather.units.${card.unitKey}`)}` : val
   }
 
   return (

@@ -1,12 +1,14 @@
 import * as tf from '@tensorflow/tfjs';
-import { v4 as uuidv4 } from 'uuid';
 import type { Defect } from '@/types';
+import { makeId } from '@/utils';
 
 // ============================
 // 1. Константы
 // ============================
 
-const MODEL_URL = '/model.json';
+// Относительно base: в собранном Electron (file://, base './') абсолютный '/model.json' указывал бы на корень диска.
+// Файлы модели (model.json и *.bin) класть в public/.
+const MODEL_URL = `${import.meta.env.BASE_URL}model.json`;
 
 const IMAGE_SIZE = 640;
 const CONFIDENCE_THRESHOLD = 0.5;
@@ -47,6 +49,7 @@ async function loadModel(): Promise<tf.GraphModel> {
       `Не удалось загрузить модель: ${
         error instanceof Error ? error.message : String(error)
       }`,
+      { cause: error },
     );
   }
 }
@@ -306,7 +309,7 @@ function postprocessOutputs(
     const severity = getSeverity(score);
 
     defects.push({
-      id: uuidv4(),
+      id: makeId(),
       type: defectClass,
       severity,
       x,
@@ -360,8 +363,8 @@ export async function analyzeImage(
       error,
     );
 
-    // Fallback для тестирования
-    return getMockDefects();
+    // Сбой не подменяем выдуманными дефектами: пусть его увидит пользователь
+    throw error;
   } finally {
     // Освобождаем входной tensor
     inputTensor?.dispose();
@@ -371,63 +374,4 @@ export async function analyzeImage(
       tensor.dispose();
     }
   }
-}
-
-// ============================
-// 11. Mock-данные
-// ============================
-
-export function getMockDefects(): Defect[] {
-  return [
-    {
-      id: uuidv4(),
-      type: 'crack',
-      severity: 'high',
-      x: 0.15 + Math.random() * 0.3,
-      y: 0.15 + Math.random() * 0.3,
-      width: 0.1,
-      height: 0.05,
-      confidence: 0.88 + Math.random() * 0.1,
-    },
-    {
-      id: uuidv4(),
-      type: 'corrosion',
-      severity: 'medium',
-      x: 0.4 + Math.random() * 0.3,
-      y: 0.5 + Math.random() * 0.3,
-      width: 0.08,
-      height: 0.08,
-      confidence: 0.78 + Math.random() * 0.12,
-    },
-    {
-      id: uuidv4(),
-      type: 'delamination',
-      severity: 'medium',
-      x: 0.2 + Math.random() * 0.3,
-      y: 0.6 + Math.random() * 0.2,
-      width: 0.1,
-      height: 0.08,
-      confidence: 0.75 + Math.random() * 0.15,
-    },
-    {
-      id: uuidv4(),
-      type: 'erosion',
-      severity: 'low',
-      x: 0.6 + Math.random() * 0.3,
-      y: 0.1 + Math.random() * 0.3,
-      width: 0.12,
-      height: 0.06,
-      confidence: 0.7 + Math.random() * 0.15,
-    },
-    {
-      id: uuidv4(),
-      type: 'lightning',
-      severity: 'high',
-      x: 0.5 + Math.random() * 0.2,
-      y: 0.2 + Math.random() * 0.3,
-      width: 0.08,
-      height: 0.12,
-      confidence: 0.82 + Math.random() * 0.12,
-    },
-  ];
 }

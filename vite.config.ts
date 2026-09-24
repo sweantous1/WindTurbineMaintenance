@@ -1,54 +1,46 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type PluginOption } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
+import electron from 'vite-plugin-electron/simple'
 import path from 'path'
 
 export default defineConfig(({ mode }) => {
   const isElectron = mode === 'electron'
 
-  const plugins = [react(), tailwindcss()]
+  const plugins: PluginOption[] = [react(), tailwindcss()]
 
   if (isElectron) {
     plugins.push(
-      electron([
-        {
+      electron({
+        main: {
           entry: 'electron/main.ts',
+        },
+        preload: {
+          input: 'electron/preload.ts',
+          // Пресет собирает preload в CommonJS, но при "type": "module" даёт ему расширение .mjs,
+          // и Electron грузит файл как ES-модуль. Расширение .cjs однозначно означает CommonJS.
           vite: {
             build: {
-              outDir: 'dist-electron',
-              rollupOptions: {
-                external: ['electron'],
+              rolldownOptions: {
+                output: {
+                  entryFileNames: '[name].cjs',
+                },
               },
             },
           },
         },
-        {
-          entry: 'electron/preload.ts',
-          onstart(options) {
-            options.reload()
-          },
-          vite: {
-            build: {
-              outDir: 'dist-electron',
-              rollupOptions: {
-                external: ['electron'],
-              },
-            },
-          },
-        },
-      ]),
-      renderer()
+      }),
     )
   }
 
-  return defineConfig({
+  return {
+    // Собранное приложение открывается через file://, поэтому пути к ассетам относительные
+    base: isElectron ? './' : '/',
     plugins,
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
     },
-  })
+  }
 })

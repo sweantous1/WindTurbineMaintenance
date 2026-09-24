@@ -8,16 +8,13 @@
     "dev": "vite",
     "dev:electron": "vite --mode electron",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
     "build:electron": "tsc -b && vite build --mode electron && electron-builder",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "electron:dev": "vite --mode electron",
-    "electron:build": "tsc -b && vite build --mode electron && electron-builder"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tensorflow/tfjs": "^4.22.0",
-    "@tensorflow/tfjs-backend-webgl": "^4.22.0",
-    "@tensorflow/tfjs-converter": "^4.22.0",
     "i18next": "^26.3.6",
     "i18next-browser-languagedetector": "^8.2.1",
     "leaflet": "^1.9.4",
@@ -26,9 +23,7 @@
     "react-i18next": "^17.0.10",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.1",
-    "react-toastify": "^11.1.0",
-    "uuid": "^14.0.1",
-    "yolo-ts": "^1.0.5"
+    "react-toastify": "^11.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -36,7 +31,6 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.3",
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",
@@ -44,8 +38,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vite-plugin-electron": "^1.1.0",
-    "vite-plugin-electron-renderer": "^1.0.0"
+    "vite-plugin-electron": "^1.1.0"
   },
   "build": {
     "appId": "com.wtm.app",
@@ -55,19 +48,17 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*"
+      "dist-electron/**/*",
+      "!node_modules/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "public/icon.png"
+      "target": "nsis"
     },
     "mac": {
-      "target": "dmg",
-      "icon": "public/icon.png"
+      "target": "dmg"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "public/icon.png"
+      "target": "AppImage"
     }
   },
   "allowScripts": {

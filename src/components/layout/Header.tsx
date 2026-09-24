@@ -7,13 +7,16 @@ const navItems = [
   { path: '/router', labelKey: 'nav.router' },
   { path: '/weather', labelKey: 'nav.weather' },
   { path: '/history', labelKey: 'nav.history' },
+  { path: '/docs', labelKey: 'nav.docs' },
 ]
 
 export default function Header() {
   const { t, i18n } = useTranslation()
+  // resolvedLanguage — уже сведённый к 'ru' или 'en' язык; language может быть 'ru-RU'
+  const isRu = i18n.resolvedLanguage === 'ru'
 
   const toggleLang = () => {
-    i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')
+    i18n.changeLanguage(isRu ? 'en' : 'ru')
   }
 
   return (
@@ -46,20 +49,12 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      <div className="flex items-center gap-3">
-        <button
-          onClick={toggleLang}
-          className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-        >
-          {i18n.language === 'ru' ? 'EN' : 'RU'}
-        </button>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <div className="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-            A
-          </div>
-          <span className="hidden sm:block">{t('profile.admin')}</span>
-        </div>
-      </div>
+      <button
+        onClick={toggleLang}
+        className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+      >
+        {isRu ? 'EN' : 'RU'}
+      </button>
     </header>
   )
 }

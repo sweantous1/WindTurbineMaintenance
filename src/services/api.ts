@@ -1,12 +1,13 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  // options раскрываются первыми: иначе их headers затёрли бы Content-Type
   const res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options?.headers,
     },
-    ...options,
   })
 
   if (!res.ok) {

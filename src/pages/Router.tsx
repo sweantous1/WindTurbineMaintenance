@@ -7,27 +7,60 @@ import 'leaflet/dist/leaflet.css'
 import Card from '@/components/common/Card'
 import Button from '@/components/common/Button'
 import type { RoutePoint, DroneRoute } from '@/types'
-import { v4 as uuidv4 } from 'uuid'
+import markerIcon from 'leaflet/dist/images/marker-icon.png'
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+import { makeId } from '@/utils'
 
+// Иконки маркеров из пакета leaflet, а не с unpkg: без интернета карта всё равно покажет точки.
+// imagePath = '' отключает угадывание пути по leaflet.css: иначе в dev путь склеивается дважды
+L.Icon.Default.imagePath = ''
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
 })
 
 const STORAGE_KEY = 'wtm_route_data'
+const DEFAULT_CENTER: [number, number] = [55.751244, 37.618423]
 
+const isRoutePoint = (p: unknown): p is RoutePoint =>
+  typeof p === 'object' && p !== null &&
+  ['lat', 'lng', 'alt'].every((k) => Number.isFinite((p as Record<string, unknown>)[k]))
+
+const newRoute = (): DroneRoute => ({
+  id: makeId(),
+  name: 'New Route',
+  turbineId: 'WT-001',
+  points: [],
+  status: 'draft',
+})
+
+// Сохранённые данные проверяем по форме: битый JSON не должен ронять экран
 const loadSavedRoute = (): DroneRoute => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch {}
-  return {
-    id: uuidv4(),
-    name: 'New Route',
-    turbineId: 'WT-001',
-    points: [],
-    status: 'draft',
+    if (saved) {
+      const parsed: unknown = JSON.parse(saved)
+      const points = (parsed as Partial<DroneRoute> | null)?.points
+      if (Array.isArray(points) && points.every(isRoutePoint)) {
+        return { ...newRoute(), ...(parsed as DroneRoute), points }
+      }
+      console.warn('Сохранённый маршрут повреждён, начинаем новый')
+    }
+  } catch (error) {
+    console.warn('Не удалось прочитать сохранённый маршрут:', error)
+  }
+  return newRoute()
+}
+
+const saveRoute = (route: DroneRoute): boolean => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(route))
+    return true
+  } catch (error) {
+    console.error('Не удалось сохранить маршрут:', error)
+    return false
   }
 }
 
@@ -45,7 +78,7 @@ export default function Router() {
   const [route, setRoute] = useState<DroneRoute>(loadSavedRoute)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(route))
+    saveRoute(route)
   }, [route])
 
   const addPoint = (point: RoutePoint) => {
@@ -71,11 +104,14 @@ export default function Router() {
   }
 
   const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(route))
-    toast.success(t('router.saved'))
+    if (saveRoute(route)) toast.success(t('router.saved'))
+    else toast.error(t('router.saveFailed'))
   }
 
-  const center: [number, number] = [55.751244, 37.618423]
+  // Карта открывается на первой точке маршрута, если она есть
+  const [center] = useState<[number, number]>(() =>
+    route.points.length > 0 ? [route.points[0].lat, route.points[0].lng] : DEFAULT_CENTER,
+  )
 
   return (
     <div className="space-y-6">
@@ -95,11 +131,11 @@ export default function Router() {
             <div className="h-[500px] rounded-lg overflow-hidden -m-5">
               {typeof window !== 'undefined' && (
                 <MapContainer center={center} zoom={10} className="h-full w-full">
+                  {/* Условия OpenStreetMap требуют видимой атрибуции */}
                   <TileLayer
-                    attribution=""
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  <style>{`.leaflet-control-attribution { display: none !important; }`}</style>
                   <ClickMarker onMapClick={addPoint} />
                   {route.points.map((point, i) => (
                     <Marker key={i} position={[point.lat, point.lng]} />
@@ -118,7 +154,7 @@ export default function Router() {
         </div>
 
         <div>
-          <Card title={t('router.routePoints')} subtitle={`${route.points.length} ${t('router.points')}`}>
+          <Card title={t('router.routePoints')} subtitle={t('router.pointsCount', { count: route.points.length })}>
             {route.points.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-8">{t('router.noPoints')}</p>
             ) : (
