@@ -159,7 +159,7 @@
       },
       "detection": {
         "title": "Defect detection",
-        "body": "On the Defects screen, add the inspection photos: they are stored with the mission on this computer. A YOLO model runs inside the app without a network — on the GPU via WebGPU or on the CPU via WASM; large images are analysed in tiles. Findings have a class (crack, corrosion, erosion, lightning strike, contamination, delamination, other) and a severity from 1 to 5 that the operator reviews and adjusts; the confidence threshold and classes change without re-running the analysis. Photos with EXIF coordinates are matched to the nearest turbine of the farm (within 300 m). Exports: PNG with boxes, JSON per photo and for the whole mission; the number of findings shows in History."
+        "body": "On the Detection screen, add the inspection photos: they are stored with the mission on this computer. A YOLO model runs inside the app without a network — on the GPU via WebGPU or on the CPU via WASM; large images are analysed in tiles. Findings have a class (crack, corrosion, erosion, lightning strike, contamination, delamination, other) and a severity from 1 to 5 that the operator reviews and adjusts; the confidence threshold and classes change without re-running the analysis. Photos with EXIF coordinates are matched to the nearest turbine of the farm (within 300 m). Exports: PNG with boxes, JSON per photo and for the whole mission; the number of findings shows in History."
       },
       "history": {
         "title": "History",

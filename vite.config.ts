@@ -45,6 +45,10 @@ export default defineConfig(({ mode }) => {
     worker: {
       format: 'es',
     },
+    build: {
+      // three.js с R3F — около 1 МБ в ленивом чанке экрана 3D; стартовый бандл намного меньше
+      chunkSizeWarningLimit: 1200,
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

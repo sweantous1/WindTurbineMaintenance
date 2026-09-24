@@ -35,6 +35,13 @@ npm test                 # только тесты (vitest)
 npm run build:electron   # установщик Windows (NSIS) в папке release/
 ```
 
+Если сборка установщика падает с `EPERM: operation not permitted, rename '…\release\win-unpacked.tmp'`,
+значит, антивирус держит только что распакованный Electron. Соберите из уже установленного:
+
+```bash
+npx electron-builder -c.electronDist=node_modules/electron/dist
+```
+
 ## Устройство
 
 ```

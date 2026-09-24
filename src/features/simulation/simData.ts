@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { effectiveLimits, estimateMission, type MissionEstimate } from '@/domain/flightCheck'
+import { effectiveLimits, estimateMission, planWorstWindMs, type MissionEstimate } from '@/domain/flightCheck'
 import { buildTrajectory, type Trajectory } from '@/domain/flightPath'
 import { orbitRadiusM, turbineHubM, turbineRotorM } from '@/domain/flightPlan'
 import { WIND_LEVELS_M, type DroneProfile, type FlightPlan, type Mission, type WeatherHour, type WindLevel } from '@/domain/types'
@@ -96,7 +96,8 @@ export function buildSimData(mission: Mission, drone: DroneProfile): SimData {
     turbines,
     conflictSegments: new Set(plan.conflicts.map((c) => c.segmentIndex)),
     wind,
-    estimate: estimateMission(plan.lengthM, drone, wind?.transitMs),
+    // Ветер для оценки заряда — худший на высотах плана, как у вердикта часа на экране погоды
+    estimate: estimateMission(plan.lengthM, drone, wind ? planWorstWindMs(wind.hour, plan) : undefined),
   }
 }
 

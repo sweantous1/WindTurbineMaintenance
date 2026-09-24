@@ -25,23 +25,23 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500]">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-            W
-          </div>
-          <span className="font-semibold text-gray-800 text-sm hidden sm:block">
+      {/* При узком окне (у Electron минимум 1024 px) ужимаются отступы меню, а если его всё равно не хватает —
+          меню прокручивается. Правый блок не сжимается: иначе выбор миссии наползал на кнопку языка */}
+      <div className="flex min-w-0 flex-1 items-center gap-4 xl:gap-8">
+        <div className="flex shrink-0 items-center gap-2">
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-8 w-8" />
+          <span className="font-semibold text-gray-800 text-sm hidden xl:block">
             WTM
           </span>
         </div>
-        <nav className="flex items-center gap-1">
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === '/'}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
+                `px-2 xl:px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -53,8 +53,7 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      {/* min-w-0: при узком окне сжимается выбор миссии, а не навигация */}
-      <div className="flex min-w-0 shrink items-center gap-3">
+      <div className="ml-3 flex shrink-0 items-center gap-3">
         <MissionSwitcher />
         <button
           onClick={toggleLang}

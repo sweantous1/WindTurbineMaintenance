@@ -17,14 +17,22 @@ const KEY_ACTIONS: Readonly<Record<string, keyof SimKeyActions>> = {
   KeyC: 'nextCamera',
 }
 
-// Фокус в поле или на кнопке: клавиша принадлежит им. Пробел на кнопке уже нажимает её саму,
-// и без этой проверки пуск переключился бы дважды
-const OWN_KEYS = 'input, textarea, select, button, [contenteditable]:not([contenteditable="false"])'
+// Поля для текста и списки: любая клавиша принадлежит им
+const TEXT_ENTRY =
+  'textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
+  'input:not([type=button]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=reset])'
+// Пробел сам нажимает кнопку, флажок и ссылку: без этой проверки пуск переключился бы дважды.
+// Остальные клавиши экрана у кнопок своего смысла не имеют и работают после щелчка по ним
+const SPACE_ACTIVATES =
+  'button, a[href], summary, [role="button"], input[type=button], input[type=submit], input[type=reset], input[type=checkbox], input[type=radio]'
 
 export function shouldIgnoreKey(e: KeyboardEvent): boolean {
   if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return true
   const target = e.target
-  if (target instanceof Element && target.closest(OWN_KEYS)) return true
+  if (target instanceof Element) {
+    if (target.closest(TEXT_ENTRY)) return true
+    if (e.code === 'Space' && target.closest(SPACE_ACTIVATES)) return true
+  }
   // Поверх экрана открыто окно — клавиши для него, а не для проигрывания
   return document.querySelector('[role="dialog"]') !== null
 }

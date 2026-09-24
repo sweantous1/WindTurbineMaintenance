@@ -65,11 +65,13 @@ describe('панель 3D-облёта', () => {
     await seek(clock, (second.orbitStartS + second.orbitEndS) / 2)
     expect(getByText('p', 'Облёт турбины 2 из 2 — WTG-B')).toBeTruthy()
     expect(text()).toContain('1 из 2')
-    // Текущая выделена, осмотренная — с галочкой
+    // Текущая выделена, осмотренная — с галочкой, и экранный диктор слышит это в имени кнопки
     const items = Array.from(document.querySelectorAll('ol button'))
     expect(items.map((b) => b.getAttribute('aria-current'))).toEqual([null, 'step'])
-    expect(items[0].querySelector('[aria-label="осмотрена"]')).toBeTruthy()
-    expect(items[1].querySelector('[aria-label="осмотрена"]')).toBeNull()
+    expect(items[0].getAttribute('aria-label')).toMatch(/, осмотрена$/)
+    expect(items[0].querySelector('svg')).toBeTruthy()
+    expect(items[1].getAttribute('aria-label')).not.toMatch(/осмотрена/)
+    expect(items[1].querySelector('svg')).toBeNull()
 
     await seek(clock, data.trajectory.durationS)
     expect(getByText('p', 'Облёт завершён')).toBeTruthy()
@@ -146,6 +148,16 @@ describe('панель 3D-облёта', () => {
     const cleanData = ready(clean)
     await render(createElement(SimPanel, { data: cleanData, mission: clean, drone: DRONE, clock: createSimClock(cleanData.trajectory.durationS) }))
     expect(queryByText('[role="alert"]', 'слишком близко')).toBeUndefined()
+  })
+
+  it('после полёта — без ссылок «поправить маршрут» и «выбрать час вылета»', async () => {
+    const flown = makeMission({ status: 'flown', completedAt: '2026-09-25T12:00:00Z' })
+    const data = ready(flown)
+    await render(createElement(SimPanel, { data, mission: flown, drone: DRONE, clock: createSimClock(data.trajectory.durationS) }))
+    expect(text()).toContain('Час вылета не был выбран')
+    expect(queryByText('a', 'Выбрать час вылета')).toBeUndefined()
+    const alert = getByText('[role="alert"]', 'слишком близко')
+    expect(alert.querySelector('a')).toBeNull()
   })
 
   it('легенда: дрон увеличен, атрибуция модели со ссылками', async () => {
@@ -256,6 +268,21 @@ describe('управление проигрыванием', () => {
 
     await key('Space')
     expect(clock.getSnapshot().playing).toBe(true)
+  })
+
+  it('после щелчка по кнопке C, R и скобки продолжают работать', async () => {
+    const { clock, onCameraMode } = await renderControls()
+    const button = document.querySelector<HTMLButtonElement>('button[aria-label="Сначала"]')
+    if (!button) throw new Error('нет кнопки')
+    button.focus()
+    await key('KeyC', button)
+    expect(onCameraMode).toHaveBeenCalledWith('free')
+    await seek(clock, 100)
+    await key('KeyR', button)
+    expect(clock.timeS()).toBe(0)
+    const before = clock.getSnapshot().speed
+    await key('BracketRight', button)
+    expect(clock.getSnapshot().speed).toBeGreaterThan(before)
   })
 
   it('слушатель клавиатуры снимается при уходе с экрана', async () => {

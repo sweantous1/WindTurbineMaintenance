@@ -47,6 +47,10 @@ export function LabelProjector({ turbines, registry }: { turbines: readonly SimT
   const size = useThree((s) => s.size)
   const [v] = useState(() => new Vector3())
   useFrame(() => {
+    // lookAt камеры (за дроном и в OrbitControls) обновляет матрицу до поворота, а рендер пересчитает
+    // её только при отрисовке: без этого подписи проецировались бы с поворотом прошлого кадра
+    // и на облёте отставали от турбин на десятки пикселей
+    camera.updateMatrixWorld()
     for (const t of turbines) {
       const el = registry.elements.get(t.id)
       if (!el) continue

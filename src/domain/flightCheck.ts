@@ -116,6 +116,14 @@ function worstAt<T extends { altM: number }>(items: T[], pick: (x: T) => number 
   return worst
 }
 
+// Худший средний ветер на высотах плана — тот же, по которому assessHour оценивает заряд
+// (встречный на всём пути). Экраны, показывающие число вылетов, берут ветер отсюда,
+// чтобы не расходиться с вердиктом часа
+export function planWorstWindMs(h: WeatherHour, plan: FlightPlan): number | undefined {
+  const byAlt = checkAltitudes(plan, plan.transitAltM).map((altM) => ({ altM, ms: windAtAltitude(h, altM).ms }))
+  return worstAt(byAlt, (w) => w.ms)?.value
+}
+
 export function assessHour(
   h: WeatherHour,
   ctx: { limits: MissionLimits; drone: DroneProfile; plan?: FlightPlan; flightAltitudeM: number },

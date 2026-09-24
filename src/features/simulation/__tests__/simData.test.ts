@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { effectiveLimits, estimateMission } from '@/domain/flightCheck'
+import { assessHour, effectiveLimits, estimateMission, planWorstWindMs } from '@/domain/flightCheck'
 import { gustAtAltitude, windAtAltitude } from '@/domain/weather'
 import { planFor, routeContext } from '@/features/route/routeLogic'
 import { buildSimData, windDirNear, type SimReady } from '../simData'
@@ -117,8 +117,19 @@ describe('buildSimData: ветер и оценка', () => {
     expect(wind.gustMs).toBeCloseTo(gustAtAltitude(HOUR, data.plan.transitAltM) ?? NaN, 9)
     // Ступица 100 м ровно между уровнями 80 и 120 — берётся нижний
     expect(wind.fromDeg).toBe(210)
-    expect(data.estimate).toEqual(estimateMission(data.plan.lengthM, DRONE, wind.transitMs))
+    expect(data.estimate).toEqual(estimateMission(data.plan.lengthM, DRONE, planWorstWindMs(HOUR, data.plan)))
     expect(data.estimate.timeWorstMin).toBeGreaterThan(data.estimate.timeMin)
+  })
+
+  it('оценка заряда совпадает с вердиктом часа: худший ветер на высотах плана, а не на транзите', () => {
+    // Транзит 40 м, ступицы 120 м: наверху ветер заметно сильнее
+    const tall = { ...FARM, defaults: { ...FARM.defaults, hubHeightM: 120 } }
+    const hour = { ...HOUR, windMs: { '10': 3, '80': 5, '120': 8, '180': 9 } }
+    const mission = makeMission({ farm: tall, flightAltitudeM: 40, weather: { ...WEATHER, hourly: [hour] }, departureTime: hour.time })
+    const data = ready(buildSimData(mission, DRONE))
+    const verdict = assessHour(hour, { limits: mission.limits, drone: DRONE, plan: data.plan, flightAltitudeM: 40 })
+    expect(planWorstWindMs(hour, data.plan)).toBeCloseTo(8, 9)
+    expect(data.estimate).toEqual(verdict.estimate)
   })
 
   it('направление — по средней высоте ступиц и только по уровням с данными', () => {

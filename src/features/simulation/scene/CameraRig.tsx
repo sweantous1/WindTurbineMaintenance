@@ -114,7 +114,11 @@ function TopCamera({ frame, bounds, farM }: { frame: DroneFrame; bounds: LocalBo
     const toTarget = new Vector3(center.x, 0, -center.y)
     // Лёгкий наклон: камера чуть южнее центра, север — вверху экрана
     const toPos = toTarget.clone().add(new Vector3(0, Math.cos(TOP_TILT_RAD) * d, Math.sin(TOP_TILT_RAD) * d))
-    return { t: 0, fromPos: camera.position.clone(), fromTarget: frame.position.clone(), toPos, toTarget }
+    // Подлёт начинается с той точки, куда камера уже смотрит: цель на луче взгляда не поворачивает
+    // вид на первом кадре. Раньше цель ставилась на дрон, и из свободной камеры вид дёргался к нему
+    const lookDistance = Math.min(farM * 0.45, Math.max(MIN_ORBIT_DISTANCE_M, camera.position.distanceTo(frame.position)))
+    const fromTarget = camera.getWorldDirection(new Vector3()).multiplyScalar(lookDistance).add(camera.position)
+    return { t: 0, fromPos: camera.position.clone(), fromTarget, toPos, toTarget }
   })
 
   useFrame((_, dt) => {

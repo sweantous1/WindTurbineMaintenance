@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import Card from '@/components/common/Card'
 import { batteryUsedPct, sampleAt, type TurbineVisit } from '@/domain/flightPath'
+import { isPreFlight } from '@/domain/missionStatus'
 import type { DroneProfile, Mission } from '@/domain/types'
 import { formatLocalHour, formatNumber } from '@/features/mission/missionView'
 import WindArrow from '@/features/weather/WindArrow'
@@ -45,6 +46,8 @@ export default function SimPanel({ data, mission, drone, clock }: SimPanelProps)
   const level = batteryLevel(remainingPct, drone.reservePct)
   const km = (m: number) => formatNumber(m / 1000, lang, 1)
   const seekTo = useCallback((v: TurbineVisit) => clock.seek(v.transitStartS), [clock])
+  // После полёта маршрут и погода только для чтения: ссылок «поправить» не показываем
+  const editable = isPreFlight(mission.status)
 
   return (
     <div className="space-y-6">
@@ -103,12 +106,17 @@ export default function SimPanel({ data, mission, drone, clock }: SimPanelProps)
         </div>
       </Card>
 
-      <WeatherCard data={data} mission={mission} drone={drone} />
+      <WeatherCard data={data} mission={mission} drone={drone} editable={editable} />
 
       {data.plan.conflicts.length > 0 && (
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          {t('sim.conflicts.text', { count: data.conflictSegments.size })}{' '}
-          <ScreenLink to="/router">{t('sim.conflicts.link')}</ScreenLink>
+          {t('sim.conflicts.text', { count: data.conflictSegments.size })}
+          {editable && (
+            <>
+              {' '}
+              <ScreenLink to="/router">{t('sim.conflicts.link')}</ScreenLink>
+            </>
+          )}
         </div>
       )}
 
@@ -159,7 +167,7 @@ export default function SimPanel({ data, mission, drone, clock }: SimPanelProps)
   )
 }
 
-function WeatherCard({ data, mission, drone }: { data: SimReady; mission: Mission; drone: DroneProfile }) {
+function WeatherCard({ data, mission, drone, editable }: { data: SimReady; mission: Mission; drone: DroneProfile; editable: boolean }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
   const forecast = useMemo(() => missionForecast(mission, drone), [mission, drone])
@@ -169,8 +177,8 @@ function WeatherCard({ data, mission, drone }: { data: SimReady; mission: Missio
     return (
       <Card title={t('sim.weather.title')}>
         <div className="space-y-2 text-sm">
-          <p className="text-gray-700">{t('sim.weather.none')}</p>
-          <ScreenLink to="/weather">{t('sim.weather.noneLink')}</ScreenLink>
+          <p className="text-gray-700">{t(editable ? 'sim.weather.none' : 'sim.weather.noneFlown')}</p>
+          {editable && <ScreenLink to="/weather">{t('sim.weather.noneLink')}</ScreenLink>}
         </div>
       </Card>
     )
@@ -229,13 +237,15 @@ const VisitList = memo(function VisitList({ visits, names, current, inspected, o
         const name = names.get(v.turbineId) ?? v.turbineId
         const isCurrent = v.visitIndex === current
         const done = v.visitIndex < inspected
+        const goTo = t('sim.order.goTo', { n: v.visitIndex + 1, name })
         return (
           <li key={v.turbineId}>
             <button
               type="button"
               onClick={() => onSelect(v)}
               aria-current={isCurrent ? 'step' : undefined}
-              aria-label={t('sim.order.goTo', { n: v.visitIndex + 1, name })}
+              // Содержимое кнопки в её имя не попадает, поэтому отметка «осмотрена» — в самом aria-label
+              aria-label={done ? `${goTo}, ${t('sim.order.inspected')}` : goTo}
               className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 isCurrent ? 'bg-cyan-50 text-gray-900 ring-1 ring-cyan-400' : 'text-gray-800 hover:bg-gray-50'
               }`}
@@ -250,7 +260,7 @@ const VisitList = memo(function VisitList({ visits, names, current, inspected, o
               </span>
               <span className="min-w-0 flex-1 truncate">{name}</span>
               {done && (
-                <svg className="h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" role="img" aria-label={t('sim.order.inspected')}>
+                <svg className="h-4 w-4 shrink-0 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
               )}

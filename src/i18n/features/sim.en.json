@@ -23,7 +23,8 @@
         "title": "Drone speed is not set",
         "body": "The cruise speed in the drone profile must be above zero: the flight time is based on it.",
         "link": "Open Settings"
-      }
+      },
+      "flownBody": "The mission is already completed and its data no longer changes."
     },
     "scene": {
       "label": "3D flight scene",
@@ -78,7 +79,7 @@
       "sorties_few": "The route does not fit one battery: {{count}} flights needed",
       "sorties_many": "The route does not fit one battery: {{count}} flights needed",
       "sorties_other": "The route does not fit one battery: {{count}} flights needed",
-      "sortiesImpossible": "The route cannot be flown: the headwind at transit height is close to the drone speed."
+      "sortiesImpossible": "The route cannot be flown: the headwind at flight height is close to the drone speed."
     },
     "weather": {
       "title": "Weather at departure",
@@ -90,7 +91,8 @@
       "tempC": "{{value}} °C",
       "more": "Details",
       "none": "No forecast for the departure hour: rotors are still, nacelles face west.",
-      "noneLink": "Choose the departure hour"
+      "noneLink": "Choose the departure hour",
+      "noneFlown": "No departure hour was chosen before the flight was completed: rotors are still, nacelles face west."
     },
     "conflicts": {
       "text_one": "{{count}} route segment passes too close to a tower — it is marked red.",

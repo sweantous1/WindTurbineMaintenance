@@ -1,7 +1,7 @@
-import { Suspense, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Box3, Group, Quaternion, Vector3, type Mesh, type Object3D } from 'three'
+import { Box3, Group, Quaternion, Vector3, type Material, type Mesh, type Object3D, type Texture } from 'three'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { DRONE_VISUAL_SPAN_M } from '../simView'
 import { AIRBORNE_M, FRAME_PRIORITY, type DroneFrame } from './droneFrame'
@@ -87,7 +87,27 @@ function DroneModel({ onPropellers }: { onPropellers: (list: Propeller[]) => voi
     onPropellers(prepared.propellers)
     return () => onPropellers([])
   }, [prepared, onPropellers])
+  // Геометрии, материалы и текстуры модели живут в кэше загрузчика, и R3F их не освобождает:
+  // каждый рендерер вешает на них свой обработчик dispose, и без этого прошлые рендереры
+  // оставались бы в памяти после каждого захода на экран. После dispose three.js загрузит
+  // ресурсы на видеокарту заново при следующем показе, так что кэш остаётся годным
+  useEffect(() => () => disposeModel(gltf.scene), [gltf.scene])
   return <primitive object={prepared.root} />
+}
+
+function disposeModel(root: Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as Mesh
+    if (!mesh.isMesh) return
+    mesh.geometry.dispose()
+    const materials: Material[] = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+    for (const material of materials) {
+      for (const value of Object.values(material)) {
+        if ((value as Texture | null)?.isTexture) (value as Texture).dispose()
+      }
+      material.dispose()
+    }
+  })
 }
 
 // Копия сцены из кэша загрузчика: её можно перестраивать, не ломая повторный заход на экран.
