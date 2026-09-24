@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import MissionSwitcher from '@/features/mission/MissionSwitcher'
 
 const navItems = [
   { path: '/', labelKey: 'nav.home' },
@@ -8,6 +9,7 @@ const navItems = [
   { path: '/weather', labelKey: 'nav.weather' },
   { path: '/history', labelKey: 'nav.history' },
   { path: '/docs', labelKey: 'nav.docs' },
+  { path: '/settings', labelKey: 'nav.settings' },
 ]
 
 export default function Header() {
@@ -49,12 +51,15 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      <button
-        onClick={toggleLang}
-        className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-      >
-        {isRu ? 'EN' : 'RU'}
-      </button>
+      <div className="flex items-center gap-3">
+        <MissionSwitcher />
+        <button
+          onClick={toggleLang}
+          className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+        >
+          {isRu ? 'EN' : 'RU'}
+        </button>
+      </div>
     </header>
   )
 }

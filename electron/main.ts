@@ -1,10 +1,36 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, net, protocol, shell } from 'electron'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 // main собирается в ES-модуль ("type": "module" в package.json), а в ESM нет __dirname
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
-const indexHtml = path.join(currentDir, '../dist/index.html')
+const distDir = path.join(currentDir, '../dist')
+
+// Собранное приложение открывается со своей схемы app://bundle, а не с file://.
+// У file:// нет нормального origin: хуже работают IndexedDB, фоновые потоки (Web Worker)
+// и загрузка файлов модели через fetch.
+const APP_SCHEME = 'app'
+const APP_ORIGIN = `${APP_SCHEME}://bundle`
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
+  },
+])
+
+function registerAppProtocol() {
+  protocol.handle(APP_SCHEME, async (request) => {
+    const { pathname } = new URL(request.url)
+    const relative = decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html'
+    const filePath = path.normalize(path.join(distDir, relative))
+    // Не выпускаем запросы за пределы папки dist
+    if (!filePath.startsWith(distDir + path.sep)) {
+      return new Response('Not found', { status: 404 })
+    }
+    return net.fetch(pathToFileURL(filePath).toString())
+  })
+}
 
 let mainWindow: BrowserWindow | null = null
 
@@ -54,7 +80,7 @@ function createWindow() {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
     mainWindow.webContents.openDevTools()
   } else {
-    mainWindow.loadFile(indexHtml)
+    mainWindow.loadURL(`${APP_ORIGIN}/index.html`)
   }
 
   mainWindow.on('closed', () => {
@@ -62,7 +88,10 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  registerAppProtocol()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

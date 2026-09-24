@@ -6,6 +6,7 @@ import Router from '@/pages/Router'
 import Weather from '@/pages/Weather'
 import History from '@/pages/History'
 import Docs from '@/pages/Docs'
+import Settings from '@/pages/Settings'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/weather" element={<Weather />} />
         <Route path="/history" element={<History />} />
         <Route path="/docs" element={<Docs />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
   )
