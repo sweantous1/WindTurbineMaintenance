@@ -31,8 +31,8 @@ export type MissionStepKey = 'mission' | 'farm' | 'route' | 'weather' | 'simulat
 export interface MissionStep {
   key: MissionStepKey
   done: boolean
-  // Шаг ещё не реализован в приложении
-  upcoming?: boolean
+  // Шаг можно пропустить: текущим он не становится
+  optional?: boolean
 }
 
 // Шаги сценария для главной; статус каждого шага вычисляется из данных миссии
@@ -43,9 +43,10 @@ export function missionSteps(m: Mission | undefined): MissionStep[] {
     { key: 'farm', done: !!m?.farm && m.farm.turbines.length > 0 },
     { key: 'route', done: !!m?.route && m.route.order.length > 0 },
     { key: 'weather', done: !!m?.weather && !!m?.departureTime },
-    { key: 'simulation', done: false, upcoming: true },
+    // 3D-облёт — просмотр плана перед вылетом; после полёта этот этап позади
+    { key: 'simulation', done: flown, optional: true },
     { key: 'complete', done: flown },
-    { key: 'detection', done: m?.status === 'analyzed' || m?.status === 'archived', upcoming: true },
+    { key: 'detection', done: m?.status === 'analyzed' || m?.status === 'archived' },
     { key: 'history', done: flown },
   ]
 }

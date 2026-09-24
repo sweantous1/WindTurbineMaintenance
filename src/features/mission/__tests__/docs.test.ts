@@ -22,12 +22,21 @@ afterEach(async () => {
 })
 
 describe('документация', () => {
-  it('описывает текущий порядок работы, а «скоро» — отдельно', async () => {
+  it('описывает весь порядок работы, включая 3D и дефекты, без обещаний «скоро»', async () => {
     await render(createElement(Docs))
     const steps = Array.from(document.querySelectorAll('ol > li h3')).map((h) => h.textContent)
-    expect(steps).toEqual(['Миссия', 'Ферма из KML/KMZ', 'Маршрут', 'Погода и час вылета', 'Прогноз полёта', 'Завершение полёта', 'История'])
-    const soon = Array.from(document.querySelectorAll('ul > li h3')).map((h) => h.textContent)
-    expect(soon).toEqual(['Поиск дефектов', '3D-просмотр'])
+    expect(steps).toEqual([
+      'Миссия',
+      'Ферма из KML/KMZ',
+      'Маршрут',
+      'Погода и час вылета',
+      'Прогноз полёта',
+      '3D-облёт',
+      'Завершение полёта',
+      'Поиск дефектов',
+      'История',
+    ])
+    expect(document.querySelectorAll('ul > li h3')).toHaveLength(0)
 
     const text = document.body.textContent ?? ''
     // Старые тексты описывали точки маршрута по щелчку, «раздел в разработке» и демо-записи
@@ -36,6 +45,10 @@ describe('документация', () => {
     expect(text).not.toContain('примеры записей')
     expect(text).toContain('Импорт KML/KMZ')
     expect(text).toContain('Получить прогноз')
+    // «скоро» отдельным словом: «скорость» в описании 3D законна
+    expect(text).not.toMatch(/(^|[^а-яё])скоро([^а-яё]|$)|следующ(ей|их) верси/i)
+    expect(text).toContain('WebGPU')
+    expect(text).toContain('Открыть в 3D')
   })
 
   it('на английском тоже без старых обещаний', async () => {
@@ -46,6 +59,7 @@ describe('документация', () => {
     expect(text).not.toContain('route point')
     expect(text).not.toContain('Sample records')
     expect(text).not.toContain('In progress: the forecast')
+    expect(text).not.toMatch(/coming soon|next version|future version/i)
   })
 
   it('в русском и английском одинаковый набор ключей', () => {

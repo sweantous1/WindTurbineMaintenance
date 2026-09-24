@@ -404,6 +404,19 @@ describe('главная', () => {
     }
   })
 
+  it('шаг 3D-облёта ведёт на экран 3D, только когда есть маршрут', async () => {
+    const m = await missions.create({ name: 'Без маршрута' })
+    await render(createElement(Home))
+    await waitFor(() => expect(getByText('h2', 'Без маршрута')).toBeTruthy())
+    expect(queryByText('button', '3D-облёт')).toBeUndefined()
+    expect(getByText('li', '3D-облёт').textContent).toContain('по желанию')
+
+    await missions.update(m.id, { farm, route })
+    await waitFor(() => expect(queryByText('button', '3D-облёт')).toBeTruthy())
+    await click(getByText('button', '3D-облёт'))
+    expect(window.location.hash).toBe('#/simulation')
+  })
+
   it('пустые значения карточки читаемы: не блёклый серый', async () => {
     await missions.create({ name: 'Пустая' })
     await render(createElement(Home))
@@ -421,7 +434,11 @@ describe('главная', () => {
     expect(document.body.textContent).toContain('Маршрут готов')
     expect(document.body.textContent).toContain('95 м')
     expect(document.body.textContent).toContain('8,4 км')
-    expect(document.body.textContent).toContain('скоро')
+    // 3D-облёт не обещается «скоро»: шаг необязательный и ведёт на экран 3D
+    expect(document.body.textContent).not.toContain('скоро')
+    const simStep = getByText('li', '3D-облёт')
+    expect(simStep.textContent).toContain('по желанию')
+    expect(simStep.querySelector('[aria-current]')).toBeNull()
     expect(document.body.textContent).toContain('после полёта')
 
     await click(getByText('button', 'Завершить полёт'))
@@ -519,6 +536,22 @@ describe('история', () => {
     await click(row.querySelector<HTMLButtonElement>('button[title="Открыть"]')!)
     await waitFor(async () => expect(await missions.getActiveId()).toBe(flown.id))
     expect(window.location.hash).toBe('#/')
+  })
+
+  it('«В 3D» — только у миссий с маршрутом: делает миссию активной и открывает 3D-облёт', async () => {
+    const { draft } = await seed()
+    const withRoute = await missions.create({ name: 'С маршрутом' })
+    await missions.update(withRoute.id, { farm, route })
+    await missions.setActive(draft.id)
+    await render(createElement(History))
+    await waitFor(() => expect(rows().length).toBe(4))
+    const rowOf = (name: string) => rows().find((r) => r.textContent?.includes(name))!
+    expect(rowOf('Черновая').querySelector('button[title="В 3D"]')).toBeNull()
+    const open3d = rowOf('С маршрутом').querySelector<HTMLButtonElement>('button[title="В 3D"]')!
+    expect(open3d.getAttribute('aria-label')).toBe('В 3D: «С маршрутом»')
+    await click(open3d)
+    await waitFor(async () => expect(await missions.getActiveId()).toBe(withRoute.id))
+    expect(window.location.hash).toBe('#/simulation')
   })
 
   it('без миссий — понятное пустое состояние', async () => {

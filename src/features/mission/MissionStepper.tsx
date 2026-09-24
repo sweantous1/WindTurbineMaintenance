@@ -20,6 +20,7 @@ const STEP_PATHS: Partial<Record<MissionStepKey, string>> = {
   farm: '/router',
   route: '/router',
   weather: '/weather',
+  simulation: '/simulation',
   detection: '/detection',
   history: '/history',
 }
@@ -29,11 +30,13 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
   const lang = i18n.resolvedLanguage ?? 'ru'
   const navigate = useNavigate()
   const steps = missionSteps(mission)
-  // Текущий шаг — первый невыполненный, кроме ещё не сделанной 3D-симуляции
-  const current = mission ? steps.find((s) => !s.done && s.key !== 'simulation')?.key : 'mission'
+  // Текущий шаг — первый невыполненный из обязательных: 3D-облёт можно пропустить
+  const current = mission ? steps.find((s) => !s.done && !s.optional)?.key : 'mission'
+  const hasRoute = !!mission?.route && mission.route.order.length > 0
 
   const actionFor = (s: MissionStep): (() => void) | undefined => {
-    if (s.key === 'simulation') return undefined
+    // 3D проигрывает маршрут — без него открывать нечего
+    if (s.key === 'simulation' && !hasRoute) return undefined
     if (s.key === 'mission') return mission ? onOpenSettings : onCreate
     if (!mission) return s.key === 'history' ? () => navigate('/history') : undefined
     if (s.key === 'complete') return isPreFlight(mission.status) ? onComplete : undefined
@@ -72,7 +75,7 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
 
   const captionFor = (s: MissionStep): ReactNode => {
     if (s.done) return <span className="text-green-700">{t('mission.steps.caption.done')}</span>
-    if (s.key === 'simulation') return <span className="text-gray-500">{t('mission.steps.caption.soon')}</span>
+    if (s.optional) return <span className="text-gray-600">{t('mission.steps.caption.optional')}</span>
     if (s.key === current) return <span className="text-blue-700">{t('mission.steps.caption.current')}</span>
     if (s.key === 'detection') return <span className="text-amber-700">{t('mission.steps.caption.afterFlight')}</span>
     return null

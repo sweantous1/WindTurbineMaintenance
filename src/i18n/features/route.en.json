@@ -14,8 +14,7 @@
       "exportJson": "Export JSON",
       "exportKml": "Export KML",
       "open3d": "Open in 3D",
-      "open3dHint": "3D route preview is coming in the next version",
-      "soon": "soon"
+      "open3dNeedsRoute": "Build a route first: 3D plays back the flight plan"
     },
     "empty": {
       "title": "No farm loaded yet",

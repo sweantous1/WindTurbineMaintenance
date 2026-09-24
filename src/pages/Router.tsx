@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import Button from '@/components/common/Button'
 import ReadOnlyBanner from '@/components/mission/ReadOnlyBanner'
@@ -79,6 +80,7 @@ export default function Router() {
 function RoutePlanner({ mission }: { mission: Mission }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
+  const navigate = useNavigate()
   const drone = useMissionDrone(mission)
   const { id: missionId, farm, route, flightAltitudeM } = mission
   const savedTakeoff = mission.takeoff
@@ -355,6 +357,8 @@ function RoutePlanner({ mission }: { mission: Mission }) {
   const pickFile = () => fileInput.current?.click()
   const busy = solving !== null
   const hasTurbines = turbineCount > 0
+  // 3D проигрывает тот же план: без турбин в нём показывать нечего
+  const can3d = (plan?.turbineOrder.length ?? 0) > 0
 
   return (
     <div className="space-y-6">
@@ -385,11 +389,13 @@ function RoutePlanner({ mission }: { mission: Mission }) {
           <Button variant="secondary" onClick={() => exportAs('kml')} disabled={!hasTurbines}>
             {t('routePlan.actions.exportKml')}
           </Button>
-          <Button variant="secondary" disabled title={t('routePlan.actions.open3dHint')}>
+          <Button
+            variant="secondary"
+            onClick={() => navigate('/simulation')}
+            disabled={!can3d}
+            title={can3d ? undefined : t('routePlan.actions.open3dNeedsRoute')}
+          >
             {t('routePlan.actions.open3d')}
-            <span className="text-[10px] uppercase tracking-wide rounded bg-gray-200 text-gray-600 px-1.5 py-0.5">
-              {t('routePlan.actions.soon')}
-            </span>
           </Button>
         </div>
       </div>

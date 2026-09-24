@@ -77,9 +77,16 @@
         "GB": "GB"
       },
       "dataTitle": "Data",
-      "dataText": "Missions, drone profiles and forecasts are stored on this computer (IndexedDB). Only forecast and city search requests go to the internet: the point coordinates or the name.",
+      "dataText": "Missions, drone profiles, forecasts and flight photos are stored on this computer (IndexedDB); photos are analyzed locally and never uploaded. Only forecast and city search requests (point coordinates or a name) and OpenStreetMap map tiles go to the internet — the tiles reveal which area is open.",
       "weatherSource": "Weather",
-      "weatherLicense": "— forecast data under the CC BY 4.0 license"
+      "weatherLicense": "— forecast data under the CC BY 4.0 license",
+      "mapSource": "Map",
+      "mapLicense": "— map data under the ODbL license",
+      "droneModel": "Drone 3D model",
+      "droneModelText": "“Drone” by liz3d, licensed under CC BY 4.0",
+      "defectModel": "Defect detection",
+      "defectModelText": "YOLO11 (Ultralytics, AGPL-3.0), weights from the Grant-temp training project",
+      "moreCredits": "Full list: ATTRIBUTION.md in the repository"
     }
   }
 }

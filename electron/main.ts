@@ -20,6 +20,23 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
+// Политика содержимого собранного приложения: код — только свой, из сети — только прогноз,
+// поиск города и тайлы карты. 'wasm-unsafe-eval' нужен onnxruntime-web, blob: — фоновому потоку
+// маршрута и текстурам внутри GLB. В режиме разработки страницу отдаёт Vite, и политика не действует
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org",
+  "font-src 'self' data:",
+  "connect-src 'self' data: blob: https://api.open-meteo.com https://geocoding-api.open-meteo.com https://tile.openstreetmap.org",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join('; ')
+
 function registerAppProtocol() {
   protocol.handle(APP_SCHEME, async (request) => {
     const { pathname } = new URL(request.url)
@@ -31,7 +48,11 @@ function registerAppProtocol() {
     if (!filePath.startsWith(distDir + path.sep) || !existsSync(filePath)) {
       return new Response('Not found', { status: 404 })
     }
-    return net.fetch(pathToFileURL(filePath).toString())
+    const file = await net.fetch(pathToFileURL(filePath).toString())
+    // Заголовок нужен и страницам, и скриптам фоновых потоков: у потока из отдельного файла своя политика
+    const headers = new Headers(file.headers)
+    headers.set('Content-Security-Policy', CONTENT_SECURITY_POLICY)
+    return new Response(file.body, { status: file.status, statusText: file.statusText, headers })
   })
 }
 

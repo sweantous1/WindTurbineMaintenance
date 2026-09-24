@@ -2,11 +2,13 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import MissionSwitcher from '@/features/mission/MissionSwitcher'
 
+// Порядок — по сценарию работы с миссией: маршрут, погода, облёт в 3D, затем дефекты по фото
 const navItems = [
   { path: '/', labelKey: 'nav.home' },
-  { path: '/detection', labelKey: 'nav.detection' },
   { path: '/router', labelKey: 'nav.router' },
   { path: '/weather', labelKey: 'nav.weather' },
+  { path: '/simulation', labelKey: 'nav.simulation' },
+  { path: '/detection', labelKey: 'nav.detection' },
   { path: '/history', labelKey: 'nav.history' },
   { path: '/docs', labelKey: 'nav.docs' },
   { path: '/settings', labelKey: 'nav.settings' },
@@ -39,7 +41,7 @@ export default function Header() {
               to={item.path}
               end={item.path === '/'}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                `px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'

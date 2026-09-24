@@ -126,10 +126,8 @@
   },
   "docs": {
     "title": "Documentation",
-    "intro": "How work is organised in the app, from a mission to a record in History. The steps follow the same order as on the Home screen.",
+    "intro": "How work is organised in the app, from a mission to a record in History. The steps follow the same order as on Home and in the menu.",
     "flowTitle": "Workflow",
-    "soonTitle": "Coming soon",
-    "soonBadge": "soon",
     "steps": {
       "mission": {
         "title": "Mission",
@@ -151,23 +149,21 @@
         "title": "Flight forecast",
         "body": "The Flight forecast card on Home and on the Weather screen checks the chosen hour: go, marginal or no-go — with reasons, wind at the plan's altitudes and an estimate of length, time, battery and number of sorties. The mission status Departure set only means the data is in place: whether you can fly is decided by this verdict."
       },
+      "simulation": {
+        "title": "3D flight",
+        "body": "The 3D flight screen (the Open in 3D button on Routes) plays back the same flight plan as the map: takeoff, transits at transit altitude, the climb to hub height and the orbit of each turbine, return and landing — at real heights and at the drone cruise speed. Turbines are built from hub height and rotor diameter; with a departure hour chosen, rotors turn and face the forecast wind. Segments entering a tower safety zone are red. The panel shows the flight phase, height, distance, time, turbines inspected and battery left against the reserve, the weather at departure and the inspection order (click to jump to a turbine). Camera: follow, free (mouse) or top; keys: Space — play and pause, R — restart, [ and ] — speed, C — camera. The Map on the ground switch below the scene lays an OpenStreetMap layer on the ground. At the end of playback or from the header — Complete flight…"
+      },
       "complete": {
         "title": "Completing the flight",
-        "body": "After the flight, click Complete flight on Home. Weather, route, farm, limits and the drone profile become the flight record and are read-only from then on; only the name can still be changed. Nothing is deleted, and the active mission is cleared."
+        "body": "After the flight, click Complete flight on Home or Complete flight… on the 3D flight screen. Weather, route, farm, limits and the drone profile become the flight record and are read-only from then on; only the name can still be changed. Nothing is deleted, and the active mission is cleared."
+      },
+      "detection": {
+        "title": "Defect detection",
+        "body": "On the Defects screen, add the inspection photos: they are stored with the mission on this computer. A YOLO model runs inside the app without a network — on the GPU via WebGPU or on the CPU via WASM; large images are analysed in tiles. Findings have a class (crack, corrosion, erosion, lightning strike, contamination, delamination, other) and a severity from 1 to 5 that the operator reviews and adjusts; the confidence threshold and classes change without re-running the analysis. Photos with EXIF coordinates are matched to the nearest turbine of the farm (within 300 m). Exports: PNG with boxes, JSON per photo and for the whole mission; the number of findings shows in History."
       },
       "history": {
         "title": "History",
-        "body": "All missions: search by name, filter by In progress, Flown and Archived, open, archive a flown mission, and delete. Each mission can be exported as JSON, and the listed missions as an HTML report. A flown mission opens on Home for viewing."
-      }
-    },
-    "soon": {
-      "detection": {
-        "title": "Defect detection",
-        "body": "Analysis of blade photos after the flight, with the defects found saved to the mission. This section is coming in a future version."
-      },
-      "simulation": {
-        "title": "3D preview",
-        "body": "A 3D fly-through of the route before departure. The Open in 3D button on the Routes screen will work in the next version."
+        "body": "All missions: search by name, filter by In progress, Flown and Archived, open, view the route in 3D, archive a flown mission, and delete. Each mission can be exported as JSON, and the listed missions as an HTML report. A flown mission opens on Home for viewing."
       }
     }
   },

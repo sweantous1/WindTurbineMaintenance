@@ -58,11 +58,11 @@ export default function History() {
     changeFilter('all')
   }
 
-  // Облетанная миссия откроется на главной в режиме просмотра
-  const open = async (m: Mission) => {
+  // Облетанная миссия откроется на главной (или в 3D) в режиме просмотра
+  const open = async (m: Mission, path: '/' | '/simulation' = '/') => {
     try {
       await missions.setActive(m.id)
-      navigate('/')
+      navigate(path)
     } catch (error) {
       console.error('Не удалось открыть миссию:', error)
       toast.error(t('missionHistory.errors.openFailed'))
@@ -175,6 +175,8 @@ export default function History() {
                   const weatherParts = hour ? hourWeatherParts(hour, t, lang) : null
                   const isActive = m.id === active?.id
                   const canArchive = !isPreFlight(m.status) && m.status !== 'archived'
+                  // 3D проигрывает маршрут: без порядка облёта показывать нечего
+                  const has3d = !!m.route && m.route.order.length > 0
                   // Кнопки-значки в каждой строке одинаковые — диктору нужно и название миссии
                   const aria = (action: string) => t('missionHistory.actionLabel', { action, name: m.name })
                   return (
@@ -231,6 +233,21 @@ export default function History() {
                           <IconButton label={t('missionHistory.actions.open')} ariaLabel={aria(t('missionHistory.actions.open'))} onClick={() => open(m)}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                           </IconButton>
+                          {has3d ? (
+                            <IconButton
+                              label={t('missionHistory.actions.open3d')}
+                              ariaLabel={aria(t('missionHistory.actions.open3d'))}
+                              onClick={() => open(m, '/simulation')}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+                              />
+                            </IconButton>
+                          ) : (
+                            <span className="h-7 w-7" aria-hidden="true" />
+                          )}
                           <IconButton
                             label={t('missionHistory.actions.exportJson')}
                             ariaLabel={aria(t('missionHistory.actions.exportJson'))}

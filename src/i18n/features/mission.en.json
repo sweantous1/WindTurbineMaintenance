@@ -125,7 +125,7 @@
       "caption": {
         "done": "done",
         "current": "next",
-        "soon": "coming soon",
+        "optional": "optional",
         "afterFlight": "after flight"
       },
       "mission": {
@@ -148,8 +148,8 @@
         "verdictHint": "Go or no-go: see the Flight forecast card below"
       },
       "simulation": {
-        "title": "3D preview",
-        "hint": "3D fly-through before departure"
+        "title": "3D flight",
+        "hint": "Play back the flight plan in 3D"
       },
       "complete": {
         "title": "Flight completion",
@@ -225,6 +225,7 @@
     "noHourWeather": "no forecast for this hour",
     "actions": {
       "open": "Open",
+      "open3d": "Open in 3D",
       "exportJson": "Export JSON",
       "archive": "Archive",
       "delete": "Delete"

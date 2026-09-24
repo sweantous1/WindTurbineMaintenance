@@ -110,6 +110,30 @@ export default function AboutSection() {
           </a>{' '}
           {t('settings.about.weatherLicense')}
         </dd>
+        {/* Лицензии карты, модели дрона и весов детекции требуют указывать источник */}
+        <dt className="text-gray-500">{t('settings.about.mapSource')}</dt>
+        <dd className="text-gray-700">
+          <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-700">
+            © OpenStreetMap
+          </a>{' '}
+          {t('settings.about.mapLicense')}
+        </dd>
+        <dt className="text-gray-500">{t('settings.about.droneModel')}</dt>
+        <dd className="text-gray-700">
+          <a
+            href="https://sketchfab.com/3d-models/drone-19d310dec81c446fba1a797903e083eb"
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 hover:text-blue-700"
+          >
+            {t('settings.about.droneModelText')}
+          </a>
+        </dd>
+        <dt className="text-gray-500">{t('settings.about.defectModel')}</dt>
+        <dd className="text-gray-700">
+          {t('settings.about.defectModelText')}
+          <span className="mt-0.5 block text-xs text-gray-500">{t('settings.about.moreCredits')}</span>
+        </dd>
       </dl>
     </Card>
   )

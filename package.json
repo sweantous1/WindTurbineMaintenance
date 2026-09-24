@@ -2,6 +2,8 @@
   "name": "wind-turbine-maintenance",
   "private": true,
   "version": "0.1.0",
+  "description": "Планирование облёта ветропарка дроном: маршрут, погода и окно вылета, 3D-просмотр облёта, поиск дефектов на фото",
+  "author": "WindTurbineMaintenance contributors",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -60,21 +62,45 @@
     "appId": "com.wtm.app",
     "productName": "WTM Wind Turbine Maintenance",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
       "!node_modules/**/*"
     ],
+    "icon": "build/icon.png",
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WTM",
+      "installerLanguages": [
+        "ru_RU",
+        "en_US"
+      ],
+      "language": "1049",
+      "artifactName": "WTM-Setup-${version}.${ext}"
     },
     "mac": {
       "target": "dmg"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "category": "Utility"
     }
   },
   "allowScripts": {

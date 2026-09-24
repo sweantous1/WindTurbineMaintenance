@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { canEdit, derivePreFlightStatus, lockedFields, missionSteps } from '../missionStatus'
+import type { Mission, MissionStatus } from '../types'
 
 describe('статусы миссии', () => {
   it('до полёта статус следует из данных', () => {
@@ -20,5 +21,16 @@ describe('статусы миссии', () => {
 
   it('шаги сценария без миссии все не выполнены', () => {
     expect(missionSteps(undefined).every((s) => !s.done)).toBe(true)
+  })
+
+  it('3D-облёт — по желанию и позади после полёта; поиск дефектов — обычный шаг', () => {
+    const step = (status: MissionStatus, key: string) =>
+      missionSteps({ status, route: { order: ['a'] } } as unknown as Mission).find((s) => s.key === key)
+    expect(step('ready', 'simulation')).toEqual({ key: 'simulation', done: false, optional: true })
+    expect(step('flown', 'simulation')).toEqual({ key: 'simulation', done: true, optional: true })
+    expect(step('flown', 'detection')).toEqual({ key: 'detection', done: false })
+    expect(step('analyzed', 'detection')).toEqual({ key: 'detection', done: true })
+    // Необязательный шаг один — остальные текущими становятся по порядку
+    expect(missionSteps(undefined).filter((s) => s.optional).map((s) => s.key)).toEqual(['simulation'])
   })
 })
