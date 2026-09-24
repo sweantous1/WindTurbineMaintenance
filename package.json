@@ -16,7 +16,8 @@
     "check": "tsc -b && oxlint && vitest run && vite build"
   },
   "dependencies": {
-    "@tensorflow/tfjs": "^4.22.0",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.8.0",
     "@tmcw/togeojson": "^7.1.2",
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
@@ -33,6 +34,7 @@
     "react-router-dom": "^7.18.1",
     "react-toastify": "^11.1.0",
     "recharts": "^3.10.1",
+    "three": "^0.186.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -41,6 +43,7 @@
     "@types/node": "^24.13.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^6.0.3",
     "electron": "^43.1.1",
     "electron-builder": "^26.15.3",

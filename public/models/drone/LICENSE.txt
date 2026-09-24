@@ -1,0 +1,8 @@
+Drone 3D model
+
+This work is based on "Drone" (https://sketchfab.com/3d-models/drone-19d310dec81c446fba1a797903e083eb)
+by liz3d (https://sketchfab.com/mazapan3d), licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/).
+
+Changes: converted to a single GLB, textures downscaled to 256 px and re-encoded as WebP,
+vertex data quantized (KHR_mesh_quantization). Taken from the Grant-temp example project
+(renderer/threejsSimulation/assets/drone).
