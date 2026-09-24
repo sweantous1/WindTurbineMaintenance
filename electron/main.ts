@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from 'electron'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -25,7 +26,9 @@ function registerAppProtocol() {
     const relative = decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html'
     const filePath = path.normalize(path.join(distDir, relative))
     // Не выпускаем запросы за пределы папки dist
-    if (!filePath.startsWith(distDir + path.sep)) {
+    // Нет файла — честный 404, а не сетевая ошибка: так, например, движок детекции
+    // отличает «модель не установлена» от сбоя загрузки
+    if (!filePath.startsWith(distDir + path.sep) || !existsSync(filePath)) {
       return new Response('Not found', { status: 404 })
     }
     return net.fetch(pathToFileURL(filePath).toString())

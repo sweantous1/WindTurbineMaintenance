@@ -54,13 +54,19 @@ async function readExif(file: File): Promise<Pick<PreparedPhoto, 'takenAt' | 'gp
   try {
     // exifr подгружается только при импорте фото
     const exifr = (await import('exifr')).default
-    const data = await exifr.parse(file, { gps: true, pick: ['DateTimeOriginal', 'latitude', 'longitude'] })
-    if (!data) return {}
+    // Координаты — отдельным вызовом gps(): latitude/longitude вычисляются из тегов GPSLatitude/Ref,
+    // а фильтр pick по вычисленным именам эти исходные теги отбрасывал, и GPS не читался никогда
+    const [data, coords] = await Promise.all([
+      exifr.parse(file, { pick: ['DateTimeOriginal'] }).catch(() => undefined),
+      exifr.gps(file).catch(() => undefined),
+    ])
     const out: Pick<PreparedPhoto, 'takenAt' | 'gps'> = {}
-    if (data.DateTimeOriginal instanceof Date && !Number.isNaN(data.DateTimeOriginal.getTime())) {
+    if (data?.DateTimeOriginal instanceof Date && !Number.isNaN(data.DateTimeOriginal.getTime())) {
       out.takenAt = data.DateTimeOriginal.toISOString()
     }
-    if (Number.isFinite(data.latitude) && Number.isFinite(data.longitude)) out.gps = { lat: data.latitude, lon: data.longitude }
+    if (coords && Number.isFinite(coords.latitude) && Number.isFinite(coords.longitude)) {
+      out.gps = { lat: coords.latitude, lon: coords.longitude }
+    }
     return out
   } catch {
     // Нет EXIF или он битый — фото всё равно годится для анализа

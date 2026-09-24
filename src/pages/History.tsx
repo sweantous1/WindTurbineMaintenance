@@ -9,6 +9,7 @@ import StatusBadge from '@/components/common/StatusBadge'
 import { isPreFlight } from '@/domain/missionStatus'
 import type { Mission } from '@/domain/types'
 import { useActiveMission, useMissions } from '@/hooks/useMissions'
+import { useDetectionCounts } from '@/hooks/usePhotos'
 import { missions } from '@/storage/missions'
 import NewMissionDialog from '@/features/mission/NewMissionDialog'
 import {
@@ -37,6 +38,7 @@ export default function History() {
   const navigate = useNavigate()
   const list = useMissions()
   const active = useActiveMission()
+  const defectCounts = useDetectionCounts()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<HistoryFilter>(() => parseHistoryFilter(readLocal(FILTER_KEY)))
   const [pending, setPending] = useState<PendingAction | null>(null)
@@ -157,6 +159,9 @@ export default function History() {
                   <th className="px-2 py-2 font-medium">{t('missionHistory.columns.dates')}</th>
                   <th className="px-2 py-2 text-right font-medium">{t('missionHistory.columns.turbines')}</th>
                   <th className="px-2 py-2 text-right font-medium">{t('missionHistory.columns.routeKm')}</th>
+                  <th className="px-2 py-2 text-right font-medium" title={t('defects.history.hint')}>
+                    {t('defects.history.column')}
+                  </th>
                   <th className="px-2 py-2 font-medium">{t('missionHistory.columns.departureWeather')}</th>
                   <th className="py-2 pl-2 text-right font-medium">
                     <span className="sr-only">{t('missionHistory.columns.actions')}</span>
@@ -201,6 +206,7 @@ export default function History() {
                       </td>
                       <td className="px-2 py-3 text-right tabular-nums text-gray-900">{r.turbines ?? <Dash />}</td>
                       <td className="px-2 py-3 text-right tabular-nums text-gray-900">{r.routeKm ?? <Dash />}</td>
+                      <td className="px-2 py-3 text-right tabular-nums text-gray-900">{defectCounts?.get(m.id) || <Dash />}</td>
                       <td className="max-w-[10rem] px-2 py-3">
                         {r.departure ? (
                           <>
