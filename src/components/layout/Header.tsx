@@ -24,7 +24,7 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500]">
+    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500] print:hidden">
       {/* При узком окне (у Electron минимум 1024 px) ужимаются отступы меню, а если его всё равно не хватает —
           меню прокручивается. Правый блок не сжимается: иначе выбор миссии наползал на кнопку языка */}
       <div className="flex min-w-0 flex-1 items-center gap-4 xl:gap-8">

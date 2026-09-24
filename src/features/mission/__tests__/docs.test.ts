@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import i18n from '@/i18n'
 import ru from '@/i18n/ru.json'
 import en from '@/i18n/en.json'
 import Docs from '@/pages/Docs'
-import { cleanup, render } from './render'
+import { cleanup, click, getByText, render } from './render'
 
 type Dict = { [key: string]: string | Dict }
 
@@ -68,5 +68,18 @@ describe('документация', () => {
 
   it('пункт меню маршрутов на английском называется как ссылки на экран, а не «маршрутизатор»', () => {
     expect(en.nav.router).toBe('Routes')
+  })
+  it('«Печать или PDF» открывает печать этой же страницы', async () => {
+    // В happy-dom печати нет — подставляем свою
+    const original = window.print
+    const print = vi.fn()
+    window.print = print
+    try {
+      await render(createElement(Docs))
+      await click(getByText('button', 'Печать или PDF'))
+      expect(print).toHaveBeenCalledTimes(1)
+    } finally {
+      window.print = original
+    }
   })
 })

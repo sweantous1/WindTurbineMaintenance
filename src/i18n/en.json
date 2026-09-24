@@ -165,7 +165,9 @@
         "title": "History",
         "body": "All missions: search by name, filter by In progress, Flown and Archived, open, view the route in 3D, archive a flown mission, and delete. Each mission can be exported as JSON, and the listed missions as an HTML report. A flown mission opens on Home for viewing."
       }
-    }
+    },
+    "print": "Print or PDF",
+    "printHint": "Choose “Save as PDF” in the print dialog"
   },
   "common": {
     "save": "Save",
