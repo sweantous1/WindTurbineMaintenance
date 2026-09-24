@@ -14,7 +14,7 @@ export interface FarmImport {
   sha256: string
 }
 
-export type KmlImportErrorCode = 'noTurbines' | 'invalidXml' | 'kmzBroken' | 'kmzNoKml' | 'tooLarge' | 'readFailed'
+export type KmlImportErrorCode = 'noTurbines' | 'notKml' | 'invalidXml' | 'kmzBroken' | 'kmzNoKml' | 'tooLarge' | 'readFailed'
 
 // code — для перевода в интерфейсе, message — русский текст на случай, если перевода нет
 export class KmlImportError extends Error {
@@ -28,6 +28,8 @@ export class KmlImportError extends Error {
 
 const MERGE_DISTANCE_M = 5
 const MOVED_THRESHOLD_M = 1
+// Та же турбина при повторном импорте: поправка координат бывает, перенос на километр — уже другая ферма
+const SAME_TURBINE_M = 1000
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 const MAX_KML_BYTES = 100 * 1024 * 1024
 
@@ -135,7 +137,7 @@ function mergeClosePoints(candidates: Candidate[]): { accepted: Candidate[]; mer
 export function parseKmlText(text: string): { name?: string; turbines: Turbine[]; skipped: number; merged: number } {
   const doc = new DOMParser().parseFromString(text, 'application/xml')
   if (doc.getElementsByTagName('parsererror').length > 0) {
-    throw new KmlImportError('invalidXml', 'Файл не удалось разобрать как KML: ошибка в XML')
+    throw new KmlImportError('invalidXml', 'Файл не читается как KML: XML в нём повреждён или это другой формат. Нужен KML или KMZ из Google Earth')
   }
 
   // togeojson сначала выдаёт по одному объекту на каждый Placemark в порядке документа,
@@ -245,7 +247,7 @@ async function extractKml(zip: Uint8Array): Promise<Uint8Array> {
     throw kmzBrokenError()
   }
   const main = entries.find((e) => e.name.toLowerCase() === 'doc.kml') ?? entries.find((e) => !e.name.includes('/')) ?? entries[0]
-  if (!main) throw new KmlImportError('kmzNoKml', 'В архиве KMZ нет файла .kml')
+  if (!main) throw new KmlImportError('kmzNoKml', 'Это ZIP-архив без файла .kml внутри, а не KMZ. Нужен KML или KMZ из Google Earth с метками турбин')
   if (main.bytes > MAX_KML_BYTES) throw new KmlImportError('tooLarge', 'KML внутри архива слишком большой (больше 100 МБ)')
   let data: Uint8Array | undefined
   try {
@@ -330,16 +332,35 @@ export async function readFarmFile(file: File): Promise<FarmImport> {
     throw new KmlImportError('readFailed', 'Не удалось прочитать файл')
   }
   // Тип определяется по содержимому: KMZ с расширением .kml (и наоборот) встречается
-  const kmlBytes = isZip(bytes) ? await extractKml(bytes) : bytes
-  const parsed = parseKmlText(decodeXml(kmlBytes))
+  const zip = isZip(bytes)
+  const text = decodeXml(zip ? await extractKml(bytes) : bytes)
+  // Перетащить можно что угодно; фото или PDF — не «ошибка в XML», а просто не тот файл
+  if (!zip && !text.trimStart().startsWith('<')) {
+    throw new KmlImportError('notKml', 'Это не KML и не KMZ. Нужен файл из Google Earth с метками турбин')
+  }
+  const parsed = parseKmlText(text)
   return { ...parsed, fileName: file.name, sha256: await sha256Hex(bytes) }
 }
 
 // ---------- Ферма ----------
 
+// Имя фермы после импорта. Без имени в файле прежнее переносится, только если это та же ферма
+// (есть общая турбина на прежнем месте): иначе другая ферма получила бы чужое название.
+// Одних id мало: у меток без уникальных имён они t1…tN у любой фермы
+export function importedFarmName(imp: Pick<FarmImport, 'name' | 'turbines'>, previous?: Farm): string | undefined {
+  if (imp.name) return imp.name
+  if (!previous?.name) return undefined
+  const prevById = new Map(previous.turbines.map((t) => [t.id, t]))
+  const same = imp.turbines.some((t) => {
+    const old = prevById.get(t.id)
+    return old !== undefined && haversineM(old, t) <= SAME_TURBINE_M
+  })
+  return same ? previous.name : undefined
+}
+
 export function farmFromImport(imp: FarmImport, previous?: Farm): Farm {
   if (imp.turbines.length === 0) throw noTurbinesError()
-  const name = imp.name ?? previous?.name
+  const name = importedFarmName(imp, previous)
   return {
     ...(name ? { name } : {}),
     center: centroid(imp.turbines),

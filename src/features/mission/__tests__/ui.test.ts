@@ -1,13 +1,16 @@
 // @vitest-environment happy-dom
 import 'fake-indexeddb/auto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, createElement } from 'react'
+import { act, createElement, useState, type ReactNode } from 'react'
 import { toast } from 'react-toastify'
 import i18n from '@/i18n'
 import { db } from '@/storage/db'
 import { missions } from '@/storage/missions'
 import type { Farm, Mission, RoutePlan, WeatherSnapshot } from '@/domain/types'
+import { DEFAULT_DRONE_PROFILE, LEGACY_DEFAULT_DRONE_NAME } from '@/domain/defaults'
 import { planFor } from '@/features/route/routeLogic'
+import Modal from '@/components/common/Modal'
+import { loadMissionMenu } from '@/hooks/useMissions'
 import CompleteMissionDialog from '../CompleteMissionDialog'
 import NewMissionDialog from '../NewMissionDialog'
 import MissionSettingsDialog from '../MissionSettingsDialog'
@@ -222,6 +225,53 @@ describe('параметры миссии', () => {
     expect((await missions.get(m.id))?.limits.minTempC).toBe(-10)
   })
 
+  it('неудачное «Сохранить» переводит фокус на первое поле с ошибкой', async () => {
+    const m = await missions.create({ name: 'Фокус' })
+    await render(createElement(MissionSettingsDialog, { mission: m, isOpen: true, onClose: () => {} }))
+    const save = getByText('button[type="submit"]', 'Сохранить')
+    await typeInto(getInput('mission-settings-altitude'), '5')
+    save.focus()
+    await submit(form())
+    expect(document.activeElement).toBe(getInput('mission-settings-altitude'))
+
+    // Ошибок несколько — фокус на первой сверху, её могло прокрутить из вида
+    await typeInto(getInput('mission-settings-name'), '  ')
+    save.focus()
+    await submit(form())
+    expect(document.activeElement).toBe(getInput('mission-settings-name'))
+    expect(getInput('mission-settings-name').getAttribute('aria-describedby')).toBe('mission-settings-name-error')
+  })
+
+  it('дробные лимиты и высота — с запятой в русском интерфейсе', async () => {
+    const m = await missions.create({ name: 'Дроби', flightAltitudeM: 150.5 })
+    await render(createElement(MissionSettingsDialog, { mission: m, isOpen: true, onClose: () => {} }))
+    expect(getInput('mission-limit-maxPrecipMmH').value).toBe('0,5')
+    expect(getInput('mission-settings-altitude').value).toBe('150,5')
+  })
+
+  it('у облетанной миссии — дрон из снимка на момент полёта, а не текущий профиль', async () => {
+    await db.droneProfiles.put({ ...DEFAULT_DRONE_PROFILE, id: 'p-snap', name: 'Мавик', maxWindMs: 12, maxAltitudeM: 60 })
+    try {
+      const m = await missions.create({ name: 'Со снимком', droneProfileId: 'p-snap' })
+      await missions.complete(m.id, { force: true })
+      // После полёта профиль в настройках переименовали и поменяли
+      await db.droneProfiles.put({ ...DEFAULT_DRONE_PROFILE, id: 'p-snap', name: 'Мавик v2', maxWindMs: 8, maxAltitudeM: 150 })
+      const flown = (await missions.get(m.id))!
+      await render(createElement(MissionSettingsDialog, { mission: flown, isOpen: true, onClose: () => {} }))
+      await waitFor(() => expect(document.getElementById('mission-settings-drone-hint')).toBeTruthy())
+      const select = document.getElementById('mission-settings-drone') as HTMLSelectElement
+      expect(select.disabled).toBe(true)
+      expect(Array.from(select.options).map((o) => o.textContent)).toEqual(['Мавик'])
+      const hint = document.getElementById('mission-settings-drone-hint')!.textContent
+      expect(hint).toContain('Ветер до 12 м/с')
+      expect(hint).toContain('потолок 60 м')
+      expect(document.body.textContent).toContain('у дрона: 12 м/с, 15 м/с, 60 м')
+      expect(document.body.textContent).not.toContain('Мавик v2')
+    } finally {
+      await db.droneProfiles.delete('p-snap')
+    }
+  })
+
   it('если миссию успели завершить, показывает понятную ошибку блокировки', async () => {
     const error = vi.spyOn(toast, 'error')
     const m = await missions.create({ name: 'Гонка' })
@@ -256,6 +306,55 @@ describe('переключатель миссий', () => {
     await waitFor(async () => expect(getByText('button[aria-haspopup]', 'Первая')).toBeTruthy())
     expect(await missions.getActiveId()).toBe(a.id)
   })
+
+  it('читает только миссии в работе и последние облетанные, остальные — счётчиком', async () => {
+    for (let i = 1; i <= 10; i++) {
+      const m = await missions.create({ name: `Облёт ${i}` })
+      await missions.complete(m.id, { force: true })
+    }
+    await missions.create({ name: 'Черновик А' })
+    await missions.create({ name: 'Черновик Б' })
+
+    const menu = await loadMissionMenu(8)
+    expect(menu.inWork.map((m) => m.name).sort()).toEqual(['Черновик А', 'Черновик Б'])
+    expect(menu.flown).toHaveLength(8)
+    expect(menu.flown.every((m) => m.status === 'flown')).toBe(true)
+    expect(menu.flownTotal).toBe(10)
+
+    await render(createElement(MissionSwitcher))
+    await waitFor(() => expect(getByText('button[aria-haspopup]', 'Черновик Б')).toBeTruthy())
+    await click(getByText('button[aria-haspopup]', 'Черновик Б'))
+    expect(document.querySelectorAll('[role="group"] button[role="menuitemradio"]')).toHaveLength(10)
+    expect(getByText('button[role="menuitem"]', 'Ещё 2 — в истории')).toBeTruthy()
+  })
+
+  it('пункт с фокусом выделен кольцом, а выбранная миссия не теряет подсветку', async () => {
+    await missions.create({ name: 'Первая' })
+    await missions.create({ name: 'Вторая' })
+    await render(createElement(MissionSwitcher))
+    await waitFor(() => expect(getByText('button[aria-haspopup]', 'Вторая')).toBeTruthy())
+    await click(getByText('button[aria-haspopup]', 'Вторая'))
+    const items = Array.from(document.querySelectorAll<HTMLElement>('[role^="menuitem"]'))
+    expect(items.length).toBe(3)
+    for (const item of items) {
+      expect(item.className).toContain('focus-visible:ring-2')
+      // Фон при фокусе почти не отличался от белого и перекрывал голубую подсветку выбранной
+      expect(item.className).not.toMatch(/(^|\s)focus:bg-/)
+    }
+    expect(getByText('button[role="menuitemradio"]', 'Вторая').className).toContain('bg-blue-50')
+  })
+
+  it('без активной миссии в узкой шапке — короткая подпись, полная — в подсказке', async () => {
+    await missions.create({ name: 'Одна' })
+    await missions.setActive(null)
+    await render(createElement(MissionSwitcher))
+    await waitFor(() => expect(document.querySelector('button[aria-haspopup]')).toBeTruthy())
+    const button = document.querySelector<HTMLButtonElement>('button[aria-haspopup]')!
+    expect(button.getAttribute('aria-label')).toBe('Выберите миссию')
+    expect(button.title).toBe('Выберите миссию')
+    const short = Array.from(button.querySelectorAll('span')).find((el) => el.textContent === 'Выбрать')
+    expect(short?.className).toContain('xl:hidden')
+  })
 })
 
 describe('главная', () => {
@@ -263,6 +362,55 @@ describe('главная', () => {
     await render(createElement(Home))
     await waitFor(() => expect(getByText('h2', 'Создайте первую миссию')).toBeTruthy())
     expect(getByText('h3', 'Шаги миссии')).toBeTruthy()
+  })
+
+  it('час вылета выбран — не «готова к полёту»: нейтральная плашка и отсылка к прогнозу полёта', async () => {
+    const m = await missions.create({ name: 'С часом' })
+    await missions.update(m.id, { route, weather, departureTime: '2026-09-24T15:00' })
+    await render(createElement(Home))
+    await waitFor(() => expect(getByText('h2', 'С часом')).toBeTruthy())
+    const badge = getByText('span', 'Час вылета выбран')
+    expect(badge.className).not.toMatch(/green/)
+    expect(document.body.textContent).not.toContain('Готова к полёту')
+    // Шаг погоды выполнен, но рядом сказано, где смотреть, можно ли лететь
+    const weatherStep = getByText('li', 'Погода и час вылета')
+    expect(weatherStep.textContent).toContain('готово')
+    expect(weatherStep.textContent).toContain('Можно ли лететь — в карточке «Прогноз полёта» ниже')
+    // У других шагов отсылки нет
+    expect(getByText('li', 'Маршрут').textContent).not.toContain('Прогноз полёта')
+  })
+
+  it('встроенный профиль дрона — на языке интерфейса: в карточке и в списке профилей', async () => {
+    // В старых базах встроенный профиль лежит под прежним русским именем
+    const saved = await db.droneProfiles.get(DEFAULT_DRONE_PROFILE.id)
+    await db.droneProfiles.put({ ...DEFAULT_DRONE_PROFILE, name: LEGACY_DEFAULT_DRONE_NAME })
+    await i18n.changeLanguage('en')
+    try {
+      await missions.create({ name: 'Drone name' })
+      await render(createElement(Home))
+      await waitFor(() => expect(getByText('h2', 'Drone name')).toBeTruthy())
+      await waitFor(() => expect(getByText('dd', 'Quadcopter')).toBeTruthy())
+      expect(document.body.textContent).not.toContain('Квадрокоптер')
+      await cleanup()
+
+      await render(createElement(NewMissionDialog, { isOpen: true, onClose: () => {} }))
+      const select = document.getElementById('new-mission-drone') as HTMLSelectElement
+      await waitFor(() => expect(Array.from(select.options).map((o) => o.textContent)).toContain('Quadcopter'))
+      expect(Array.from(select.options).map((o) => o.textContent)).not.toContain(LEGACY_DEFAULT_DRONE_NAME)
+    } finally {
+      await i18n.changeLanguage('ru')
+      if (saved) await db.droneProfiles.put(saved)
+      else await db.droneProfiles.delete(DEFAULT_DRONE_PROFILE.id)
+    }
+  })
+
+  it('пустые значения карточки читаемы: не блёклый серый', async () => {
+    await missions.create({ name: 'Пустая' })
+    await render(createElement(Home))
+    await waitFor(() => expect(getByText('h2', 'Пустая')).toBeTruthy())
+    const empty = getByText('dd span', 'не рассчитан')
+    expect(empty.className).toContain('text-gray-600')
+    expect(getByText('dt', 'Маршрут').className).not.toContain('text-gray-400')
   })
 
   it('с миссией — карточка, шаги и завершение', async () => {
@@ -346,6 +494,22 @@ describe('история', () => {
     await waitFor(() => expect(rows().length).toBe(2))
   })
 
+  it('после закрытия окна подтверждения фокус возвращается на кнопку, которая его открыла', async () => {
+    await seed()
+    await render(createElement(History))
+    await waitFor(() => expect(rows().length).toBe(3))
+    const trash = rows()
+      .find((r) => r.textContent?.includes('Черновая'))!
+      .querySelector<HTMLButtonElement>('button[title="Удалить"]')!
+    trash.focus()
+    await click(trash)
+    // В окне autoFocus на «Отмене» — раньше Modal запоминал именно её
+    expect(document.activeElement?.textContent).toBe('Отмена')
+    await pressEscape(getByText('.fixed button', 'Отмена'))
+    expect(document.querySelector('.fixed')).toBeNull()
+    expect(document.activeElement).toBe(trash)
+  })
+
   it('«Открыть» делает миссию активной и ведёт на главную', async () => {
     const { flown } = await seed()
     window.location.hash = '#/history'
@@ -361,5 +525,36 @@ describe('история', () => {
     await render(createElement(History))
     await waitFor(() => expect(getByText('p', 'Миссий пока нет')).toBeTruthy())
     expect(getByText('button', 'HTML-отчёт').hasAttribute('disabled')).toBe(true)
+  })
+})
+
+describe('окно и фокус', () => {
+  // children в Modal обязательный, а createElement передаёт их третьим аргументом — типы этого не видят
+  const Dialog = Modal as (props: { isOpen: boolean; onClose: () => void; title: string; children?: ReactNode }) => ReactNode
+
+  // Кнопка исчезает, пока окно открыто (пункт меню, карточка завершённой миссии)
+  function VanishingOpener() {
+    const [open, setOpen] = useState(false)
+    return createElement(
+      'main',
+      { tabIndex: -1 },
+      open ? null : createElement('button', { type: 'button', onClick: () => setOpen(true) }, 'Открыть окно'),
+      createElement(
+        Dialog,
+        { isOpen: open, onClose: () => setOpen(false), title: 'Окно' },
+        createElement('button', { type: 'button', autoFocus: true }, 'Внутри'),
+      ),
+    )
+  }
+
+  it('если открывшей кнопки уже нет, фокус уходит на основную область, а не в body', async () => {
+    await render(createElement(VanishingOpener))
+    const opener = getByText('button', 'Открыть окно')
+    opener.focus()
+    await click(opener)
+    expect(document.activeElement?.textContent).toBe('Внутри')
+    await pressEscape(getByText('button', 'Внутри'))
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.activeElement).toBe(document.querySelector('main'))
   })
 })

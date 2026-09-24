@@ -105,11 +105,24 @@ function identifyTileRequests() {
   })
 }
 
-app.whenReady().then(() => {
-  registerAppProtocol()
-  identifyTileRequests()
-  createWindow()
-})
+// Второй экземпляр с тем же профилем не открыл бы IndexedDB (её держит первый процесс)
+// и навсегда остался бы в «Загрузка…». Вместо него поднимаем уже открытое окно.
+// Окно создаётся только в экземпляре с блокировкой, иначе второй успевал бы мелькнуть окном
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  })
+
+  app.whenReady().then(() => {
+    registerAppProtocol()
+    identifyTileRequests()
+    createWindow()
+  })
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

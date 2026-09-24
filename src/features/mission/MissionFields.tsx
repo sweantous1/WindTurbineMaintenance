@@ -1,6 +1,7 @@
 import type { InputHTMLAttributes, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DroneProfile, MissionType } from '@/domain/types'
+import { droneDisplayName } from '@/features/settings/droneName'
 import { useDroneProfiles } from '@/hooks/useMissions'
 import { formatValue, MISSION_TYPES, type FieldError } from './missionView'
 
@@ -109,13 +110,31 @@ interface DroneSelectProps {
   disabled?: boolean
   title?: string
   hasHint?: boolean
+  // Имя из снимка дрона облетанной миссии: вместо текущих профилей показываем тот, с которым летали
+  fixedName?: string
 }
 
-export function DroneSelect({ id, value, onChange, disabled, title, hasHint }: DroneSelectProps) {
+export function DroneSelect({ id, value, onChange, disabled, title, hasHint, fixedName }: DroneSelectProps) {
   const { t } = useTranslation()
   const profiles = useDroneProfiles()
   // Профиль могли удалить в настройках — тогда расчёты берут профиль по умолчанию
   const known = profiles?.some((p) => p.id === value) ?? true
+
+  if (fixedName !== undefined) {
+    return (
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled
+        title={title}
+        aria-describedby={describedBy(id, null, hasHint)}
+        className={`${controlClass} border-gray-300 bg-white`}
+      >
+        <option value={value}>{fixedName}</option>
+      </select>
+    )
+  }
 
   return (
     <select
@@ -131,7 +150,7 @@ export function DroneSelect({ id, value, onChange, disabled, title, hasHint }: D
       {profiles && !known && <option value={value}>{t('mission.droneMissing')}</option>}
       {profiles?.map((p) => (
         <option key={p.id} value={p.id}>
-          {p.name}
+          {droneDisplayName(p, t)}
         </option>
       ))}
     </select>

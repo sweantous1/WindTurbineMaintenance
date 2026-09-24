@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import forecastMs from './fixtures/openMeteo-48.215_40.284-24h.json'
-import { DEFAULT_DRONE_PROFILE, DEFAULT_LIMITS } from '../defaults'
+import { DEFAULT_DRONE_PROFILE, DEFAULT_FARM_DEFAULTS, DEFAULT_LIMITS } from '../defaults'
+import { buildFlightPlan } from '../flightPlan'
 import type { DroneProfile, FlightPlan, MissionLimits, WeatherHour } from '../types'
 import { assessHour, effectiveLimits, estimateMission } from '../flightCheck'
 import { normalizeForecast } from '../weather'
@@ -222,9 +223,47 @@ describe('оценка часа', () => {
     expect(low.reasons).toContainEqual({ code: 'altitude', severity: 'no', value: 110, limit: 100, altM: 110 })
     // Ровно на потолке — можно
     expect(assessHour(hour(), { ...ctx, plan: plan({ maxAltM: 120 }) }).status).toBe('ok')
-    // Без плана потолок сверяется с высотой транзита миссии
-    const noPlan = assessHour(hour(), { ...ctx, flightAltitudeM: 130 })
-    expect(noPlan.reasons).toEqual([{ code: 'altitude', severity: 'no', value: 130, limit: 120, altM: 130 }])
+  })
+
+  it('без плана высота миссии выше потолка прижимается к нему, как в плане полёта', () => {
+    // План ведёт транзит по потолку (buildFlightPlan), поэтому до построения маршрута тот же
+    // час не должен быть «нельзя», а после — «можно»
+    const noPlan = assessHour(hour(), { ...ctx, flightAltitudeM: 150 })
+    expect(noPlan.status).toBe('ok')
+    expect(noPlan.reasons).toEqual([])
+    expect(noPlan.windByAlt.map((w) => w.altM)).toEqual([120])
+    // Ветер оценивается на потолке, а не на недостижимых 150 м
+    const windy = hour({ windMs: { '10': 5, '80': 8, '120': 11, '180': 14 } }, 5, 8)
+    expect(assessHour(windy, { ...ctx, flightAltitudeM: 150 }).reasons.find((r) => r.code === 'wind')).toMatchObject({ altM: 120, value: 11 })
+    // Потолок — общий для миссии и дрона
+    const lowDrone = assessHour(hour(), { ...ctx, drone: { ...drone, maxAltitudeM: 100 }, flightAltitudeM: 130 })
+    expect(lowDrone.windByAlt.map((w) => w.altM)).toEqual([100])
+    expect(lowDrone.reasons).toEqual([])
+    // Ниже потолка высота миссии не меняется
+    expect(assessHour(hour(), ctx).windByAlt.map((w) => w.altM)).toEqual([90])
+  })
+
+  it('конфликты плана с башнями — не «можно лететь», а «на грани» с числом конфликтов', () => {
+    const conflict = { segmentIndex: 0, turbineId: 'T1', distanceM: 0, minDistanceM: 90 }
+    const a = assessHour(hour(), { ...ctx, plan: plan({ conflicts: [conflict, { ...conflict, segmentIndex: 5 }] }) })
+    expect(a.status).toBe('marginal')
+    expect(a.reasons).toEqual([{ code: 'conflict', severity: 'marginal', value: 2, limit: 0 }])
+    // Запреты по погоде по-прежнему идут первыми
+    const wet = assessHour(hour({ precipitationMm: 1 }), { ...ctx, plan: plan({ conflicts: [conflict] }) })
+    expect(wet.status).toBe('no')
+    expect(wet.reasons.map((r) => r.code)).toEqual(['precip', 'conflict'])
+    // Без конфликтов причины нет
+    expect(assessHour(hour(), { ...ctx, plan: plan() }).reasons).toEqual([])
+  })
+
+  it('одна турбина и взлёт у её основания (центр фермы по умолчанию) — вердикт не «можно»', () => {
+    const center = { lat: 48.2, lon: 40.3 }
+    const farm = { center, defaults: { ...DEFAULT_FARM_DEFAULTS }, turbines: [{ id: 'T1', name: 'T1', ...center }] }
+    const p = buildFlightPlan({ farm, takeoff: center, order: ['T1'], flightAltitudeM: 90, maxAltitudeM: 120, returnToTakeoff: true })
+    expect(p.conflicts.length).toBeGreaterThan(0)
+    const a = assessHour(hour(), { ...ctx, plan: p })
+    expect(a.status).toBe('marginal')
+    expect(a.reasons).toEqual([{ code: 'conflict', severity: 'marginal', value: p.conflicts.length, limit: 0 }])
   })
 
   it('заряд считается по худшему ветру среди высот плана', () => {

@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_FARM_DEFAULTS } from '@/domain/defaults'
 import type { Farm, WeatherSnapshot } from '@/domain/types'
 import {
+  DEFAULT_FORECAST_HOURS,
   distanceToFarmM,
+  FAR_FROM_FARM_M,
   farmPoint,
+  forecastDistanceM,
   formatCoords,
   geocodeLabel,
+  initialForecastHours,
   initialPoint,
+  isFarFromFarm,
   parseDecimal,
   parseForecastHours,
   parseLatitude,
@@ -93,6 +98,23 @@ describe('часы прогноза', () => {
   })
 })
 
+describe('период прогноза по умолчанию', () => {
+  const hours = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ time: `2026-09-${String(24 + Math.floor(i / 24)).padStart(2, '0')}T${String(i % 24).padStart(2, '0')}:00` }))
+
+  // Находка: «Обновить» у снимка на 168 ч спрашивало 48 ч и сбрасывало дальний час вылета
+  it('как у сохранённого снимка, чтобы «Обновить» спрашивало тот же горизонт', () => {
+    expect(initialForecastHours({ weather: snapshot({ hourly: hours(168) as WeatherSnapshot['hourly'] }) })).toBe(168)
+    expect(initialForecastHours({ weather: snapshot({ hourly: hours(24) as WeatherSnapshot['hourly'] }) })).toBe(24)
+  })
+
+  it('без снимка или с пустым рядом — по умолчанию, длиннее максимума — максимум', () => {
+    expect(initialForecastHours({})).toBe(DEFAULT_FORECAST_HOURS)
+    expect(initialForecastHours({ weather: snapshot({}) })).toBe(DEFAULT_FORECAST_HOURS)
+    expect(initialForecastHours({ weather: snapshot({ hourly: hours(200) as WeatherSnapshot['hourly'] }) })).toBe(168)
+  })
+})
+
 describe('точка прогноза по умолчанию', () => {
   it('есть ферма — её центр с подписью', () => {
     expect(initialPoint({ farm })).toEqual({ lat: 48.215, lon: 40.284, source: 'farm', name: 'Каменская ВЭС' })
@@ -133,5 +155,19 @@ describe('геокодер', () => {
     expect(distanceToFarmM({ lat: 48.3, lon: 40.284 }, farm)).toBeCloseTo(9452, -1)
     expect(distanceToFarmM(null, farm)).toBeUndefined()
     expect(distanceToFarmM({ lat: 0, lon: 0 }, undefined)).toBeUndefined()
+  })
+
+  // Находка: после импорта другой фермы в снимке оставалось расстояние до прежней
+  it('расстояние от места прогноза — до нынешнего центра фермы, а не из снимка', () => {
+    const weather = snapshot({ source: 'farm', location: { lat: 48.215, lon: 40.284 }, distanceToFarmM: 0 })
+    const moved: Farm = { ...farm, center: { lat: 51.8, lon: 40.284 } }
+    const d = forecastDistanceM({ farm: moved, weather })
+    expect(d).toBeCloseTo(398_600, -3)
+    expect(isFarFromFarm(d)).toBe(true)
+    expect(isFarFromFarm(forecastDistanceM({ farm, weather }))).toBe(false)
+    expect(isFarFromFarm(FAR_FROM_FARM_M)).toBe(false)
+    expect(forecastDistanceM({ farm })).toBeUndefined()
+    expect(forecastDistanceM({ weather })).toBeUndefined()
+    expect(isFarFromFarm(undefined)).toBe(false)
   })
 })

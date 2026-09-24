@@ -11,6 +11,7 @@ import {
   formatTimeZone,
   formatUtcOffset,
   isPastHour,
+  offsetShiftInForecast,
   parseLocalTime,
   snapshotAge,
   splitMinutes,
@@ -70,6 +71,30 @@ describe('время фермы', () => {
     expect(farmLocalNow(MOSCOW, now)).toBe('2026-09-24T19:20')
     // Незнакомый движку пояс — по смещению из снимка
     expect(farmLocalNow({ timezone: 'Mars/Olympus', utcOffsetSeconds: 3600 }, now)).toBe('2026-09-24T17:20')
+  })
+
+  // Находка: Open-Meteo подписывает весь ряд одним смещением, без перехода на зимнее время.
+  // Снимок получен 23.10 (+2), смотрим 26.10 в 09:30Z: по часам ряда это 11:30, а не 10:30
+  it('«сейчас» и прошедшие часы — по смещению снимка, а не по переходу на зимнее время', () => {
+    const berlin = { timezone: 'Europe/Berlin', utcOffsetSeconds: 7200 }
+    const now = new Date('2026-10-26T09:30:00Z')
+    expect(farmLocalNow(berlin, now)).toBe('2026-10-26T11:30')
+    expect(isPastHour('2026-10-26T10:00', berlin, now)).toBe(true)
+    expect(isPastHour('2026-10-26T11:00', berlin, now)).toBe(false)
+    // Весной в Новой Зеландии: идущий час ряда (09:00 по +12) не считается прошедшим
+    const auckland = { timezone: 'Pacific/Auckland', utcOffsetSeconds: 43200 }
+    expect(isPastHour('2026-09-29T09:00', auckland, new Date('2026-09-28T21:30:00Z'))).toBe(false)
+  })
+
+  it('перевод часов в горизонте прогноза замечается', () => {
+    const hourly = (from: string, to: string) => [{ time: from }, { time: to }] as Parameters<typeof offsetShiftInForecast>[0]['hourly']
+    const berlin = { timezone: 'Europe/Berlin', utcOffsetSeconds: 7200 }
+    // 23.10 → 29.10: 25.10 Берлин переходит на +1
+    expect(offsetShiftInForecast({ ...berlin, hourly: hourly('2026-10-23T12:00', '2026-10-29T12:00') })).toBe(-3600)
+    expect(offsetShiftInForecast({ ...berlin, hourly: hourly('2026-10-20T12:00', '2026-10-22T12:00') })).toBeNull()
+    expect(offsetShiftInForecast({ ...MOSCOW, hourly: hourly('2026-10-23T12:00', '2026-10-29T12:00') })).toBeNull()
+    expect(offsetShiftInForecast({ timezone: 'Mars/Olympus', utcOffsetSeconds: 3600, hourly: hourly('2026-10-23T12:00', '2026-10-29T12:00') })).toBeNull()
+    expect(offsetShiftInForecast({ ...berlin, hourly: [] })).toBeNull()
   })
 
   it('текущий час ещё не прошёл, предыдущий — прошёл', () => {

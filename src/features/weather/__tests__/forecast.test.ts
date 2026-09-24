@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import forecast from '@/domain/__tests__/fixtures/openMeteo-48.215_40.284-24h.json'
 import { DEFAULT_DRONE_PROFILE, DEFAULT_FARM_DEFAULTS, DEFAULT_LIMITS } from '@/domain/defaults'
-import { assessHour, effectiveLimits } from '@/domain/flightCheck'
+import { assessHour, effectiveLimits, transitAltitudeM } from '@/domain/flightCheck'
 import { buildFlightPlan } from '@/domain/flightPlan'
 import type { DroneProfile, Farm, Mission, RoutePlan } from '@/domain/types'
 import { normalizeForecast } from '@/domain/weather'
 import { offsetGeo } from '@/lib/geo'
+import { chartAltitudes } from '../chartData'
 import { forecastGap, gapScreen, missionFlightPlan, missionForecast } from '../forecast'
 
 const CENTER = { lat: 48.215, lon: 40.284 }
@@ -129,6 +130,18 @@ describe('вердикт на час вылета', () => {
     expect(f.assessment.windByAlt.map((w) => w.altM)).toEqual([90])
   })
 
+  it('без плана график ветра — на той же высоте, что вердикт: миссия выше потолка прижата к нему', () => {
+    const m = mission({ takeoff: undefined, flightAltitudeM: 150, limits: { ...DEFAULT_LIMITS, maxAltitudeM: 120 } })
+    const f = missionForecast(m, drone)
+    if (f.gap !== null) throw new Error('ожидался вердикт')
+    // Экран погоды строит график по transitAltitudeM, вердикт — assessHour
+    const chartAltM = transitAltitudeM(m.flightAltitudeM, effectiveLimits(m.limits, drone))
+    expect(chartAltitudes(undefined, chartAltM)).toEqual({ transitAltM: 120, topAltM: 120 })
+    expect(f.assessment.windByAlt.map((w) => w.altM)).toEqual([chartAltM])
+    // Ниже потолка высота миссии не меняется
+    expect(transitAltitudeM(90, effectiveLimits(m.limits, drone))).toBe(90)
+  })
+
   it('устаревший порядок облёта отмечается отдельно', () => {
     const f = missionForecast(mission({ route: { ...route, order: ['gone'] } }), drone)
     expect(f.gap === null && f.planIssue).toBe('staleRoute')
@@ -136,6 +149,36 @@ describe('вердикт на час вылета', () => {
 
   it('чего-то не хватает — только пробел, без вердикта', () => {
     expect(missionForecast(mission({ departureTime: undefined }), drone)).toEqual({ gap: 'departure' })
+  })
+
+  // Находка: после импорта фермы в 400 км вердикт «Можно лететь» давался по погоде прежнего места
+  it('прогноз далеко от нынешнего центра фермы — не «можно», с расстоянием', () => {
+    // Две башни без конфликтов плана: рядом с прогнозом вердикт «можно»
+    const at = (northM: number): Pick<Mission, 'farm' | 'takeoff' | 'route'> => {
+      const center = offsetGeo(CENTER, 0, northM)
+      return {
+        farm: {
+          ...farm,
+          center,
+          turbines: [
+            { id: 't1', name: 'T1', ...offsetGeo(center, -600, 0) },
+            { id: 't3', name: 'T3', ...offsetGeo(center, 600, 0) },
+          ],
+        },
+        takeoff: offsetGeo(center, -900, -200),
+        route: { ...route, order: ['t1', 't3'] },
+      }
+    }
+    const near = missionForecast(mission(at(0)), drone)
+    if (near.gap !== null) throw new Error('ожидался вердикт')
+    expect(near.assessment.status).toBe('ok')
+    expect(near.farFromFarmM).toBeUndefined()
+
+    const f = missionForecast(mission(at(400_000)), drone)
+    if (f.gap !== null) throw new Error('ожидался вердикт')
+    expect(f.assessment.status).toBe('marginal')
+    expect(f.assessment.reasons).toEqual(near.assessment.reasons)
+    expect(f.farFromFarmM).toBeGreaterThan(390_000)
   })
 
   it('лимиты — меньшие из миссии и дрона', () => {

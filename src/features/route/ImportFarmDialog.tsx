@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Modal from '@/components/common/Modal'
 import Button from '@/components/common/Button'
-import type { Farm, GeoPoint } from '@/domain/types'
-import { diffTurbines, type FarmImport } from '@/lib/kml'
-import { FAR_TAKEOFF_M, importTakeoffDistanceM } from './farmEdit'
+import type { Farm, GeoPoint, WeatherSnapshot } from '@/domain/types'
+import { diffTurbines, importedFarmName, type FarmImport } from '@/lib/kml'
+import { FAR_TAKEOFF_M, importDropsWeather, importTakeoffDistanceM, importWeatherDistanceM } from './farmEdit'
 import { formatNumber } from './format'
 
 interface ImportFarmDialogProps {
@@ -12,6 +12,9 @@ interface ImportFarmDialogProps {
   currentFarm?: Farm
   // Сохранённая точка взлёта миссии; undefined — не задана, станет центром новой фермы
   takeoff?: GeoPoint
+  // Сохранённый прогноз миссии и выбран ли по нему час вылета: далёкий прогноз импорт сбросит
+  weather?: WeatherSnapshot
+  hasDepartureTime: boolean
   hasRoute: boolean
   busy: boolean
   onCancel: () => void
@@ -24,13 +27,23 @@ function Stat({ label, value, hint, tone = 'normal' }: { label: string; value: s
     <div className="rounded-lg bg-gray-50 px-3 py-2">
       <p className="text-xs text-gray-500">{label}</p>
       <p className={`text-lg font-semibold ${color}`}>{value}</p>
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
     </div>
   )
 }
 
 // Что нашлось в файле и чем новая ферма отличается от текущей — до того, как что-то заменится
-export default function ImportFarmDialog({ imp, currentFarm, takeoff, hasRoute, busy, onCancel, onConfirm }: ImportFarmDialogProps) {
+export default function ImportFarmDialog({
+  imp,
+  currentFarm,
+  takeoff,
+  weather,
+  hasDepartureTime,
+  hasRoute,
+  busy,
+  onCancel,
+  onConfirm,
+}: ImportFarmDialogProps) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
   const replacing = !!currentFarm && currentFarm.turbines.length > 0
@@ -39,6 +52,10 @@ export default function ImportFarmDialog({ imp, currentFarm, takeoff, hasRoute, 
   const takeoffDistanceM = importTakeoffDistanceM(takeoff, imp)
   const takeoffFar = takeoffDistanceM !== undefined && takeoffDistanceM > FAR_TAKEOFF_M
   const [moveTakeoff, setMoveTakeoff] = useState(takeoffFar)
+  const weatherDistanceM = importWeatherDistanceM(weather, imp)
+  const dropsWeather = importDropsWeather(weather, imp)
+  // Имя — то, что реально сохранится: прежнее переходит только к той же ферме
+  const farmName = importedFarmName(imp, currentFarm)
   const n = (v: number) => formatNumber(v, lang)
   const actions = useRef<HTMLDivElement>(null)
   // Только на момент открытия: ферму могли поменять в другом окне, фокус от этого не прыгает
@@ -60,12 +77,13 @@ export default function ImportFarmDialog({ imp, currentFarm, takeoff, hasRoute, 
       <div className="space-y-4">
         <div className="text-sm text-gray-600 space-y-0.5">
           <p className="break-all">
-            <span className="text-gray-400">{t('routePlan.import.file')}: </span>
+            <span className="text-gray-500">{t('routePlan.import.file')}: </span>
             {imp.fileName}
           </p>
           <p>
-            <span className="text-gray-400">{t('routePlan.import.farmName')}: </span>
-            {imp.name ?? t('routePlan.import.noName')}
+            <span className="text-gray-500">{t('routePlan.import.farmName')}: </span>
+            {farmName ?? t('routePlan.import.noName')}
+            {farmName !== undefined && !imp.name && <span className="text-gray-500"> ({t('routePlan.import.nameFromCurrent')})</span>}
           </p>
         </div>
 
@@ -102,6 +120,14 @@ export default function ImportFarmDialog({ imp, currentFarm, takeoff, hasRoute, 
             />
             {t('routePlan.import.moveTakeoff', { km: formatNumber(takeoffDistanceM / 1000, lang, 1) })}
           </label>
+        )}
+
+        {dropsWeather && weatherDistanceM !== undefined && (
+          <p className="text-sm rounded-lg bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2">
+            {t(hasDepartureTime ? 'routePlan.import.weatherResetWithDeparture' : 'routePlan.import.weatherReset', {
+              km: formatNumber(weatherDistanceM / 1000, lang),
+            })}
+          </p>
         )}
 
         <div ref={actions} className="flex justify-end gap-2 pt-1">

@@ -6,7 +6,7 @@
   "nav": {
     "home": "Home",
     "detection": "Detection",
-    "router": "Router",
+    "router": "Routes",
     "weather": "Weather",
     "history": "History",
     "docs": "Docs"
@@ -126,17 +126,50 @@
   },
   "docs": {
     "title": "Documentation",
-    "overview": "System Overview",
-    "detection": "Defect Detection Guide",
-    "router": "Route Planning Guide",
-    "api": "API Reference",
-    "intro": "A short guide to what the app can do right now. Sections will grow as features arrive.",
-    "routerBody": "Click the map to add a route point. Each point has an editable altitude and can be removed. The route is saved automatically and restored next time.",
-    "detectionBody": "Drag blade photos into the upload area or click it to choose files. Automatic defect detection will appear once a model is connected.",
-    "weather": "Weather",
-    "weatherBody": "In progress: the forecast will be requested for the wind farm coordinates.",
-    "history": "History",
-    "historyBody": "Sample records for now. Search, status filter and report export already work."
+    "intro": "How work is organised in the app, from a mission to a record in History. The steps follow the same order as on the Home screen.",
+    "flowTitle": "Workflow",
+    "soonTitle": "Coming soon",
+    "soonBadge": "soon",
+    "steps": {
+      "mission": {
+        "title": "Mission",
+        "body": "Everything starts with a mission: name, type (planned, emergency, post-storm), drone profile, transit altitude and weather limits. Create it on Home or from the mission menu in the header. The other screens save their data into the active mission; change its parameters with the Mission settings button."
+      },
+      "farm": {
+        "title": "Wind farm from KML/KMZ",
+        "body": "On the Routes screen, click Import KML/KMZ or drop the file onto the map: turbines are placemarks with a point. Hub height and rotor diameter missing from the file come from Turbine defaults. You can also place turbines by clicking the map (the Add turbines by click switch), drag them, or delete one from its marker popup."
+      },
+      "route": {
+        "title": "Route",
+        "body": "Click Build route: the visiting order is chosen automatically, taking the takeoff point and the maximum turn angle into account. The takeoff point defaults to the farm centre and can be dragged. Adjust the order with the arrows in Visiting order; the summary shows plan length, flight time and battery use. The route can be exported as JSON and KML."
+      },
+      "weather": {
+        "title": "Weather and departure",
+        "body": "On the Weather screen, pick the forecast point (the farm centre by default) and the period, then click Get forecast. The hourly Open-Meteo forecast — wind at altitude, gusts, precipitation, visibility, temperature — is saved to the mission right away. The Flight window strip colours each hour by the mission and drone limits; click an hour to make it the departure hour. All hours are in the farm's local time."
+      },
+      "forecast": {
+        "title": "Flight forecast",
+        "body": "The Flight forecast card on Home and on the Weather screen checks the chosen hour: go, marginal or no-go — with reasons, wind at the plan's altitudes and an estimate of length, time, battery and number of sorties. The mission status Departure set only means the data is in place: whether you can fly is decided by this verdict."
+      },
+      "complete": {
+        "title": "Completing the flight",
+        "body": "After the flight, click Complete flight on Home. Weather, route, farm, limits and the drone profile become the flight record and are read-only from then on; only the name can still be changed. Nothing is deleted, and the active mission is cleared."
+      },
+      "history": {
+        "title": "History",
+        "body": "All missions: search by name, filter by In progress, Flown and Archived, open, archive a flown mission, and delete. Each mission can be exported as JSON, and the listed missions as an HTML report. A flown mission opens on Home for viewing."
+      }
+    },
+    "soon": {
+      "detection": {
+        "title": "Defect detection",
+        "body": "Analysis of blade photos after the flight, with the defects found saved to the mission. This section is coming in a future version."
+      },
+      "simulation": {
+        "title": "3D preview",
+        "body": "A 3D fly-through of the route before departure. The Open in 3D button on the Routes screen will work in the next version."
+      }
+    }
   },
   "common": {
     "save": "Save",
@@ -165,7 +198,9 @@
     },
     "errorTitle": "This screen failed to open",
     "errorDesc": "Something went wrong. Reload the app; if it happens again, send the text below to the developers.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "notifications": "Notifications (Alt+T)",
+    "closeNotification": "Close notification"
   },
   "profile": {
     "settings": "Settings",

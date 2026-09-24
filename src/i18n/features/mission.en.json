@@ -3,7 +3,7 @@
     "statuses": {
       "draft": "Draft",
       "planned": "Route ready",
-      "ready": "Ready to fly",
+      "ready": "Departure set",
       "flown": "Flown",
       "analyzed": "Analyzed",
       "archived": "Archived"
@@ -111,6 +111,7 @@
       "createShort": "Mission",
       "new": "New mission",
       "choose": "Choose a mission",
+      "chooseShort": "Select",
       "current": "Active mission: {{name}} ({{status}})",
       "groupActive": "In progress",
       "emptyActive": "No missions in progress",
@@ -143,7 +144,8 @@
         "title": "Weather and departure",
         "hint": "Farm forecast and departure hour",
         "departure": "Departure {{time}}",
-        "noHour": "Forecast loaded, no departure hour chosen"
+        "noHour": "Forecast loaded, no departure hour chosen",
+        "verdictHint": "Go or no-go: see the Flight forecast card below"
       },
       "simulation": {
         "title": "3D preview",
@@ -210,8 +212,8 @@
       "completed": "Completed",
       "turbines": "Turbines",
       "routeKm": "Route, km",
-      "departureWeather": "Departure & weather",
-      "departure": "Departure",
+      "departureWeather": "Departure (farm time) & weather",
+      "departure": "Departure (farm time)",
       "weather": "Weather at departure",
       "actions": "Actions"
     },

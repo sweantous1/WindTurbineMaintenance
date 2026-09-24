@@ -1,4 +1,5 @@
 import type { RouteAlgorithm, RoutePlan } from '@/domain/types'
+import { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M } from '@/domain/defaults'
 import { DEFAULT_ACO_PARAMS, DEFAULT_GA_PARAMS } from '@/domain/route'
 import type { OptimizerSettings } from './routeLogic'
 
@@ -64,8 +65,9 @@ export const THETA_RANGE: NumberRange = { min: 10, max: 180 }
 // 180° — ограничения нет
 export const DEFAULT_THETA_DEG = 180
 
-// Высота транзита над землёй; выше потолка план всё равно прижмёт её к потолку
-export const FLIGHT_ALTITUDE_RANGE: NumberRange = { min: 10, max: 1000 }
+// Высота транзита над землёй; выше потолка план всё равно прижмёт её к потолку.
+// Границы те же, что в окне параметров миссии: иначе там миссия с высотой отсюда не сохранялась бы
+export const FLIGHT_ALTITUDE_RANGE: NumberRange = { min: FLIGHT_ALTITUDE_MIN_M, max: FLIGHT_ALTITUDE_MAX_M }
 
 // Параметры турбин: с запасом на крупнейшие морские турбины (ротор ~250 м)
 export const FARM_DEFAULT_RANGES = {

@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { WtmDatabase } from '../db'
 import { createMissionRepository, MissionLockedError } from '../missions'
 import { createDroneProfileRepository } from '../droneProfiles'
-import type { RoutePlan, WeatherSnapshot } from '@/domain/types'
+import { DEFAULT_DRONE_PROFILE, DEFAULT_FARM_DEFAULTS } from '@/domain/defaults'
+import { missionPlanLengthM } from '@/domain/flightPlan'
+import type { Farm, RoutePlan, WeatherSnapshot } from '@/domain/types'
+import { offsetGeo } from '@/lib/geo'
 
 const route: RoutePlan = {
   algorithm: 'auto', params: {}, thetaMaxDeg: 180, returnToTakeoff: true,
@@ -98,6 +101,103 @@ describe('репозиторий миссий', () => {
     await repo.remove(m.id)
     expect(await repo.get(m.id)).toBeUndefined()
     expect(await repo.getActiveId()).toBeNull()
+  })
+})
+
+describe('длина маршрута и профиль дрона', () => {
+  // 6 турбин в ряд, высота перелёта 90 м: при потолке 60 м транзит опускается, и длина плана меняется
+  const center = { lat: 48.2, lon: 40.3 }
+  const farm: Farm = {
+    center,
+    defaults: { ...DEFAULT_FARM_DEFAULTS },
+    turbines: Array.from({ length: 6 }, (_, k) => ({ id: `t${k}`, name: `T${k}`, ...offsetGeo(center, k * 500 - 1250, 0) })),
+  }
+  const farmRoute: RoutePlan = { ...route, order: farm.turbines.map((t) => t.id) }
+
+  // Миссия с маршрутом, длина которого посчитана по текущему профилю — как после «Построить маршрут»
+  const takeoff = offsetGeo(center, -1600, 0)
+  const { id: _id, ...profileBase } = DEFAULT_DRONE_PROFILE
+
+  async function plannedMission(droneProfileId = 'default') {
+    const m = await repo.create({ name: 'М', droneProfileId })
+    const drone = (await database.droneProfiles.get(droneProfileId)) ?? DEFAULT_DRONE_PROFILE
+    const lengthM = missionPlanLengthM({ ...m, farm, takeoff, route: farmRoute }, drone)!
+    return repo.update(m.id, { farm, takeoff, route: { ...farmRoute, lengthM } })
+  }
+
+  it('завершение пересчитывает длину по снимку профиля, если профиль правили в настройках', async () => {
+    const m = await plannedMission()
+    const before = m.route!.lengthM
+    await database.droneProfiles.put({ ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 60 })
+    const res = await repo.complete(m.id, { force: true })
+    expect(res.ok).toBe(true)
+    const saved = (await repo.get(m.id))!
+    expect(saved.status).toBe('flown')
+    expect(saved.droneSnapshot?.maxAltitudeM).toBe(60)
+    const expected = missionPlanLengthM(saved, saved.droneSnapshot!)!
+    expect(saved.route!.lengthM).toBeCloseTo(expected, 6)
+    expect(saved.route!.lengthM).not.toBeCloseTo(before, 0)
+    // Остальное в маршруте не трогается
+    expect({ ...saved.route, lengthM: 0 }).toEqual({ ...m.route, lengthM: 0 })
+  })
+
+  it('завершение без фермы оставляет сохранённую длину как есть', async () => {
+    const m = await repo.create({ name: 'М' })
+    await repo.update(m.id, { route, weather })
+    await repo.complete(m.id)
+    expect((await repo.get(m.id))?.route?.lengthM).toBe(1200)
+  })
+
+  it('пересчёт длины после правки профиля: только миссии до полёта с этим профилем', async () => {
+    const drones = createDroneProfileRepository(database)
+    const other = await drones.save({ ...profileBase, name: 'Другой' })
+    const mine = await plannedMission()
+    const foreign = await plannedMission(other.id)
+    const flown = await plannedMission()
+    await repo.complete(flown.id, { force: true })
+    const flownBefore = (await repo.get(flown.id))!
+
+    await drones.save({ ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 60 })
+    expect(await repo.recomputeRouteLengths('default')).toBe(1)
+
+    const savedMine = (await repo.get(mine.id))!
+    expect(savedMine.route!.lengthM).toBeCloseTo(missionPlanLengthM(savedMine, { ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 60 })!, 6)
+    expect(savedMine.route!.lengthM).not.toBeCloseTo(mine.route!.lengthM, 0)
+    // Пересчёт производного поля — не правка миссии: порядок списка не меняется
+    expect(savedMine.updatedAt).toBe(mine.updatedAt)
+    expect(savedMine.status).toBe(mine.status)
+    expect((await repo.get(foreign.id))!.route!.lengthM).toBe(foreign.route!.lengthM)
+    // Облетанная миссия — запись о полёте, её длина уже по снимку
+    expect(await repo.get(flown.id)).toEqual(flownBefore)
+    // Повторный вызов ничего не меняет
+    expect(await repo.recomputeRouteLengths('default')).toBe(0)
+  })
+
+  it('после удаления профиля миссии считаются по профилю по умолчанию', async () => {
+    const drones = createDroneProfileRepository(database)
+    const low = await drones.save({ ...profileBase, name: 'Низкий', maxAltitudeM: 60 })
+    const m = await plannedMission(low.id)
+    await drones.remove(low.id)
+    expect(await repo.recomputeRouteLengths(low.id)).toBe(1)
+    const saved = (await repo.get(m.id))!
+    expect(saved.route!.lengthM).toBeCloseTo(missionPlanLengthM(saved, DEFAULT_DRONE_PROFILE)!, 6)
+
+    // Профиль по умолчанию правят позже — миссия удалённого профиля летит на нём и тоже пересчитывается
+    await drones.save({ ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 70 })
+    expect(await repo.recomputeRouteLengths('default')).toBe(1)
+    const again = (await repo.get(m.id))!
+    expect(again.route!.lengthM).toBeCloseTo(missionPlanLengthM(again, { ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 70 })!, 6)
+  })
+
+  it('без id пересчитываются все миссии до полёта', async () => {
+    const drones = createDroneProfileRepository(database)
+    const other = await drones.save({ ...profileBase, name: 'Другой' })
+    await plannedMission()
+    await plannedMission(other.id)
+    await drones.save({ ...DEFAULT_DRONE_PROFILE, maxAltitudeM: 60 })
+    await drones.save({ ...other, maxAltitudeM: 60 })
+    expect(await repo.recomputeRouteLengths()).toBe(2)
+    expect(await repo.recomputeRouteLengths()).toBe(0)
   })
 })
 

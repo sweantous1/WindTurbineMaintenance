@@ -1,13 +1,39 @@
 import { describe, expect, it } from 'vitest'
-import type { Farm, Turbine } from '@/domain/types'
+import type { Farm, GeoPoint, Turbine, WeatherSnapshot } from '@/domain/types'
 import { DEFAULT_FARM_DEFAULTS } from '@/domain/defaults'
+import { derivePreFlightStatus } from '@/domain/missionStatus'
 import { centroid, haversineM } from '@/lib/geo'
 import type { FarmImport } from '@/lib/kml'
-import { FAR_TAKEOFF_M, addTurbine, importPatch, importTakeoffDistanceM, moveTurbine, removeTurbine, setFarmDefaults } from '../farmEdit'
-import { at, lineFarm } from './helpers'
+import { FAR_FROM_FARM_M } from '@/features/weather/location'
+import {
+  FAR_TAKEOFF_M,
+  addTurbine,
+  importDropsWeather,
+  importPatch,
+  importTakeoffDistanceM,
+  importWeatherDistanceM,
+  moveTurbine,
+  removeTurbine,
+  setFarmDefaults,
+} from '../farmEdit'
+import { at, lineFarm, makeRoute } from './helpers'
 
 function importOf(turbines: Turbine[], name?: string): FarmImport {
   return { ...(name ? { name } : {}), turbines, skipped: 2, merged: 1, fileName: 'farm.kml', sha256: 'abc' }
+}
+
+// Снимок прогноза по точке; содержимое прогноза для импорта не важно
+function weatherAt(location: GeoPoint): WeatherSnapshot {
+  return {
+    fetchedAt: '2026-09-24T10:00:00.000Z',
+    source: 'farm',
+    location: { ...location, name: 'Ферма А' },
+    distanceToFarmM: 0,
+    timezone: 'Europe/Warsaw',
+    utcOffsetSeconds: 7200,
+    current: { time: '2026-09-24T12:00', temperatureC: 15, windMs10: 4, windDirDeg10: 180, gustMs10: 6, weatherCode: 0, precipitationMm: 0 },
+    hourly: [],
+  }
 }
 
 describe('турбины кликом по карте', () => {
@@ -109,6 +135,46 @@ describe('замена фермы импортом', () => {
     expect(kept.farm?.name).toBe('Старая')
     const moved = importPatch({ farm: previous, takeoff }, importOf(imported), { moveTakeoff: true })
     expect(moved.takeoff).toEqual(moved.farm?.center)
+  })
+
+  it('прогноз для места дальше порога от новой фермы сбрасывается вместе с часом вылета', () => {
+    // Ферма А в районе BASE, прогноз по её центру; ферма Б — в сотнях километров
+    const farmA = lineFarm(4)
+    const mission = {
+      farm: farmA,
+      takeoff: farmA.center,
+      route: makeRoute(['t1', 't2', 't3', 't4']),
+      weather: weatherAt(farmA.center),
+      departureTime: '2026-09-25T10:00',
+    }
+    expect(derivePreFlightStatus(mission)).toBe('ready')
+    const farB = importOf(lineFarm(3).turbines.map((t, i) => ({ ...t, id: `b${i}`, ...at(i * 400, 500_000) })), 'Ферма Б')
+    const patch = importPatch(mission, farB, { moveTakeoff: true })
+    expect('weather' in patch && patch.weather === undefined).toBe(true)
+    expect('departureTime' in patch && patch.departureTime === undefined).toBe(true)
+    // Новый маршрут больше не делает миссию «Готовой к полёту» по чужой погоде
+    const after = { ...mission, ...patch, route: makeRoute(['b0', 'b1', 'b2']) }
+    expect(derivePreFlightStatus(after)).toBe('planned')
+  })
+
+  it('близкий прогноз (повторный импорт той же фермы, город рядом) остаётся', () => {
+    const farm = lineFarm(4)
+    const weather = weatherAt(at(0, 20_000))
+    const patch = importPatch({ farm, takeoff: farm.center, weather }, importOf(farm.turbines), { moveTakeoff: false })
+    expect('weather' in patch).toBe(false)
+    expect('departureTime' in patch).toBe(false)
+    // Без прогноза сбрасывать нечего
+    expect('weather' in importPatch({ farm }, importOf(farm.turbines), { moveTakeoff: false })).toBe(false)
+  })
+
+  it('порог сброса прогноза тот же, что у экрана погоды', () => {
+    const imp = importOf(lineFarm(2).turbines)
+    const center = centroid(imp.turbines)
+    expect(importWeatherDistanceM(undefined, imp)).toBeUndefined()
+    expect(importWeatherDistanceM(weatherAt(center), imp)).toBeLessThan(1)
+    expect(importDropsWeather(weatherAt(at(200, FAR_FROM_FARM_M - 1000)), imp)).toBe(false)
+    expect(importDropsWeather(weatherAt(at(200, FAR_FROM_FARM_M + 1000)), imp)).toBe(true)
+    expect(importDropsWeather(undefined, imp)).toBe(false)
   })
 
   it('расстояние от сохранённого взлёта до новой фермы', () => {

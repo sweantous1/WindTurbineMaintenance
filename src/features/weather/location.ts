@@ -75,6 +75,23 @@ export function distanceToFarmM(p: GeoPoint | null, farm: Farm | undefined): num
   return p && farm ? haversineM(p, farm.center) : undefined
 }
 
+// От места прогноза до нынешнего центра фермы. Не distanceToFarmM из снимка: ферму могли
+// переимпортировать после запроса, и тогда прогноз описывает погоду совсем другого места
+export function forecastDistanceM(m: Pick<Mission, 'farm' | 'weather'>): number | undefined {
+  return m.weather ? distanceToFarmM(m.weather.location, m.farm) : undefined
+}
+
+export function isFarFromFarm(distanceM: number | undefined): distanceM is number {
+  return distanceM !== undefined && distanceM > FAR_FROM_FARM_M
+}
+
+// Период по умолчанию — как у сохранённого снимка: «Обновить» спрашивает тот же горизонт,
+// иначе дальний час вылета из прошлого прогноза выпал бы из нового
+export function initialForecastHours(m: Pick<Mission, 'weather'>): number {
+  const n = m.weather?.hourly.length ?? 0
+  return n > 0 ? Math.min(n, MAX_FORECAST_HOURS) : DEFAULT_FORECAST_HOURS
+}
+
 // Координаты всегда с точкой: так их можно вставить в карты и навигатор, а запятая
 // между числами не путается с десятичной
 export function formatCoords(p: GeoPoint): string {

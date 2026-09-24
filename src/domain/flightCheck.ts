@@ -3,10 +3,11 @@ import { MARGINAL_FRACTION } from './defaults'
 import { gustAtAltitude, windAtAltitude } from './weather'
 
 export type HourStatus = 'ok' | 'marginal' | 'no' | 'insufficient'
-export type ReasonCode = 'wind' | 'gust' | 'precip' | 'temp' | 'visibility' | 'battery' | 'altitude'
+export type ReasonCode = 'wind' | 'gust' | 'precip' | 'temp' | 'visibility' | 'battery' | 'altitude' | 'conflict'
 
 // value и limit — в единицах проверки: м/с, мм/ч, °C, км, м; для battery — % заряда
-// (худший случай против доступного без резерва; при невозможности долететь value = Infinity)
+// (худший случай против доступного без резерва; при невозможности долететь value = Infinity);
+// для conflict — число конфликтов плана (как в сводке экрана маршрута) при допустимом нуле
 export interface Reason {
   code: ReasonCode
   severity: 'marginal' | 'no'
@@ -36,6 +37,13 @@ export function effectiveLimits(limits: MissionLimits, drone: DroneProfile): Eff
     maxTempC: limits.maxTempC,
     maxAltitudeM: Math.min(limits.maxAltitudeM, drone.maxAltitudeM),
   }
+}
+
+// Высота транзита без плана полёта. Миссия выше потолка — не запрет: план прижимает транзит
+// к потолку (buildFlightPlan), и до построения маршрута вердикт и график ветра обязаны считать
+// так же, иначе вердикт менялся бы с «нельзя» на «можно» от одного нажатия «Построить маршрут»
+export function transitAltitudeM(flightAltitudeM: number, lim: Pick<EffectiveLimits, 'maxAltitudeM'>): number {
+  return Math.min(flightAltitudeM, lim.maxAltitudeM)
 }
 
 export interface MissionEstimate {
@@ -83,8 +91,9 @@ export interface HourAssessment {
   estimate?: MissionEstimate
 }
 
-function checkAltitudes(plan: FlightPlan | undefined, flightAltitudeM: number): number[] {
-  const alts = plan ? [...plan.altitudeLevelsM, plan.maxAltM] : [flightAltitudeM]
+// Без плана — высота транзита, уже прижатая к потолку (transitAltM)
+function checkAltitudes(plan: FlightPlan | undefined, transitAltM: number): number[] {
+  const alts = plan ? [...plan.altitudeLevelsM, plan.maxAltM] : [transitAltM]
   return [...new Set(alts.filter(Number.isFinite))].sort((a, b) => a - b)
 }
 
@@ -112,7 +121,8 @@ export function assessHour(
   ctx: { limits: MissionLimits; drone: DroneProfile; plan?: FlightPlan; flightAltitudeM: number },
 ): HourAssessment {
   const lim = effectiveLimits(ctx.limits, ctx.drone)
-  const windByAlt = checkAltitudes(ctx.plan, ctx.flightAltitudeM).map((altM) => {
+  const transitAltM = transitAltitudeM(ctx.flightAltitudeM, lim)
+  const windByAlt = checkAltitudes(ctx.plan, transitAltM).map((altM) => {
     const w = windAtAltitude(h, altM)
     return { altM, ms: w.ms, gustMs: gustAtAltitude(h, altM), extrapolated: w.extrapolated }
   })
@@ -146,8 +156,8 @@ export function assessHour(
     add({ code: 'visibility', severity: 'no', value: vis, limit: lim.minVisibilityKm })
   }
 
-  // Без плана полёта потолок проверяется по высоте транзита миссии
-  const topAltM = ctx.plan ? ctx.plan.maxAltM : ctx.flightAltitudeM
+  // Выше потолка может оказаться только облёт ступицы, а её высоту знает лишь план
+  const topAltM = ctx.plan ? ctx.plan.maxAltM : transitAltM
   if (topAltM > lim.maxAltitudeM) {
     add({ code: 'altitude', severity: 'no', value: topAltM, limit: lim.maxAltitudeM, altM: topAltM })
   }
@@ -159,6 +169,11 @@ export function assessHour(
     const altM = worstWind ? { altM: worstWind.altM } : {}
     if (!Number.isFinite(estimate.sorties)) add({ ...battery, severity: 'no', ...altM })
     else if (estimate.sorties > 1) add({ ...battery, severity: 'marginal', ...altM })
+    // Маршрут заходит в безопасную зону башен. Погода тут ни при чём, но «можно лететь,
+    // всё в пределах» с таким планом писать нельзя: пусть человек посмотрит на маршрут
+    if (ctx.plan.conflicts.length > 0) {
+      add({ code: 'conflict', severity: 'marginal', value: ctx.plan.conflicts.length, limit: 0 })
+    }
   }
 
   let status: HourStatus = 'ok'

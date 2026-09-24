@@ -4,7 +4,7 @@ import { DRONE_FIELD_RANGES, DRONE_NUMERIC_FIELDS, droneToForm, validateDroneFor
 
 const { id: _id, ...base } = DEFAULT_DRONE_PROFILE
 void _id
-const form = (patch: Partial<DroneFormValues> = {}): DroneFormValues => ({ ...droneToForm(base), ...patch })
+const form = (patch: Partial<DroneFormValues> = {}): DroneFormValues => ({ ...droneToForm(base, 'ru'), ...patch })
 
 describe('форма профиля дрона', () => {
   it('профиль по умолчанию проходит проверку без изменений', () => {
@@ -53,6 +53,18 @@ describe('форма профиля дрона', () => {
     const result = validateDroneForm(form({ maxWindMs: '14', maxGustMs: '12' }))
     expect(!result.ok && result.errors.maxGustMs?.key).toBe('settings.errors.gustBelowWind')
     expect(validateDroneForm(form({ maxWindMs: '12', maxGustMs: '12' })).ok).toBe(true)
+  })
+
+  // Находка: в русском интерфейсе дроби в полях профиля шли через точку, везде — через запятую
+  it('дроби в полях — с разделителем языка и читаются обратно', () => {
+    const p = { ...base, maxWindMs: 12.5, cruiseSpeedMs: 9.75 }
+    const ruForm = droneToForm(p, 'ru')
+    expect(ruForm.maxWindMs).toBe('12,5')
+    expect(ruForm.cruiseSpeedMs).toBe('9,75')
+    expect(ruForm.enduranceMin).toBe('35')
+    expect(droneToForm(p, 'en').maxWindMs).toBe('12.5')
+    expect(validateDroneForm(ruForm)).toEqual({ ok: true, profile: p })
+    expect(validateDroneForm(droneToForm(p, 'en'))).toEqual({ ok: true, profile: p })
   })
 
   it('у каждого числового поля есть диапазон', () => {

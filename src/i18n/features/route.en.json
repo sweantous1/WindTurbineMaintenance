@@ -32,6 +32,7 @@
       "file": "File",
       "farmName": "Name",
       "noName": "not set",
+      "nameFromCurrent": "from the current farm",
       "found": "Turbines found",
       "skipped": "Skipped",
       "skippedHint": "lines, polygons, placemarks without a point",
@@ -48,6 +49,8 @@
       "replace": "The current farm will be replaced.",
       "replaceWithRoute": "The current farm will be replaced and the built route will be reset.",
       "moveTakeoff": "Move the takeoff point to the centre of the new farm: it is now {{km}} km away from it",
+      "weatherReset": "The weather forecast was fetched for a place {{km}} km from the new farm and will be reset. Fetch it again on the Weather screen.",
+      "weatherResetWithDeparture": "The weather forecast and the chosen departure hour are for a place {{km}} km from the new farm and will be reset. Fetch the forecast again on the Weather screen.",
       "confirm": "Import",
       "confirmReplace": "Replace farm",
       "done_one": "Farm loaded: {{count}} turbine",
@@ -57,10 +60,12 @@
       "onlyFirst": "Only the first file is imported: {{name}}"
     },
     "importErrors": {
+      "withFile": "“{{name}}”: {{reason}}",
       "noTurbines": "The file has no turbine points: point placemarks (Placemark with Point) are required",
-      "invalidXml": "The file could not be read as KML: XML error",
+      "notKml": "This is neither KML nor KMZ. A Google Earth file with turbine placemarks is required",
+      "invalidXml": "The file cannot be read as KML: its XML is damaged or it is another format. A KML or KMZ from Google Earth is required",
       "kmzBroken": "The KMZ archive is damaged or is not a ZIP",
-      "kmzNoKml": "The KMZ archive contains no .kml file",
+      "kmzNoKml": "This is a ZIP archive with no .kml inside, not a KMZ. A KML or KMZ from Google Earth with turbine placemarks is required",
       "tooLarge": "The file is too large: KML or KMZ up to 50 MB, .kml inside an archive up to 100 MB",
       "readFailed": "The file could not be read",
       "unknown": "The file could not be imported"
@@ -69,6 +74,11 @@
       "addMode": "Add turbines by click",
       "addModeHint": "Click the map to place a turbine. Markers can be dragged; delete a turbine from its marker popup.",
       "fitAll": "Show all",
+      "tilesUnavailable": "The base map did not load — check the internet connection. Turbines and the route are shown without the map.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "closePopup": "Close",
+      "leafletTitle": "A JavaScript library for interactive maps",
       "legend": {
         "transit": "transit",
         "orbit": "orbit",
@@ -83,7 +93,7 @@
       "orbit": "Orbit radius",
       "groundAlt": "Ground elevation",
       "byDefault": "default",
-      "conflictHint": "A transit leg passes too close to this turbine — see the summary.",
+      "conflictHint": "The route passes too close to this turbine — see the summary.",
       "deleteTurbine": "Delete turbine",
       "takeoff": "Takeoff point",
       "takeoffDefault": "Defaults to the farm centre",
@@ -201,11 +211,13 @@
         "landing": "landing"
       },
       "conflictsTitle": "Conflicts: {{n}}",
-      "noConflicts": "Transit never enters the safety zone of other turbines.",
+      "noConflicts": "The route never enters the safety zone of any turbine.",
       "conflict": "{{from}} → {{to}}: passes {{distance}} m from {{turbine}} below the blade tips (safe is at least {{min}} m)",
       "conflictVertical": "Climb or descent at “{{at}}” {{distance}} m from {{turbine}} (safe is at least {{min}} m)",
       "conflictUnknown": "A plan leg passes {{distance}} m from {{turbine}} (safe is at least {{min}} m)",
-      "conflictsHint": "Move the takeoff point, change the visiting order or raise transit above the blade tips."
+      "conflictOrbit": "Orbit of {{at}}: passes {{distance}} m from {{turbine}} below the blade tips (safe is at least {{min}} m)",
+      "conflictsHint": "Move the takeoff point, change the visiting order or raise transit above the blade tips.",
+      "conflictsOrbitHint": "An orbit clips a neighbouring turbine: the turbines stand too close for a circular orbit. Check their coordinates and sizes; if they are correct, fly this inspection manually."
     },
     "order": {
       "title": "Visiting order",

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useInsertionEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface ModalProps {
@@ -11,20 +11,38 @@ interface ModalProps {
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
+// Куда вернуть фокус после закрытия. Кнопки, открывшей окно, может уже не быть (пункт меню,
+// карточка завершённой миссии) или она отключена — тогда на основную область страницы,
+// а не в body, откуда клавиатуре пришлось бы начинать с начала шапки
+function restoreFocus(opener: HTMLElement | null) {
+  const usable = opener && opener !== document.body && opener.isConnected && !(opener as HTMLButtonElement).disabled
+  if (usable) {
+    opener.focus()
+    if (document.activeElement === opener) return
+  }
+  document.querySelector<HTMLElement>('main[tabindex]')?.focus()
+}
+
 export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
   const { t } = useTranslation()
   const titleId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
   // onClose часто создаётся заново на каждом рендере — держим последнюю версию без перезапуска эффекта
   const onCloseRef = useRef(onClose)
   useEffect(() => {
     onCloseRef.current = onClose
   })
 
+  // Открывший окно элемент запоминаем до layout-фазы: autoFocus содержимого ставит фокус раньше
+  // useEffect, и тогда «вернуть фокус» пришлось бы на кнопку самого окна, которой после закрытия нет
+  useInsertionEffect(() => {
+    if (isOpen) openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  }, [isOpen])
+
   useEffect(() => {
     if (!isOpen) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
     document.body.style.overflow = 'hidden'
 
     // Фокус внутрь окна, если содержимое не поставило его само (autoFocus):
@@ -61,8 +79,13 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
+      // Окно ещё на месте — это повторный запуск эффекта в StrictMode, а не закрытие: фокус не трогаем
+      if (panel?.isConnected) return
+      // Фокус уже намеренно перевели на что-то на странице — не отбираем его
+      const current = document.activeElement
+      if (current && current !== document.body && current.isConnected) return
       // Возвращаем фокус туда, откуда окно открыли
-      previouslyFocused?.focus?.()
+      restoreFocus(openerRef.current)
     }
   }, [isOpen])
 

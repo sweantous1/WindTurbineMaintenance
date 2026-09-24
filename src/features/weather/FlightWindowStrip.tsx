@@ -34,7 +34,7 @@ export default function FlightWindowStrip({ cells, selectedTime, onSelect, isPas
     return parts.join('\n')
   }
 
-  if (cells.length === 0) return <p className="py-6 text-center text-sm text-gray-400">{t('common.noData')}</p>
+  if (cells.length === 0) return <p className="py-6 text-center text-sm text-gray-500">{t('common.noData')}</p>
 
   return (
     <div className="space-y-3">

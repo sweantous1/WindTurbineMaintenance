@@ -1,5 +1,5 @@
-// lang — язык интерфейса; без него дата форматируется по языку системы
-export function formatDate(date: string, lang?: string): string {
+// lang обязателен: без него дата форматируется по языку системы и расходится с интерфейсом
+export function formatDate(date: string, lang: string): string {
   return new Date(date).toLocaleDateString(lang)
 }
 
