@@ -1,5 +1,5 @@
 import type { Mission, MissionPatch, MissionType } from '@/domain/types'
-import { DEFAULT_DRONE_PROFILE_ID, DEFAULT_FLIGHT_ALTITUDE_M, DEFAULT_LIMITS } from '@/domain/defaults'
+import { DEFAULT_DRONE_PROFILE, DEFAULT_DRONE_PROFILE_ID, DEFAULT_FLIGHT_ALTITUDE_M, DEFAULT_LIMITS } from '@/domain/defaults'
 import { derivePreFlightStatus, isPreFlight, lockedFields } from '@/domain/missionStatus'
 import { makeId } from '@/utils/id'
 import { db, type WtmDatabase } from './db'
@@ -83,19 +83,23 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Завершение одной транзакцией: статус, дата и сброс активной миссии.
+  // Завершение одной транзакцией: статус, дата, снимок профиля дрона и сброс активной миссии.
   // Ничего не удаляется. Без force сначала сообщает, чего не хватает.
   async function complete(id: string, opts: { force?: boolean } = {}): Promise<CompleteResult> {
-    return database.transaction('rw', database.missions, database.settings, async () => {
+    return database.transaction('rw', database.missions, database.settings, database.droneProfiles, async () => {
       const current = await database.missions.get(id)
       if (!current) throw new Error(`Миссия ${id} не найдена`)
       if (!isPreFlight(current.status)) return { ok: true as const, mission: current }
       const missing: ('route' | 'weather')[] = []
-      if (!current.route) missing.push('route')
+      if (!current.route || current.route.order.length === 0) missing.push('route')
       if (!current.weather) missing.push('weather')
       if (missing.length > 0 && !opts.force) return { ok: false as const, missing }
       const ts = now()
-      const next: Mission = { ...current, status: 'flown', completedAt: ts, updatedAt: ts }
+      const drone =
+        (await database.droneProfiles.get(current.droneProfileId)) ??
+        (await database.droneProfiles.get(DEFAULT_DRONE_PROFILE_ID)) ??
+        DEFAULT_DRONE_PROFILE
+      const next: Mission = { ...current, status: 'flown', completedAt: ts, updatedAt: ts, droneSnapshot: { ...drone } }
       await database.missions.put(next)
       if ((await getActiveId()) === id) await setActive(null)
       return { ok: true as const, mission: next }

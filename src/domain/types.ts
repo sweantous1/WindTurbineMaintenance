@@ -183,8 +183,11 @@ export interface Mission {
   weather?: WeatherSnapshot
   // Выбранный час вылета — значение WeatherHour.time
   departureTime?: string
+  // Профиль дрона на момент завершения полёта: правка профиля в настройках
+  // не должна задним числом менять вердикт и оценку заряда облетанной миссии
+  droneSnapshot?: DroneProfile
   notes?: string
 }
 
 // Поля миссии, которые правятся через репозиторий
-export type MissionPatch = Partial<Omit<Mission, 'id' | 'schemaVersion' | 'createdAt' | 'updatedAt' | 'status' | 'completedAt'>>
+export type MissionPatch = Partial<Omit<Mission, 'id' | 'schemaVersion' | 'createdAt' | 'updatedAt' | 'status' | 'completedAt' | 'droneSnapshot'>>

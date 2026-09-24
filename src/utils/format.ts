@@ -1,5 +1,6 @@
-export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString()
+// lang — язык интерфейса; без него дата форматируется по языку системы
+export function formatDate(date: string, lang?: string): string {
+  return new Date(date).toLocaleDateString(lang)
 }
 
 export function capitalize(str: string): string {

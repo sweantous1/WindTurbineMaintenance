@@ -1,0 +1,83 @@
+{
+  "settings": {
+    "title": "Settings",
+    "desc": "Drone profiles and application info",
+    "drones": {
+      "title": "Drone profiles",
+      "subtitle": "Limits and characteristics used for weather checks and battery estimates",
+      "add": "Add profile",
+      "listLabel": "Drone profiles",
+      "summary": "wind up to {{wind}} m/s · {{endurance}} min · up to {{alt}} m",
+      "defaultBadge": "default",
+      "activeBadge": "in active mission",
+      "newItem": "New profile (not saved yet)",
+      "newName": "New profile",
+      "saved": "Profile “{{name}}” saved",
+      "saveFailed": "Could not save the profile: {{message}}",
+      "deleted": "Profile “{{name}}” deleted",
+      "deleteFailed": "Could not delete the profile: {{message}}",
+      "deleteTitle": "Delete the profile?",
+      "deleteText": "Profile “{{name}}” will be deleted permanently.",
+      "deleteUsed_one": "It is used by {{count}} mission — it will fall back to the default profile.",
+      "deleteUsed_few": "It is used by {{count}} missions — they will fall back to the default profile.",
+      "deleteUsed_many": "It is used by {{count}} missions — they will fall back to the default profile.",
+      "deleteUsed_other": "It is used by {{count}} missions — they will fall back to the default profile.",
+      "create": "Create profile",
+      "reset": "Discard changes",
+      "defaultLocked": "The default profile cannot be deleted",
+      "unsaved": "There are unsaved changes",
+      "discardTitle": "Discard changes?",
+      "discardText": "The open profile has unsaved changes. They will be lost if you switch to another profile.",
+      "discardStay": "Keep editing",
+      "discardConfirm": "Discard",
+      "fields": {
+        "name": "Name",
+        "maxWindMs": "Max wind",
+        "maxGustMs": "Max gusts",
+        "cruiseSpeedMs": "Cruise speed",
+        "enduranceMin": "Flight time",
+        "reservePct": "Battery reserve",
+        "maxAltitudeM": "Altitude ceiling"
+      },
+      "hints": {
+        "maxWindMs": "Mean wind the drone can still hold its course in; {{min}} to {{max}}",
+        "maxGustMs": "Not less than the wind limit; {{min}} to {{max}}",
+        "cruiseSpeedMs": "Route speed in calm air; {{min}} to {{max}}",
+        "enduranceMin": "On a full battery in calm air; {{min}} to {{max}}",
+        "reservePct": "Battery kept for return and landing; {{min}} to {{max}}",
+        "maxAltitudeM": "Above ground; {{min}} to {{max}}"
+      }
+    },
+    "errors": {
+      "nameRequired": "Enter a name",
+      "nameTooLong": "At most {{max}} characters",
+      "required": "Fill in this field",
+      "notNumber": "Enter a number",
+      "range": "Allowed from {{min}} to {{max}}",
+      "gustBelowWind": "The gust limit cannot be lower than the wind limit"
+    },
+    "about": {
+      "title": "About",
+      "app": "Application",
+      "version": "Version",
+      "webVersion": "web version",
+      "versionFailed": "unknown",
+      "storage": "Storage used",
+      "storageUsage": "{{usage}} of {{quota}} ({{pct}}%)",
+      "storageUsageTiny": "{{usage}} of {{quota}} (less than {{min}}%)",
+      "storageUnavailable": "the browser does not report storage usage",
+      "storageFailed": "unknown: {{message}}",
+      "refresh": "Refresh",
+      "units": {
+        "B": "B",
+        "KB": "KB",
+        "MB": "MB",
+        "GB": "GB"
+      },
+      "dataTitle": "Data",
+      "dataText": "Missions, drone profiles and forecasts are stored on this computer (IndexedDB). Only forecast and city search requests go to the internet: the point coordinates or the name.",
+      "weatherSource": "Weather",
+      "weatherLicense": "— forecast data under the CC BY 4.0 license"
+    }
+  }
+}

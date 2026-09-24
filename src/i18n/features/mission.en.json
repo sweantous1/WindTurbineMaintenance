@@ -1,0 +1,267 @@
+{
+  "common": {
+    "statuses": {
+      "draft": "Draft",
+      "planned": "Route ready",
+      "ready": "Ready to fly",
+      "flown": "Flown",
+      "analyzed": "Analyzed",
+      "archived": "Archived"
+    }
+  },
+  "mission": {
+    "close": "Close",
+    "types": {
+      "planned": "Scheduled",
+      "emergency": "Emergency",
+      "post_storm": "Post-storm"
+    },
+    "fields": {
+      "name": "Name",
+      "type": "Mission type",
+      "drone": "Drone profile",
+      "flightAltitude": "Flight altitude, m",
+      "maxWindMs": "Max wind, m/s",
+      "maxGustMs": "Max gusts, m/s",
+      "maxPrecipMmH": "Max precipitation, mm/h",
+      "minVisibilityKm": "Min visibility, km",
+      "minTempC": "Min temperature, °C",
+      "maxTempC": "Max temperature, °C",
+      "maxAltitudeM": "Altitude ceiling, m"
+    },
+    "fieldNames": {
+      "name": "name",
+      "type": "type",
+      "droneProfileId": "drone profile",
+      "flightAltitudeM": "flight altitude",
+      "limits": "weather limits",
+      "farm": "farm",
+      "takeoff": "takeoff point",
+      "route": "route",
+      "weather": "weather",
+      "departureTime": "departure hour",
+      "notes": "notes"
+    },
+    "errors": {
+      "required": "This field is required",
+      "notNumber": "Enter a number",
+      "range": "Allowed range: {{min}} to {{max}}",
+      "nameRequired": "Enter a mission name",
+      "tempOrder": "Max temperature must be above min temperature",
+      "gustBelowWind": "The gust limit can't be lower than the wind limit",
+      "createFailed": "Couldn't create the mission. Please try again.",
+      "saveFailed": "Couldn't save mission settings. Please try again.",
+      "locked": "The mission has already been flown — these fields are read-only: {{fields}}.",
+      "completeFailed": "Couldn't complete the flight: nothing was saved. Please try again."
+    },
+    "droneMissing": "Profile deleted — the default profile is used",
+    "droneSummary": "Wind up to {{wind}} m/s, gusts up to {{gust}} m/s, ceiling {{alt}} m, {{endurance}} min endurance",
+    "aboveCeiling": "Altitude is above the ceiling ({{value}} m) — the weather check will forbid the flight. The ceiling is the lower of the mission limit and the drone profile.",
+    "toast": {
+      "created": "Mission created",
+      "saved": "Mission settings saved",
+      "completed": "Flight completed"
+    },
+    "units": {
+      "tempC": "{{value}} °C",
+      "windMs": "{{value}} m/s",
+      "meters": "{{value}} m",
+      "km": "{{value}} km"
+    },
+    "turbineCount_one": "{{count}} turbine",
+    "turbineCount_few": "{{count}} turbines",
+    "turbineCount_many": "{{count}} turbines",
+    "turbineCount_other": "{{count}} turbines",
+    "newDialog": {
+      "title": "New mission",
+      "namePlaceholder": "e.g. “Rostov, September”",
+      "altitudeHint": "Transit altitude above ground between turbines, {{min}} to {{max}} m",
+      "limitsNote": "Weather limits start with defaults — you can change them in mission settings.",
+      "submit": "Create mission"
+    },
+    "settings": {
+      "title": "Mission settings",
+      "lockedFlown": "This mission has been flown: drone, altitude, limits, weather and route are a record of what happened. Only the name can be changed.",
+      "lockedArchived": "This mission is archived — view only.",
+      "limitsTitle": "Weather limits",
+      "resetLimits": "Reset to defaults",
+      "droneLimitsNote": "For wind, gusts and ceiling the lower of the mission and drone values applies (drone: {{wind}} m/s, {{gust}} m/s, {{alt}} m)."
+    },
+    "complete": {
+      "title": "Complete flight",
+      "confirm": "Mark the flight for “{{name}}” as done? Weather, route, farm and limits become the flight record and will be read-only.",
+      "nothingDeleted": "Nothing is deleted: the mission stays in History with all its data.",
+      "submit": "Complete flight",
+      "missing": {
+        "route": "No route — complete anyway?",
+        "weather": "No weather — complete anyway?",
+        "both": "No route or weather — complete anyway?",
+        "departure": "No departure hour chosen — complete anyway?",
+        "routeDeparture": "No route and no departure hour — complete anyway?"
+      },
+      "missingBody": "The mission will be saved without this data, and it can't be added after completion.",
+      "force": "Complete anyway",
+      "doneTitle": "Flight for “{{name}}” completed",
+      "doneBody": "The mission is saved in History. The active mission has been cleared — for the next flight create a new one or pick one in the header.",
+      "openHistory": "Open history"
+    },
+    "switcher": {
+      "label": "Missions",
+      "create": "Create mission",
+      "createShort": "Mission",
+      "new": "New mission",
+      "choose": "Choose a mission",
+      "current": "Active mission: {{name}} ({{status}})",
+      "groupActive": "In progress",
+      "emptyActive": "No missions in progress",
+      "groupFlown": "Flown",
+      "moreInHistory": "{{count}} more in History",
+      "switchFailed": "Couldn't switch the mission"
+    },
+    "steps": {
+      "title": "Mission steps",
+      "previewSubtitle": "This is how a mission goes — start by creating one",
+      "caption": {
+        "done": "done",
+        "current": "next",
+        "soon": "coming soon",
+        "afterFlight": "after flight"
+      },
+      "mission": {
+        "title": "Mission",
+        "hint": "Name, type, drone and limits"
+      },
+      "farm": {
+        "title": "Farm",
+        "hint": "Import turbines from KML/KMZ"
+      },
+      "route": {
+        "title": "Route",
+        "hint": "Visit order and flight plan"
+      },
+      "weather": {
+        "title": "Weather and departure",
+        "hint": "Farm forecast and departure hour",
+        "departure": "Departure {{time}}",
+        "noHour": "Forecast loaded, no departure hour chosen"
+      },
+      "simulation": {
+        "title": "3D preview",
+        "hint": "3D fly-through before departure"
+      },
+      "complete": {
+        "title": "Flight completion",
+        "hint": "Mark the flight as done",
+        "doneAt": "Completed {{date}}"
+      },
+      "detection": {
+        "title": "Defect detection",
+        "hint": "Blade photo analysis"
+      },
+      "history": {
+        "title": "History",
+        "hint": "All missions and reports"
+      }
+    },
+    "home": {
+      "title": "Inspection mission",
+      "subtitle": "From farm import to report: every step is saved to the active mission",
+      "firstTitle": "Create your first mission",
+      "firstHint": "A mission ties together the farm, drone route, forecast and departure hour. After the flight it stays in History as a record of what happened.",
+      "noActiveTitle": "No active mission",
+      "noActiveHint": "Create a new mission or open an earlier one from the header or History.",
+      "openHistory": "Open history"
+    },
+    "card": {
+      "createdAt": "created {{date}}",
+      "completedAt": "completed {{date}}",
+      "settings": "Mission settings",
+      "complete": "Complete flight",
+      "drone": "Drone",
+      "flightAltitude": "Flight altitude",
+      "turbines": "Turbines",
+      "route": "Route",
+      "departure": "Departure",
+      "noFarm": "no farm",
+      "noRoute": "not computed",
+      "noDeparture": "not chosen",
+      "farmTime": "farm local time"
+    }
+  },
+  "missionHistory": {
+    "title": "Mission history",
+    "desc": "All missions: search, status filter, export and HTML report",
+    "search": "Search by name…",
+    "filterLabel": "Status filter",
+    "filters": {
+      "all": "All",
+      "active": "In progress",
+      "flown": "Flown",
+      "archived": "Archived"
+    },
+    "noMatches": "Nothing found — change the search or filter.",
+    "resetFilters": "Reset search and filter",
+    "columns": {
+      "name": "Mission",
+      "type": "Type",
+      "status": "Status",
+      "dates": "Created / completed",
+      "created": "Created",
+      "completed": "Completed",
+      "turbines": "Turbines",
+      "routeKm": "Route, km",
+      "departureWeather": "Departure & weather",
+      "departure": "Departure",
+      "weather": "Weather at departure",
+      "actions": "Actions"
+    },
+    "activeTag": "active",
+    "actionLabel": "{{action}}: “{{name}}”",
+    "createdAt": "Created",
+    "completedAt": "Completed",
+    "notCompleted": "not completed",
+    "noHourWeather": "no forecast for this hour",
+    "actions": {
+      "open": "Open",
+      "exportJson": "Export JSON",
+      "archive": "Archive",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No missions yet",
+      "hint": "Create a mission: import a farm, compute a route and pick a departure hour. After the flight the mission stays here."
+    },
+    "errors": {
+      "openFailed": "Couldn't open the mission",
+      "deleteFailed": "Couldn't delete the mission",
+      "archiveFailed": "Couldn't archive the mission"
+    },
+    "toast": {
+      "exportedJson": "Mission exported to JSON",
+      "exportedReport": "Report generated",
+      "deleted": "Mission deleted",
+      "archived": "Mission archived"
+    },
+    "exportReport": "HTML report",
+    "reportHint": "Report on the missions currently shown in the list",
+    "confirm": {
+      "deleteTitle": "Delete mission?",
+      "deleteBody": "“{{name}}” will be deleted together with its farm, route and weather. This can't be undone.",
+      "delete": "Delete",
+      "archiveTitle": "Archive mission?",
+      "archiveBody": "“{{name}}” becomes view-only, including its name and notes. It can't be taken out of the archive.",
+      "archive": "Archive"
+    },
+    "report": {
+      "title": "WTM mission report",
+      "generated": "Generated: {{date}}",
+      "filter": "Filter: {{filter}}",
+      "search": "Search: “{{query}}”",
+      "count_one": "{{count}} mission",
+      "count_few": "{{count}} missions",
+      "count_many": "{{count}} missions",
+      "count_other": "{{count}} missions",
+      "footer": "Generated by WTM"
+    }
+  }
+}

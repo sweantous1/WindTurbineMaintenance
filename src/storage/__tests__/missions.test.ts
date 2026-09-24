@@ -66,6 +66,10 @@ describe('репозиторий миссий', () => {
     expect(saved?.route?.order).toEqual(['t1', 't2'])
     expect(saved?.weather?.timezone).toBe('Europe/Moscow')
     expect(await repo.getActiveId()).toBeNull()
+    // Снимок профиля: правка профиля потом не меняет оценку облетанной миссии
+    expect(saved?.droneSnapshot?.id).toBe('default')
+    await database.droneProfiles.update('default', { cruiseSpeedMs: 3 })
+    expect((await repo.get(m.id))?.droneSnapshot?.cruiseSpeedMs).toBe(10)
   })
 
   it('у облетанной миссии полётные данные только читаются, заметки — можно', async () => {

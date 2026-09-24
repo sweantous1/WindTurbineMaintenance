@@ -22,6 +22,13 @@ export function useDroneProfiles(): DroneProfile[] | undefined {
   return useLiveQuery(() => db.droneProfiles.toArray(), [])
 }
 
+// Профиль дрона для расчётов по миссии: у облетанной — снимок на момент полёта,
+// у остальных — текущий профиль из настроек
+export function useMissionDrone(mission: Mission): DroneProfile | undefined {
+  const live = useDroneProfile(mission.droneSnapshot ? undefined : mission.droneProfileId)
+  return mission.droneSnapshot ?? live
+}
+
 export function useDroneProfile(id: string | undefined): DroneProfile | undefined {
   return useLiveQuery(async () => {
     if (id) {

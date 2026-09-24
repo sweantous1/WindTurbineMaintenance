@@ -22,7 +22,7 @@ export default function Header() {
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500]">
       <div className="flex items-center gap-8">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
@@ -51,7 +51,8 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      <div className="flex items-center gap-3">
+      {/* min-w-0: при узком окне сжимается выбор миссии, а не навигация */}
+      <div className="flex min-w-0 shrink items-center gap-3">
         <MissionSwitcher />
         <button
           onClick={toggleLang}

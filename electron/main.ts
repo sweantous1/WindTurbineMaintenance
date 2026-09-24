@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from 'electron'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
@@ -88,8 +88,23 @@ function createWindow() {
   })
 }
 
+// Политика тайлов OpenStreetMap требует опознаваемый User-Agent и Referer, а со схемы app://
+// Chromium Referer не отправляет — без этого сервер тайлов может отказать приложению
+const TILE_URLS = ['https://tile.openstreetmap.org/*', 'https://*.tile.openstreetmap.org/*']
+const APP_REFERER = 'https://github.com/sweantous1/WindTurbineMaintenance'
+
+function identifyTileRequests() {
+  session.defaultSession.webRequest.onBeforeSendHeaders({ urls: TILE_URLS }, (details, callback) => {
+    const headers = { ...details.requestHeaders }
+    headers['User-Agent'] = `WTM-WindTurbineMaintenance/${app.getVersion()} (+${APP_REFERER})`
+    headers['Referer'] = APP_REFERER
+    callback({ requestHeaders: headers })
+  })
+}
+
 app.whenReady().then(() => {
   registerAppProtocol()
+  identifyTileRequests()
   createWindow()
 })
 
