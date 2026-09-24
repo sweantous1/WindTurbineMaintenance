@@ -37,6 +37,14 @@ export default defineConfig(({ mode }) => {
     // Собранное приложение открывается через file://, поэтому пути к ассетам относительные
     base: isElectron ? './' : '/',
     plugins,
+    // onnxruntime-web находит свой .wasm через new URL(..., import.meta.url);
+    // предварительная сборка зависимостей в dev ломает этот путь
+    optimizeDeps: {
+      exclude: ['onnxruntime-web'],
+    },
+    worker: {
+      format: 'es',
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),

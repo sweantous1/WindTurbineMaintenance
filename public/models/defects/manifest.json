@@ -1,0 +1,44 @@
+{
+  "name": "grant-temp-best-turbine",
+  "version": "2025-03-11",
+  "format": "yolo-raw",
+  "imgsz": 640,
+  "input": "images",
+  "output": "output0",
+  "outputShape": [
+    1,
+    11,
+    8400
+  ],
+  "precision": "fp16-weights, fp32-io",
+  "classes": [
+    "corrosion",
+    "craze",
+    "hide_craze",
+    "surface_eye",
+    "surface_injure",
+    "surface_oil",
+    "thunderstrike"
+  ],
+  "classMap": {
+    "corrosion": "corrosion",
+    "craze": "crack",
+    "hide_craze": "crack",
+    "surface_eye": "erosion",
+    "surface_injure": "erosion",
+    "surface_oil": "contamination",
+    "thunderstrike": "lightning"
+  },
+  "defaults": {
+    "confidence": 0.25,
+    "iou": 0.7
+  },
+  "license": "AGPL-3.0 (Ultralytics); веса Grant-temp, использование разрешено команде",
+  "metrics": {
+    "source": "YOLO11_Scan.ipynb, валидация 65 снимков / 104 дефекта",
+    "precision": 0.966,
+    "recall": 0.145,
+    "mAP50": 0.205,
+    "mAP50_95": 0.0985
+  }
+}

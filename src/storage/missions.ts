@@ -115,8 +115,13 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
+  // Удаление миссии удаляет и её фото с находками — иначе они остались бы в базе сиротами
   async function remove(id: string): Promise<void> {
-    await database.transaction('rw', database.missions, database.settings, async () => {
+    await database.transaction('rw', [database.missions, database.settings, database.photos, database.photoBlobs, database.detections], async () => {
+      const photoIds = await database.photos.where('missionId').equals(id).primaryKeys()
+      await database.detections.where('missionId').equals(id).delete()
+      await database.photoBlobs.bulkDelete(photoIds)
+      await database.photos.bulkDelete(photoIds)
       await database.missions.delete(id)
       if ((await getActiveId()) === id) await setActive(null)
     })
