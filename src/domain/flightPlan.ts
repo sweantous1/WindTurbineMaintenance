@@ -1,9 +1,10 @@
 import { distPointToSegment, makeLocalFrame, type LocalPoint } from '@/lib/geo'
-import type { Farm, FlightConflict, FlightPlan, FlightWaypoint, GeoPoint, Turbine, WaypointKind } from './types'
+import { effectiveLimits } from './flightCheck'
+import type { DroneProfile, Farm, FlightConflict, FlightPlan, FlightWaypoint, GeoPoint, Mission, Turbine, WaypointKind } from './types'
 
 // План полёта по готовому порядку турбин: взлёт, подъём на высоту транзита, у каждой
-// турбины — облёт по окружности на высоте ступицы, затем возврат или посадка.
-// Считается в локальных метрах от центра фермы, хранится в WGS84
+// турбины — облёт многоугольником вокруг круга безопасной дистанции на высоте ступицы,
+// затем возврат или посадка. Считается в локальных метрах от центра фермы, хранится в WGS84
 
 export const DEFAULT_ORBIT_SEGMENTS = 12
 const MIN_ORBIT_SEGMENTS = 3
@@ -11,10 +12,12 @@ const MAX_ORBIT_SEGMENTS = 360
 // Отрезок, начинающийся ровно на окружности облёта, не должен считаться заходом внутрь
 // из-за ошибок округления
 const BOUNDARY_TOLERANCE_M = 1e-3
-// Точки доворота к выходу ближе метра друг к другу не ставим: почти совпадающие путевые
-// точки автопилот может отвергнуть, а на безопасность такой недоворот не влияет —
-// отрезок, уходящий с окружности наружу, внутрь круга уже не заходит
-const MIN_EXIT_ARC_STEP_M = 1
+// Доворот к выходу короче метра не делаем: почти совпадающие путевые точки автопилот
+// может отвергнуть, а на безопасность такой недоворот не влияет — отрезок, уходящий
+// с окружности наружу, внутрь круга уже не заходит
+const MIN_EXIT_ARC_M = 1
+// Чтобы доворот ровно на k шагов из-за погрешности не делился на k + 1
+const STEP_EPSILON = 1e-9
 const FULL_TURN = 2 * Math.PI
 
 export interface FlightPlanInput {
@@ -40,6 +43,14 @@ export function turbineRotorM(farm: Farm, t: Turbine): number {
 // Облёт идёт на безопасной дистанции от конца лопасти при любом положении ротора
 export function orbitRadiusM(farm: Farm, t: Turbine): number {
   return turbineRotorM(farm, t) / 2 + farm.defaults.safeDistanceM
+}
+
+// Радиус, на котором стоят вершины облёта. Между вершинами дрон летит по прямой, и хорды
+// вписанного в круг многоугольника срезали бы безопасную дистанцию (при роторе 300 м и
+// запасе 5 м — до захода в диск ротора). Стороны описанного многоугольника лишь касаются
+// круга orbitRadiusM, поэтому он и остаётся гарантированной минимальной дистанцией
+export function orbitPathRadiusM(farm: Farm, t: Turbine, orbitSegments?: number): number {
+  return orbitRadiusM(farm, t) / Math.cos(Math.PI / resolveOrbitSegments(orbitSegments))
 }
 
 interface PlanPoint extends LocalPoint {
@@ -77,11 +88,12 @@ export function buildFlightPlan(input: FlightPlanInput): FlightPlan {
   let cur: LocalPoint = home
   visited.forEach((t, k) => {
     const center = frame.toLocal(t)
-    const radius = orbitRadiusM(farm, t)
+    // Вход и выход — на том же радиусе, что и вершины: иначе спуск ко входу не был бы вертикальным
+    const pathRadius = orbitPathRadiusM(farm, t, segments)
     const hubM = turbineHubM(farm, t)
     // Вход — ближайшая к текущей позиции точка окружности
     const entryAngle = angleFrom(center, cur)
-    pts.push({ kind: 'transit', turbineId: t.id, ...onCircle(center, radius, entryAngle), altM: transitAltM })
+    pts.push({ kind: 'transit', turbineId: t.id, ...onCircle(center, pathRadius, entryAngle), altM: transitAltM })
 
     // Куда лететь после облёта: к следующей турбине или домой. Выход — точка окружности
     // в сторону цели: улетая от неё по прямой, дрон не пересекает облётный круг
@@ -98,14 +110,15 @@ export function buildFlightPlan(input: FlightPlanInput): FlightPlan {
     for (let s = 0; s <= segments; s++) {
       // Последняя точка — ровно точка входа: круг замыкается без накопленной погрешности
       const angle = s === segments ? entryAngle : entryAngle + dir * step * s
-      pts.push({ kind: 'orbit', turbineId: t.id, ...onCircle(center, radius, angle), altM: hubM })
+      pts.push({ kind: 'orbit', turbineId: t.id, ...onCircle(center, pathRadius, angle), altM: hubM })
     }
-    if (extra * radius >= MIN_EXIT_ARC_STEP_M) {
-      // Остаток короче метра присоединяется к последнему шагу доворота
-      const extraSteps = Math.max(1, Math.ceil((extra - MIN_EXIT_ARC_STEP_M / radius) / step))
+    if (extra * pathRadius >= MIN_EXIT_ARC_M) {
+      // Доворот — равными шагами не длиннее шага облёта: хорда длиннее шага срезала бы
+      // безопасную дистанцию, а равные шаги не оставляют хвоста в полметра
+      const extraSteps = Math.max(1, Math.ceil(extra / step - STEP_EPSILON))
       for (let s = 1; s <= extraSteps; s++) {
-        const angle = s === extraSteps ? exitAngle : entryAngle + dir * step * s
-        pts.push({ kind: 'orbit', turbineId: t.id, ...onCircle(center, radius, angle), altM: hubM })
+        const angle = s === extraSteps ? exitAngle : entryAngle + (dir * extra * s) / extraSteps
+        pts.push({ kind: 'orbit', turbineId: t.id, ...onCircle(center, pathRadius, angle), altM: hubM })
       }
     }
     cur = pts[pts.length - 1]
@@ -146,6 +159,26 @@ export function buildFlightPlan(input: FlightPlanInput): FlightPlan {
   }
 }
 
+// Длина плана полёта миссии — тем же построением, что на экранах: взлёт из точки взлёта или,
+// пока её не задали, из центра фермы; потолок — общий для миссии и дрона.
+// undefined — плана нет: нет фермы или маршрута либо в порядке не осталось турбин фермы
+export function missionPlanLengthM(
+  m: Pick<Mission, 'farm' | 'takeoff' | 'route' | 'flightAltitudeM' | 'limits'>,
+  drone: DroneProfile,
+): number | undefined {
+  const { farm, route } = m
+  if (!farm || !route || route.order.length === 0) return undefined
+  const plan = buildFlightPlan({
+    farm,
+    takeoff: m.takeoff ?? farm.center,
+    order: route.order,
+    flightAltitudeM: m.flightAltitudeM,
+    maxAltitudeM: effectiveLimits(m.limits, drone).maxAltitudeM,
+    returnToTakeoff: route.returnToTakeoff,
+  })
+  return plan.turbineOrder.length > 0 ? plan.lengthM : undefined
+}
+
 function resolveOrbitSegments(value: number | undefined): number {
   if (value === undefined || !Number.isFinite(value)) return DEFAULT_ORBIT_SEGMENTS
   return Math.min(MAX_ORBIT_SEGMENTS, Math.max(MIN_ORBIT_SEGMENTS, Math.round(value)))
@@ -167,9 +200,11 @@ function normalizeAngle(a: number): number {
   return r < 0 ? r + FULL_TURN : r
 }
 
-// Конфликт: отрезок вне облёта заходит в круг облёта башни ниже верха лопасти плюс
-// безопасная дистанция. Башню, к облёту которой ведёт отрезок, не проверяем: к ней
-// и летим. Дуги самого облёта (оба конца 'orbit') идут по кругу и не проверяются
+// Конфликт: отрезок плана заходит в круг облёта башни ниже верха лопасти плюс безопасная
+// дистанция. Проверяются все отрезки, включая облёты, и все башни, включая ту, к которой
+// летим: облёт соседа может пройти сквозь чужой ротор, а перелёт с выхода предыдущего облёта
+// — начаться внутри круга следующей башни. Свой круг правильный план не задевает: стороны
+// облёта его касаются, вход и выход лежат снаружи, а путь к ним и от них радиальный
 function findConflicts(farm: Farm, toLocal: (p: GeoPoint) => LocalPoint, pts: PlanPoint[]): FlightConflict[] {
   const towers = farm.turbines.map((t) => ({
     id: t.id,
@@ -181,10 +216,7 @@ function findConflicts(farm: Farm, toLocal: (p: GeoPoint) => LocalPoint, pts: Pl
   for (let i = 0; i + 1 < pts.length; i++) {
     const a = pts[i]
     const b = pts[i + 1]
-    if (a.kind === 'orbit' && b.kind === 'orbit') continue
-    const headingTo = b.kind === 'orbit' || b.kind === 'transit' ? b.turbineId : undefined
     for (const tower of towers) {
-      if (tower.id === headingTo) continue
       const lowestInside = lowestAltInsideCircle(a, b, tower.center, tower.radius - BOUNDARY_TOLERANCE_M)
       if (lowestInside === null || lowestInside >= tower.clearAltM) continue
       conflicts.push({

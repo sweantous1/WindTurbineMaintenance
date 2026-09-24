@@ -12,22 +12,26 @@ import { gapScreen, missionForecast, type ForecastGap, type PlanIssue } from '@/
 import { formatDayTime, formatNumber, isPastHour, splitMinutes } from '@/features/weather/format'
 import { formatReason, missingWindAltitudes } from '@/features/weather/reasons'
 import { useNow } from '@/features/weather/useNow'
+import { droneDisplayName } from '@/features/settings/droneName'
 
 // Вердикт на выбранный час вылета: та же проверка, что и в полосе окна вылета, но с причинами
 // и оценкой длины, времени и заряда по плану полёта
-export default function FlightForecastCard({ mission }: { mission: Mission }) {
+export default function FlightForecastCard({ mission, now: screenNow }: { mission: Mission; now?: Date }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
   const drone = useMissionDrone(mission)
   // Главная перерисовывается только при смене данных: без таймера «прогноз устарел»
   // и «час вылета прошёл» так и не появились бы у открытого экрана
-  const now = useNow(60_000)
+  const ownNow = useNow(60_000)
+  // На «Погоде» — часы экрана: «час прошёл» и «прогноз устарел» меняются одновременно
+  // с полосой окна вылета и баннером, а не со сдвигом до минуты
+  const now = screenNow ?? ownNow
   const forecast = useMemo(() => (drone ? missionForecast(mission, drone) : undefined), [mission, drone])
 
   if (!drone || !forecast) {
     return (
       <Card title={t('flightForecast.title')}>
-        <p className="py-4 text-center text-sm text-gray-400">{t('common.loading')}</p>
+        <p className="py-4 text-center text-sm text-gray-500">{t('common.loading')}</p>
       </Card>
     )
   }
@@ -47,7 +51,7 @@ export default function FlightForecastCard({ mission }: { mission: Mission }) {
     )
   }
 
-  const { assessment, hour, plan, planIssue } = forecast
+  const { assessment, hour, plan, planIssue, farFromFarmM } = forecast
   const look = statusLook(assessment.status)
   const missing = missingWindAltitudes(assessment)
   const staleWeather = preFlight && mission.weather !== undefined && isStale(mission.weather, now)
@@ -67,6 +71,12 @@ export default function FlightForecastCard({ mission }: { mission: Mission }) {
           </span>
           <span className="text-base font-semibold">{t(`flightForecast.verdict.${assessment.status}`)}</span>
         </div>
+        {farFromFarmM !== undefined && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            {t('flightForecast.farFromFarm', { km: formatNumber(farFromFarmM / 1000, lang, 0) })}{' '}
+            {preFlight && <ScreenLink to="/weather">{t('flightForecast.links.weather')}</ScreenLink>}
+          </p>
+        )}
 
         {assessment.reasons.length > 0 && (
           <ul className="space-y-1.5 text-sm">
@@ -81,7 +91,15 @@ export default function FlightForecastCard({ mission }: { mission: Mission }) {
                   >
                     {rl.icon}
                   </span>
-                  <span className="text-gray-800 first-letter:uppercase">{formatReason(r, t, lang)}</span>
+                  <span className="text-gray-800 first-letter:uppercase">
+                    {formatReason(r, t, lang)}
+                    {r.code === 'conflict' && preFlight && (
+                      <>
+                        {' '}
+                        <ScreenLink to="/router">{t('flightForecast.links.route')}</ScreenLink>
+                      </>
+                    )}
+                  </span>
                 </li>
               )
             })}
@@ -131,7 +149,7 @@ export default function FlightForecastCard({ mission }: { mission: Mission }) {
         )}
 
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-xs text-gray-500">
-          <span>{t('flightForecast.droneProfile', { name: drone.name })}</span>
+          <span>{t('flightForecast.droneProfile', { name: droneDisplayName(drone, t) })}</span>
           {preFlight && <ScreenLink to="/weather">{t('flightForecast.links.changeHour')}</ScreenLink>}
         </div>
       </div>
@@ -176,6 +194,10 @@ function EstimateBlock({ estimate: e, lang }: { estimate: MissionEstimate; lang:
         </dd>
       </dl>
       <p className={`mt-2 text-sm font-medium ${e.sorties > 1 ? 'text-amber-900' : 'text-gray-900'}`}>{sorties}</p>
+      {/* Число вылетов — оценка снизу: перелёты между точкой разбиения и базой в неё не входят */}
+      {e.sorties > 1 && Number.isFinite(e.sorties) && (
+        <p className="mt-1 text-xs text-gray-500">{t('flightForecast.estimate.sortiesNote')}</p>
+      )}
       <p className="mt-1 text-xs text-gray-500">{t('flightForecast.estimate.worstNote')}</p>
     </div>
   )

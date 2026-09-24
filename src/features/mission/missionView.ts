@@ -1,7 +1,9 @@
 import type { TFunction } from 'i18next'
 import type { Mission, MissionLimits, MissionPatch, MissionStatus, MissionType, WeatherHour } from '@/domain/types'
+import { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M } from '@/domain/defaults'
 import { canEdit, PRE_FLIGHT } from '@/domain/missionStatus'
 import { findHour } from '@/domain/weather'
+import { formatInputNumber } from '@/features/route/format'
 import { lengthDrifted, planFor, routeContext } from '@/features/route/routeLogic'
 import { wmoKey } from '@/lib/wmo'
 import { escapeHtml, formatDate } from '@/utils'
@@ -11,8 +13,9 @@ import { escapeHtml, formatDate } from '@/utils'
 
 export const MISSION_TYPES: readonly MissionType[] = ['planned', 'emergency', 'post_storm']
 
-export const FLIGHT_ALTITUDE_MIN_M = 10
-export const FLIGHT_ALTITUDE_MAX_M = 500
+// Границы высоты — общие с экраном маршрута (domain/defaults): здесь только реэкспорт,
+// чтобы своё значение не разошлось с оптимизатором
+export { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M }
 
 export type LimitKey = keyof MissionLimits
 
@@ -66,9 +69,10 @@ export function validateName(raw: string): FieldError | null {
 
 export type LimitsForm = Record<LimitKey, string>
 
-export function limitsToForm(limits: MissionLimits): LimitsForm {
+// Дробь — с разделителем языка, как в полях экрана маршрута: «0,5», а не «0.5»
+export function limitsToForm(limits: MissionLimits, lang: string): LimitsForm {
   const form = {} as LimitsForm
-  for (const k of LIMIT_FIELDS) form[k] = String(limits[k])
+  for (const k of LIMIT_FIELDS) form[k] = formatInputNumber(limits[k], lang)
   return form
 }
 
@@ -217,8 +221,8 @@ export function missionRow(m: Mission, t: TFunction, lang: string): MissionRow {
     name: m.name,
     type: t(`mission.types.${m.type}`),
     status: t(`common.statuses.${m.status}`),
-    createdAt: formatDate(m.createdAt),
-    completedAt: m.completedAt ? formatDate(m.completedAt) : null,
+    createdAt: formatDate(m.createdAt, lang),
+    completedAt: m.completedAt ? formatDate(m.completedAt, lang) : null,
     turbines: turbineCount(m),
     routeKm: routeKm(m, lang),
     departure: m.departureTime ? formatLocalHour(m.departureTime, lang) : null,
@@ -226,11 +230,13 @@ export function missionRow(m: Mission, t: TFunction, lang: string): MissionRow {
   }
 }
 
-// Цвет точки статуса в компактных списках, где плашка не помещается
+// Цвет точки статуса в компактных списках, где плашка не помещается.
+// «Час вылета выбран» — не зелёный: статус говорит только о данных, а можно ли лететь,
+// решает вердикт прогноза на этот час
 export const STATUS_DOT: Readonly<Record<MissionStatus, string>> = {
   draft: 'bg-gray-400',
   planned: 'bg-blue-500',
-  ready: 'bg-green-500',
+  ready: 'bg-sky-500',
   flown: 'bg-indigo-500',
   analyzed: 'bg-teal-500',
   archived: 'bg-slate-300',
@@ -284,7 +290,9 @@ export function missionFileName(m: Pick<Mission, 'id' | 'name' | 'createdAt'>, e
     ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 || FORBIDDEN_IN_FILE_NAME.includes(ch) ? ' ' : ch,
   ).join('')
   const slug = cleaned.trim().replace(/\s+/g, '-').replace(/-+/g, '-').slice(0, 60).replace(/[.-]+$/, '')
-  const date = /^\d{4}-\d{2}-\d{2}/.test(m.createdAt) ? `-${m.createdAt.slice(0, 10)}` : ''
+  // Дата — по часам компьютера, как в истории: UTC-дата у миссии, созданной после полуночи, была бы вчерашней
+  const created = /^\d{4}-\d{2}-\d{2}/.test(m.createdAt) ? new Date(m.createdAt) : null
+  const date = created && !Number.isNaN(created.getTime()) ? `-${localDateStamp(created)}` : ''
   return `mission-${slug || m.id.slice(0, 8)}${date}.${ext}`
 }
 

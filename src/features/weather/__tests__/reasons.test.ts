@@ -54,6 +54,26 @@ describe('причины вердикта', () => {
     expect(formatReason(impossible, ru, 'ru')).not.toContain('∞')
   })
 
+  // Находка: «видимость 3 км при минимуме 3 км» при вердикте «нельзя» — значение округлялось до лимита
+  it('значение не выглядит равным лимиту, если на деле отличается', () => {
+    expect(formatReason(r({ code: 'visibility', value: 2.96, limit: 3 }), ru, 'ru')).toBe('видимость 2,96 км при минимуме 3 км')
+    expect(formatReason(r({ code: 'wind', value: 11.9568, limit: 12, altM: 100, severity: 'marginal' }), ru, 'ru')).toBe(
+      'ветер 11,96 м/с на 100 м при лимите 12 м/с',
+    )
+    expect(formatReason(r({ code: 'temp', value: -10.04, limit: -10 }), ru, 'ru')).toBe('температура -10,04 °C ниже минимума -10 °C')
+    expect(formatReason(r({ code: 'battery', severity: 'marginal', value: 80.4, limit: 80 }), en, 'en')).toContain('80.4%')
+    // Лишних знаков не больше двух, и равные числа остаются равными
+    expect(formatReason(r({ code: 'wind', value: 12.0004, limit: 12 }), ru, 'ru')).toBe('ветер 12 м/с при лимите 12 м/с')
+    expect(formatReason(r({ code: 'wind', value: 12, limit: 12 }), ru, 'ru')).toBe('ветер 12 м/с при лимите 12 м/с')
+  })
+
+  it('конфликты плана — числом и со ссылкой на маршрут в тексте', () => {
+    const conflict = r({ code: 'conflict', severity: 'marginal', value: 2, limit: 0 })
+    expect(reasonKey(conflict)).toBe('flightForecast.reasons.conflict')
+    expect(formatReason(conflict, ru, 'ru')).toBe('маршрут проходит слишком близко к башням (конфликтов: 2)')
+    expect(formatReason(conflict, en, 'en')).toBe('the route passes too close to towers (conflicts: 2)')
+  })
+
   it('для каждого кода причины есть перевод на обоих языках', () => {
     const all: Reason[] = [
       r({ code: 'wind' }),
@@ -67,6 +87,7 @@ describe('причины вердикта', () => {
       r({ code: 'altitude' }),
       r({ code: 'battery', value: 90, limit: 80 }),
       r({ code: 'battery', value: Infinity, limit: 80 }),
+      r({ code: 'conflict', value: 1 }),
     ]
     for (const reason of all) {
       for (const [t, lang] of [

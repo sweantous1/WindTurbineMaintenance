@@ -59,11 +59,16 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
         if (mission.departureTime) return t('mission.steps.weather.departure', { time: formatLocalHour(mission.departureTime, lang) })
         return mission.weather ? t('mission.steps.weather.noHour') : hint
       case 'complete':
-        return mission.completedAt ? t('mission.steps.complete.doneAt', { date: formatDate(mission.completedAt) }) : hint
+        return mission.completedAt ? t('mission.steps.complete.doneAt', { date: formatDate(mission.completedAt, lang) }) : hint
       default:
         return hint
     }
   }
+
+  // Шаг погоды «готов», когда час выбран, но это не допуск к полёту: вердикт на этот час —
+  // в карточке прогноза под шагами, и об этом нужно сказать рядом с зелёной галочкой
+  const noteFor = (s: MissionStep): string | null =>
+    mission && s.key === 'weather' && s.done ? t('mission.steps.weather.verdictHint') : null
 
   const captionFor = (s: MissionStep): ReactNode => {
     if (s.done) return <span className="text-green-700">{t('mission.steps.caption.done')}</span>
@@ -79,6 +84,7 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
         {steps.map((s, i) => {
           const action = actionFor(s)
           const isCurrent = s.key === current
+          const note = noteFor(s)
           const tone = s.done
             ? 'border-green-200 bg-green-50/60'
             : isCurrent
@@ -105,6 +111,7 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
               </div>
               <p className="mt-2 text-sm font-semibold text-gray-900">{t(`mission.steps.${s.key}.title`)}</p>
               <p className="mt-0.5 text-xs text-gray-500 line-clamp-2 break-words">{detailFor(s)}</p>
+              {note && <p className="mt-1 text-xs font-medium text-blue-700 break-words">{note}</p>}
             </>
           )
           return (
@@ -119,7 +126,8 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
                   {content}
                 </button>
               ) : (
-                <div aria-current={isCurrent ? 'step' : undefined} className={`h-full rounded-lg border p-3 ${tone} ${s.done ? '' : 'opacity-70'}`}>
+                // Без opacity: полупрозрачный серый текст падал ниже 4,5:1, неактивность и так видна по рамке
+                <div aria-current={isCurrent ? 'step' : undefined} className={`h-full rounded-lg border p-3 ${tone}`}>
                   {content}
                 </div>
               )}

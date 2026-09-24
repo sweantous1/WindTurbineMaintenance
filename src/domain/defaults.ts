@@ -2,10 +2,15 @@ import type { DroneProfile, FarmDefaults, MissionLimits } from './types'
 
 export const DEFAULT_DRONE_PROFILE_ID = 'default'
 
-// Условный инспекционный квадрокоптер; профиль редактируется в настройках
+// Прежнее имя встроенного профиля: оно уже лежит в созданных базах и снимках облетанных
+// миссий, поэтому при выводе его тоже нужно узнавать как встроенное
+export const LEGACY_DEFAULT_DRONE_NAME = 'Квадрокоптер (по умолчанию)'
+
+// Условный инспекционный квадрокоптер; профиль редактируется в настройках.
+// «По умолчанию» в имя не входит: это показывает отдельная плашка
 export const DEFAULT_DRONE_PROFILE: DroneProfile = {
   id: DEFAULT_DRONE_PROFILE_ID,
-  name: 'Квадрокоптер (по умолчанию)',
+  name: 'Квадрокоптер',
   maxWindMs: 12,
   maxGustMs: 15,
   cruiseSpeedMs: 10,
@@ -31,6 +36,11 @@ export const DEFAULT_FARM_DEFAULTS: FarmDefaults = {
 }
 
 export const DEFAULT_FLIGHT_ALTITUDE_M = 90
+
+// Допустимая высота полёта — одна на все экраны, где её вводят: иначе значение, принятое
+// на одном экране, не давало бы сохранить параметры миссии на другом
+export const FLIGHT_ALTITUDE_MIN_M = 10
+export const FLIGHT_ALTITUDE_MAX_M = 500
 
 // Доля лимита, начиная с которой погода считается «на грани»
 export const MARGINAL_FRACTION = 0.8

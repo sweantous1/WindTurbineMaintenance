@@ -1,0 +1,58 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { createElement } from 'react'
+import i18n from '@/i18n'
+import ru from '@/i18n/ru.json'
+import en from '@/i18n/en.json'
+import Docs from '@/pages/Docs'
+import { cleanup, render } from './render'
+
+type Dict = { [key: string]: string | Dict }
+
+const flatten = (obj: Dict, prefix = ''): string[] =>
+  Object.entries(obj).flatMap(([k, v]) => (typeof v === 'string' ? [`${prefix}${k}`] : flatten(v, `${prefix}${k}.`)))
+
+beforeAll(async () => {
+  await i18n.changeLanguage('ru')
+})
+
+afterEach(async () => {
+  await cleanup()
+  await i18n.changeLanguage('ru')
+})
+
+describe('документация', () => {
+  it('описывает текущий порядок работы, а «скоро» — отдельно', async () => {
+    await render(createElement(Docs))
+    const steps = Array.from(document.querySelectorAll('ol > li h3')).map((h) => h.textContent)
+    expect(steps).toEqual(['Миссия', 'Ферма из KML/KMZ', 'Маршрут', 'Погода и час вылета', 'Прогноз полёта', 'Завершение полёта', 'История'])
+    const soon = Array.from(document.querySelectorAll('ul > li h3')).map((h) => h.textContent)
+    expect(soon).toEqual(['Поиск дефектов', '3D-просмотр'])
+
+    const text = document.body.textContent ?? ''
+    // Старые тексты описывали точки маршрута по щелчку, «раздел в разработке» и демо-записи
+    expect(text).not.toContain('добавить точку маршрута')
+    expect(text).not.toContain('Раздел в разработке')
+    expect(text).not.toContain('примеры записей')
+    expect(text).toContain('Импорт KML/KMZ')
+    expect(text).toContain('Получить прогноз')
+  })
+
+  it('на английском тоже без старых обещаний', async () => {
+    await i18n.changeLanguage('en')
+    await render(createElement(Docs))
+    const text = document.body.textContent ?? ''
+    expect(text).toContain('Workflow')
+    expect(text).not.toContain('route point')
+    expect(text).not.toContain('Sample records')
+    expect(text).not.toContain('In progress: the forecast')
+  })
+
+  it('в русском и английском одинаковый набор ключей', () => {
+    expect(flatten(en.docs as Dict).sort()).toEqual(flatten(ru.docs as Dict).sort())
+  })
+
+  it('пункт меню маршрутов на английском называется как ссылки на экран, а не «маршрутизатор»', () => {
+    expect(en.nav.router).toBe('Routes')
+  })
+})

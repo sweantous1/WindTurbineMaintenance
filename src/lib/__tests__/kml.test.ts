@@ -4,7 +4,17 @@ import { strToU8, unzipSync, zipSync } from 'fflate'
 import type { Farm, Turbine } from '@/domain/types'
 import { DEFAULT_FARM_DEFAULTS } from '@/domain/defaults'
 import { centroid, offsetGeo } from '@/lib/geo'
-import { diffTurbines, farmFromImport, farmToKml, KmlImportError, parseKmlText, readFarmFile, sha256Hex, type FarmImport } from '@/lib/kml'
+import {
+  diffTurbines,
+  farmFromImport,
+  farmToKml,
+  importedFarmName,
+  KmlImportError,
+  parseKmlText,
+  readFarmFile,
+  sha256Hex,
+  type FarmImport,
+} from '@/lib/kml'
 import nestedFoldersKml from './fixtures/nested-folders.kml?raw'
 import multiGeometryKml from './fixtures/multigeometry.kml?raw'
 import altitudeModesKml from './fixtures/altitude-modes.kml?raw'
@@ -332,6 +342,24 @@ describe('readFarmFile', () => {
     expect(imp.turbines[0].id).toBe('Ветряк')
   })
 
+  it('не тот файл: фото и PDF — «не KML», документ Word — «ZIP без .kml», а не «ошибка в XML»', async () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01])
+    await expectImportRejection(readFarmFile(new File([jpeg], 'real.jpg')), 'notKml')
+    await expectImportRejection(readFarmFile(new File(['%PDF-1.7\n%âãÏÓ\n'], 'report.pdf')), 'notKml')
+    // .docx — ZIP без .kml: код «нет .kml», а текст уже не называет его архивом KMZ
+    const docx = zipSync({ '[Content_Types].xml': strToU8('<Types/>'), 'word/document.xml': strToU8('<w:document/>') })
+    const error = await readFarmFile(fileOf(docx, 'report.docx')).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(KmlImportError)
+    expect((error as KmlImportError).code).toBe('kmzNoKml')
+    expect((error as KmlImportError).message).not.toMatch(/^В архиве KMZ/)
+    // Текст, начинающийся с «<», по-прежнему разбирается как XML
+    await expectImportRejection(readFarmFile(new File(['<kml><Document><Placemark></Docu'], 'broken.kml')), 'invalidXml')
+    // Пробелы и перевод строки в начале не делают KML «не KML» (без декларации: перед ней пробелы запрещены)
+    const body = kmlDoc(placemark('A', '18.5,52.02')).replace(/^<\?xml[^>]*\?>/, '')
+    const padded = await readFarmFile(new File([`\n  ${body}`], 'padded.kml'))
+    expect(padded.turbines).toHaveLength(1)
+  })
+
   it('пустой архив — «нет .kml», а не ошибка XML', async () => {
     await expectImportRejection(readFarmFile(fileOf(zipSync({}), 'empty.kmz')), 'kmzNoKml')
   })
@@ -426,17 +454,37 @@ describe('farmFromImport', () => {
     expect(Number.isNaN(Date.parse(farm.source?.importedAt ?? ''))).toBe(false)
   })
 
-  it('берёт настройки и имя из прежней фермы', () => {
+  it('берёт настройки и имя из прежней фермы, если это та же ферма', () => {
     const previous: Farm = {
       name: 'Старая',
       center: { lat: 0, lon: 0 },
       defaults: { hubHeightM: 80, rotorDiameterM: 90, safeDistanceM: 40 },
-      turbines: [],
+      // Общая турбина a, поправленная на пару метров, — повторный импорт той же фермы
+      turbines: [{ id: 'a', name: 'A', ...offsetGeo({ lat: 52, lon: 18.5 }, 2, 0) }],
     }
     const farm = farmFromImport({ ...imp, name: undefined }, previous)
     expect(farm.defaults).toEqual(previous.defaults)
     expect(farm.name).toBe('Старая')
     expect(farmFromImport(imp, previous).name).toBe('Ряды')
+  })
+
+  it('чужое имя другой ферме без имени в файле не достаётся', () => {
+    const defaults = { hubHeightM: 80, rotorDiameterM: 90, safeDistanceM: 40 }
+    const unnamed = { ...imp, name: undefined }
+    // Ни одной общей турбины
+    const other: Farm = { name: 'Ферма А', center: BASE, defaults, turbines: [{ id: 'z', name: 'Z', ...BASE }] }
+    expect(farmFromImport(unnamed, other).name).toBeUndefined()
+    expect('name' in farmFromImport(unnamed, other)).toBe(false)
+    // Настройки переходят всегда
+    expect(farmFromImport(unnamed, other).defaults).toEqual(defaults)
+    // Те же id (у меток без уникальных имён это t1…tN у любой фермы), но за сотню километров
+    const far: Farm = { name: 'Ферма А', center: BASE, defaults, turbines: [{ id: 'a', name: 'A', ...offsetGeo({ lat: 52, lon: 18.5 }, 0, 100_000) }] }
+    expect(importedFarmName(unnamed, far)).toBeUndefined()
+    // Все турбины удалены вручную — сравнивать не с чем
+    expect(importedFarmName(unnamed, { ...other, turbines: [] })).toBeUndefined()
+    // Имя из файла главнее, без прежней фермы имени нет
+    expect(importedFarmName(imp, other)).toBe('Ряды')
+    expect(importedFarmName(unnamed)).toBeUndefined()
   })
 
   it('пустой импорт — ошибка', () => {

@@ -10,7 +10,7 @@ export type LatLngTuple = [number, number]
 export interface PlanLines {
   // Транзит без конфликтов — пунктир
   transit: LatLngTuple[][]
-  // Отрезки транзита, проходящие слишком близко к чужой башне, — красным
+  // Отрезки плана (перелёты и дуги облёта), проходящие слишком близко к башне, — красным
   conflict: LatLngTuple[][]
   // Конфликт на вертикальном отрезке (подъём или спуск на месте): в плане это точка
   conflictPoints: LatLngTuple[]
@@ -19,7 +19,8 @@ export interface PlanLines {
 const tuple = (p: GeoPoint): LatLngTuple => [p.lat, p.lon]
 const samePlace = (a: GeoPoint, b: GeoPoint) => a.lat === b.lat && a.lon === b.lon
 
-// Дуги облёта рисуются окружностями отдельно (orbitCircles), здесь — только перелёты.
+// Дуги облёта рисуются окружностями отдельно (orbitCircles), здесь — перелёты и те дуги,
+// что задевают соседнюю башню: иначе такой конфликт был бы в сводке, но не на карте.
 // Соседние отрезки одного вида склеиваются в одну линию: меньше слоёв на карте
 export function planLines(plan: FlightPlan): PlanLines {
   const conflictSegments = new Set(plan.conflicts.map((c) => c.segmentIndex))
@@ -29,8 +30,8 @@ export function planLines(plan: FlightPlan): PlanLines {
   for (let i = 0; i + 1 < wps.length; i++) {
     const a = wps[i]
     const b = wps[i + 1]
-    if (a.kind === 'orbit' && b.kind === 'orbit') continue
     const isConflict = conflictSegments.has(i)
+    if (a.kind === 'orbit' && b.kind === 'orbit' && !isConflict) continue
     if (samePlace(a, b)) {
       if (isConflict) lines.conflictPoints.push(tuple(a))
       continue
@@ -78,6 +79,21 @@ export function segmentEndpoints(plan: FlightPlan, index: number): { from: Endpo
     return w.kind === 'landing' ? { kind: 'landing' } : { kind: 'takeoff' }
   }
   return { from: ref(a), to: ref(b), vertical: samePlace(a, b) }
+}
+
+// Турбина, дугой облёта которой идёт отрезок; undefined — это не облёт. Конфликт на облёте
+// описывается иначе, чем на перелёте: «T1 → T1» читалось бы как ошибка
+export function orbitSegmentTurbine(plan: FlightPlan, index: number): string | undefined {
+  const a = plan.waypoints[index]
+  const b = plan.waypoints[index + 1]
+  if (a?.kind !== 'orbit' || b?.kind !== 'orbit' || a.turbineId !== b.turbineId) return undefined
+  return a.turbineId
+}
+
+// Где стоит вертикальный отрезок (подъём или спуск на месте). Спуск к посадке — «посадка»:
+// его начало над точкой взлёта без турбины, и по началу он назывался бы «взлёт», как и подъём
+export function verticalPlace(ends: { from: EndpointRef; to: EndpointRef }): EndpointRef {
+  return ends.to.kind === 'landing' ? ends.to : ends.from
 }
 
 // Границы вида карты: [[юг, запад], [север, восток]]

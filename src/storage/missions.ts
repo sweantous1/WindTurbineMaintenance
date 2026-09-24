@@ -1,10 +1,30 @@
-import type { Mission, MissionPatch, MissionType } from '@/domain/types'
+import type { DroneProfile, Mission, MissionPatch, MissionType, RoutePlan } from '@/domain/types'
 import { DEFAULT_DRONE_PROFILE, DEFAULT_DRONE_PROFILE_ID, DEFAULT_FLIGHT_ALTITUDE_M, DEFAULT_LIMITS } from '@/domain/defaults'
-import { derivePreFlightStatus, isPreFlight, lockedFields } from '@/domain/missionStatus'
+import { missionPlanLengthM } from '@/domain/flightPlan'
+import { derivePreFlightStatus, isPreFlight, lockedFields, PRE_FLIGHT } from '@/domain/missionStatus'
 import { makeId } from '@/utils/id'
 import { db, type WtmDatabase } from './db'
 
 const ACTIVE_KEY = 'activeMissionId'
+// Тот же допуск, что у пересчёта длины на экране маршрута (lengthDrifted)
+const LENGTH_DRIFT_M = 0.01
+
+// Маршрут с длиной плана по этому профилю дрона: длина зависит от его потолка.
+// Возвращает тот же объект, если пересчитывать нечего
+function syncedRoute(m: Mission, drone: DroneProfile): RoutePlan | undefined {
+  if (!m.route) return m.route
+  let lengthM: number | undefined
+  try {
+    lengthM = missionPlanLengthM(m, drone)
+  } catch (e) {
+    // Испорченная высота в миссии или профиле не должна мешать записать полёт
+    // или сохранить профиль: длина тогда остаётся прежней
+    if (e instanceof RangeError) return m.route
+    throw e
+  }
+  if (lengthM === undefined || Math.abs(lengthM - m.route.lengthM) <= LENGTH_DRIFT_M) return m.route
+  return { ...m.route, lengthM }
+}
 
 export class MissionLockedError extends Error {
   readonly fields: string[]
@@ -99,10 +119,49 @@ export function createMissionRepository(database: WtmDatabase = db) {
         (await database.droneProfiles.get(current.droneProfileId)) ??
         (await database.droneProfiles.get(DEFAULT_DRONE_PROFILE_ID)) ??
         DEFAULT_DRONE_PROFILE
-      const next: Mission = { ...current, status: 'flown', completedAt: ts, updatedAt: ts, droneSnapshot: { ...drone } }
+      // Длина — по тому же профилю, что уходит в снимок: профиль могли поменять в настройках,
+      // не открывая экран маршрута, а после полёта маршрут уже не пересчитать
+      const route = syncedRoute(current, drone)
+      const next: Mission = {
+        ...current,
+        ...(route ? { route } : {}),
+        status: 'flown',
+        completedAt: ts,
+        updatedAt: ts,
+        droneSnapshot: { ...drone },
+      }
       await database.missions.put(next)
       if ((await getActiveId()) === id) await setActive(null)
       return { ok: true as const, mission: next }
+    })
+  }
+
+  // Профиль дрона правили или удалили в настройках: длина маршрута зависит от его потолка,
+  // и без пересчёта главная и история показывали бы старую длину, пока кто-нибудь не откроет
+  // экран маршрута. Пересчитываются миссии до полёта с этим профилем (без id — все);
+  // миссии удалённого профиля считаются по профилю по умолчанию. Возвращает число изменённых
+  async function recomputeRouteLengths(droneProfileId?: string): Promise<number> {
+    return database.transaction('rw', database.missions, database.droneProfiles, async () => {
+      const profiles = new Map((await database.droneProfiles.toArray()).map((p) => [p.id, p]))
+      const fallback = profiles.get(DEFAULT_DRONE_PROFILE_ID) ?? DEFAULT_DRONE_PROFILE
+      const candidates = await database.missions.where('status').anyOf([...PRE_FLIGHT]).toArray()
+      let changed = 0
+      for (const m of candidates) {
+        const own = profiles.get(m.droneProfileId)
+        const affected =
+          droneProfileId === undefined ||
+          m.droneProfileId === droneProfileId ||
+          // Профиль миссии удалили раньше — она тоже летит на профиле по умолчанию
+          (droneProfileId === DEFAULT_DRONE_PROFILE_ID && !own)
+        if (!affected) continue
+        const route = syncedRoute(m, own ?? fallback)
+        if (route === m.route) continue
+        // updatedAt не трогаем: длина — производное поле, человек миссию не правил,
+        // а список миссий упорядочен по updatedAt и не должен перескакивать
+        await database.missions.put({ ...m, route })
+        changed++
+      }
+      return changed
     })
   }
 
@@ -122,7 +181,7 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
-  return { create, get, list, update, complete, archive, remove, getActiveId, setActive }
+  return { create, get, list, update, complete, recomputeRouteLengths, archive, remove, getActiveId, setActive }
 }
 
 export type CompleteResult =

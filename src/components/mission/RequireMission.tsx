@@ -15,7 +15,7 @@ export default function RequireMission({ children }: RequireMissionProps) {
   const mission = useActiveMission()
 
   if (mission === undefined) {
-    return <p className="text-sm text-gray-400 py-12 text-center">{t('common.loading')}</p>
+    return <p className="text-sm text-gray-500 py-12 text-center">{t('common.loading')}</p>
   }
 
   if (mission === null) {

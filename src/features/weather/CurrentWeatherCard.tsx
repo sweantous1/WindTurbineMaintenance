@@ -12,9 +12,10 @@ import {
   formatNumber,
   formatTimeZone,
   formatUtcOffset,
+  offsetShiftInForecast,
   snapshotAge,
 } from './format'
-import { formatCoords } from './location'
+import { formatCoords, forecastDistanceM, isFarFromFarm } from './location'
 import { formatAge } from './reasons'
 
 interface CurrentWeatherCardProps {
@@ -42,6 +43,10 @@ export default function CurrentWeatherCard({ snapshot, farm, now }: CurrentWeath
   const ageText = formatAge(age, t)
   const dir = compassPoint(c.windDirDeg10)
   const farmNow = farmLocalNow(snapshot, now)
+  // Расстояние — до нынешнего центра фермы: число из снимка устаревает после импорта другой фермы
+  const distanceM = farm ? forecastDistanceM({ farm, weather: snapshot }) : snapshot.distanceToFarmM
+  const far = farm !== undefined && isFarFromFarm(distanceM)
+  const shift = offsetShiftInForecast(snapshot)
 
   return (
     <Card
@@ -54,15 +59,18 @@ export default function CurrentWeatherCard({ snapshot, farm, now }: CurrentWeath
           <p className="font-medium text-gray-900 first-letter:uppercase">{place}</p>
           <p className="text-gray-600">
             {t('weatherScreen.current.gridNode')} <span className="font-mono">{formatCoords(loc)}</span>
-            {snapshot.distanceToFarmM !== undefined && (
+            {distanceM !== undefined && (
               <>
                 {' · '}
-                {t('weatherScreen.location.distanceToFarm', {
-                  km: formatNumber(snapshot.distanceToFarmM / 1000, lang, 1),
-                })}
+                {t('weatherScreen.location.distanceToFarm', { km: formatNumber(distanceM / 1000, lang, 1) })}
               </>
             )}
           </p>
+          {far && (
+            <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-amber-900">
+              {t('weatherScreen.location.farFromFarm')}
+            </p>
+          )}
           <p className="text-gray-600">
             {t('weatherScreen.current.timezone', {
               zone: formatTimeZone(snapshot.timezone, lang),
@@ -71,6 +79,14 @@ export default function CurrentWeatherCard({ snapshot, farm, now }: CurrentWeath
             {' · '}
             {t('weatherScreen.current.localNow', { time: formatClock(farmNow) })}
           </p>
+          {shift !== null && (
+            <p className="text-amber-800">
+              {t('weatherScreen.current.clockChange', {
+                offset: formatUtcOffset(snapshot.utcOffsetSeconds),
+                local: formatUtcOffset(snapshot.utcOffsetSeconds + shift),
+              })}
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @xl:grid-cols-5">

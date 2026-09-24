@@ -57,6 +57,8 @@ const KML_ACCEPT = '.kml,.kmz,application/vnd.google-earth.kml+xml,application/v
 
 // Сколько держится уведомление с кнопкой «Отменить»
 const UNDO_TOAST_MS = 8000
+// Ошибка импорта длинная и объясняет, какой файл нужен: за общие 3 с её не прочесть
+const IMPORT_ERROR_TOAST_MS = 10_000
 
 function downloadText(fileName: string, text: string, mime: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: `${mime};charset=utf-8` }))
@@ -256,7 +258,10 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     try {
       setPendingImport(await readFarmFile(file))
     } catch (error) {
-      toast.error(importErrorText(error))
+      // Имя файла — чтобы при нескольких неудачных попытках было видно, о каком речь
+      toast.error(t('routePlan.importErrors.withFile', { name: file.name, reason: importErrorText(error) }), {
+        autoClose: IMPORT_ERROR_TOAST_MS,
+      })
     } finally {
       setReading(false)
     }
@@ -459,6 +464,8 @@ function RoutePlanner({ mission }: { mission: Mission }) {
           imp={pendingImport}
           currentFarm={farm}
           takeoff={savedTakeoff}
+          weather={mission.weather}
+          hasDepartureTime={!!mission.departureTime}
           hasRoute={!!route}
           busy={applying}
           onCancel={() => setPendingImport(null)}

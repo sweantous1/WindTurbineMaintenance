@@ -2,20 +2,24 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, 
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
-import { isPreFlight } from '@/domain/missionStatus'
 import type { Mission } from '@/domain/types'
-import { useActiveMission, useMissions } from '@/hooks/useMissions'
+import { useActiveMission, useMissionMenu } from '@/hooks/useMissions'
 import { missions } from '@/storage/missions'
 import NewMissionDialog from './NewMissionDialog'
 import { STATUS_DOT } from './missionView'
 
-// Облетанных миссий со временем много — в шапке только последние, остальные в истории
+// Облетанных миссий со временем много — в шапке только последние, остальные в истории.
+// Шапка есть на всех экранах: читаем только эти миссии, а не всю историю после каждой записи
 const MAX_FLOWN_IN_MENU = 8
+
+// Кольцо фокуса внутри пункта: у меню overflow-hidden, внешнее кольцо обрезалось бы.
+// Фон при фокусе не меняем — иначе выбранная миссия теряла бы подсветку, а пункт с фокусом не выделялся
+const ITEM_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500'
 
 export default function MissionSwitcher() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const list = useMissions()
+  const menu = useMissionMenu(MAX_FLOWN_IN_MENU)
   const active = useActiveMission()
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -79,13 +83,15 @@ export default function MissionSwitcher() {
 
   const startCreate = () => {
     setOpen(false)
+    // Пункт «Новая миссия» исчезнет вместе с меню — окно должно вернуть фокус на кнопку миссии
+    buttonRef.current?.focus()
     setCreating(true)
   }
 
   let content
-  if (list === undefined || active === undefined) {
+  if (menu === undefined || active === undefined) {
     content = <div className="h-8 w-36 rounded-lg bg-gray-100 animate-pulse" aria-hidden="true" />
-  } else if (list.length === 0) {
+  } else if (menu.inWork.length + menu.flownTotal === 0) {
     content = (
       <button
         type="button"
@@ -100,8 +106,7 @@ export default function MissionSwitcher() {
       </button>
     )
   } else {
-    const inWork = list.filter((m) => isPreFlight(m.status))
-    const flown = list.filter((m) => !isPreFlight(m.status))
+    const { inWork, flown, flownTotal } = menu
     const statusLabel = active ? t(`common.statuses.${active.status}`) : ''
     content = (
       <>
@@ -120,7 +125,15 @@ export default function MissionSwitcher() {
         >
           {active && <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[active.status]}`} aria-hidden="true" />}
           <span className={`min-w-0 truncate ${active ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
-            {active ? active.name : t('mission.switcher.choose')}
+            {active ? (
+              active.name
+            ) : (
+              // Полная подсказка «Выберите миссию» до xl не помещается и обрезалась бы на полуслове
+              <>
+                <span className="hidden xl:inline">{t('mission.switcher.choose')}</span>
+                <span className="xl:hidden">{t('mission.switcher.chooseShort')}</span>
+              </>
+            )}
           </span>
           <svg className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -137,17 +150,17 @@ export default function MissionSwitcher() {
           >
             <div className="max-h-[60vh] overflow-y-auto py-1">
               <MenuGroup title={t('mission.switcher.groupActive')}>
-                {inWork.length === 0 && <p className="px-4 py-2 text-sm text-gray-400">{t('mission.switcher.emptyActive')}</p>}
+                {inWork.length === 0 && <p className="px-4 py-2 text-sm text-gray-500">{t('mission.switcher.emptyActive')}</p>}
                 {inWork.map((m) => (
                   <MenuItem key={m.id} mission={m} active={m.id === active?.id} onSelect={choose} />
                 ))}
               </MenuGroup>
               {flown.length > 0 && (
                 <MenuGroup title={t('mission.switcher.groupFlown')}>
-                  {flown.slice(0, MAX_FLOWN_IN_MENU).map((m) => (
+                  {flown.map((m) => (
                     <MenuItem key={m.id} mission={m} active={m.id === active?.id} onSelect={choose} />
                   ))}
-                  {flown.length > MAX_FLOWN_IN_MENU && (
+                  {flownTotal > flown.length && (
                     <button
                       type="button"
                       role="menuitem"
@@ -155,9 +168,9 @@ export default function MissionSwitcher() {
                         setOpen(false)
                         navigate('/history')
                       }}
-                      className="block w-full px-4 py-2 text-left text-xs font-medium text-blue-600 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                      className={`block w-full px-4 py-2 text-left text-xs font-medium text-blue-600 hover:bg-gray-50 ${ITEM_FOCUS}`}
                     >
-                      {t('mission.switcher.moreInHistory', { count: flown.length - MAX_FLOWN_IN_MENU })}
+                      {t('mission.switcher.moreInHistory', { count: flownTotal - flown.length })}
                     </button>
                   )}
                 </MenuGroup>
@@ -168,7 +181,7 @@ export default function MissionSwitcher() {
                 type="button"
                 role="menuitem"
                 onClick={startCreate}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-blue-700 hover:bg-blue-50 ${ITEM_FOCUS}`}
               >
                 <PlusIcon />
                 {t('mission.switcher.new')}
@@ -197,7 +210,7 @@ function MenuGroup({ title, children }: { title: string; children: ReactNode }) 
   return (
     <div className="py-1" role="group" aria-label={title}>
       {/* Название группы уже в aria-label — диктору второй раз его читать незачем */}
-      <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-gray-400" aria-hidden="true">
+      <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-gray-500" aria-hidden="true">
         {title}
       </p>
       {children}
@@ -214,7 +227,7 @@ function MenuItem({ mission, active, onSelect }: { mission: Mission; active: boo
       aria-checked={active}
       onClick={() => onSelect(mission)}
       title={mission.name}
-      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-gray-50 focus:bg-gray-50 focus:outline-none ${active ? 'bg-blue-50/70' : ''}`}
+      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm ${ITEM_FOCUS} ${active ? 'bg-blue-50/70' : 'hover:bg-gray-50'}`}
     >
       <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[mission.status]}`} aria-hidden="true" />
       <span className="min-w-0 flex-1">

@@ -30,6 +30,7 @@ const exists = (keys: Map<string, string>, key: string) => keys.has(key) || keys
 // satisfies Record: новый код ошибки импорта без перевода не соберётся
 const IMPORT_ERROR_CODES = {
   noTurbines: true,
+  notKml: true,
   invalidXml: true,
   kmzBroken: true,
   kmzNoKml: true,
@@ -66,6 +67,21 @@ describe('словари экрана маршрута', () => {
     for (const key of used) {
       expect(exists(ruKeys, key), `ru: ${key}`).toBe(true)
       expect(exists(enKeys, key), `en: ${key}`).toBe(true)
+    }
+  })
+
+  it('подстановки в текстах одинаковы на обоих языках', () => {
+    const vars = (s: string) => [...s.matchAll(/{{(\w+)}}/g)].map((m) => m[1]).sort()
+    for (const [key, value] of ruKeys) expect(vars(enKeys.get(key) ?? ''), key).toEqual(vars(value))
+    // Ошибка импорта называет файл: иначе после двух неудачных попыток не понять, о каком речь
+    expect(vars(ruKeys.get('routePlan.importErrors.withFile') ?? '')).toEqual(['name', 'reason'])
+    expect(vars(ruKeys.get('routePlan.import.weatherReset') ?? '')).toEqual(['km'])
+  })
+
+  it('тексты ошибок не называют архивом KMZ то, что пользователь им не выбирал', () => {
+    for (const keys of [ruKeys, enKeys]) {
+      expect(keys.get('routePlan.importErrors.kmzNoKml')).not.toMatch(/^(В архиве KMZ|The KMZ archive)/)
+      expect(keys.get('routePlan.importErrors.notKml')).toBeTruthy()
     }
   })
 

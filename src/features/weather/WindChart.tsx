@@ -90,7 +90,7 @@ export default function WindChart({ hours, altitudes, limits, selectedTime }: Wi
     <ChartTooltip {...props} lang={lang} series={series} twoAlts={twoAlts} />
   )
 
-  if (points.length === 0) return <p className="py-8 text-center text-sm text-gray-400">{t('common.noData')}</p>
+  if (points.length === 0) return <p className="py-8 text-center text-sm text-gray-500">{t('common.noData')}</p>
 
   return (
     <div className="space-y-2">

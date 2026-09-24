@@ -18,6 +18,9 @@ import {
 } from '@/features/weather/droneProfileForm'
 import { useActiveMission, useDroneProfiles, useMissions } from '@/hooks/useMissions'
 import { droneProfiles } from '@/storage/droneProfiles'
+import { missions } from '@/storage/missions'
+import { draftValuesFor, getDroneDraft, setDroneDraft } from './droneDraft'
+import { droneDisplayName, hasBuiltinName } from './droneName'
 
 // Выбор в списке: id профиля или новый, ещё не сохранённый
 const NEW = '__new__'
@@ -37,7 +40,8 @@ export default function DroneProfilesSection() {
   const profiles = useDroneProfiles()
   const allMissions = useMissions()
   const activeMission = useActiveMission()
-  const [selectedId, setSelectedId] = useState<string>(DEFAULT_DRONE_PROFILE_ID)
+  // После возвращения на экран открыт тот профиль, правки к которому не сохранили
+  const [selectedId, setSelectedId] = useState<string>(() => getDroneDraft()?.selectedId ?? DEFAULT_DRONE_PROFILE_ID)
   const [pendingDelete, setPendingDelete] = useState<DroneProfile | null>(null)
   // Форма сообщает о несохранённых правках: переход к другому профилю их молча стёр бы
   const [formDirty, setFormDirty] = useState(false)
@@ -46,7 +50,7 @@ export default function DroneProfilesSection() {
   if (!profiles) {
     return (
       <Card title={t('settings.drones.title')}>
-        <p className="py-6 text-center text-sm text-gray-400">{t('common.loading')}</p>
+        <p className="py-6 text-center text-sm text-gray-500">{t('common.loading')}</p>
       </Card>
     )
   }
@@ -57,8 +61,12 @@ export default function DroneProfilesSection() {
   )
   const selected = selectedId === NEW ? null : (profiles.find((p) => p.id === selectedId) ?? sorted[0] ?? null)
   // Ключ из содержимого профиля: после сохранения (или правки в другом окне) форма
-  // перечитывает профиль из базы, а не держит введённый текст вроде «12,50»
-  const formKey = selected ? JSON.stringify(selected) : NEW
+  // перечитывает профиль из базы, а не держит введённый текст вроде «12,50». Язык — в ключе:
+  // дроби в полях пишутся через разделитель языка
+  const baseKey = selected ? JSON.stringify(selected) : NEW
+  const formKey = `${baseKey}|${lang}`
+  const draftKey = selected ? selected.id : NEW
+  const name = (p: DroneProfile) => droneDisplayName(p, t)
   const usedBy = (id: string) => allMissions?.filter((m) => m.droneProfileId === id).length ?? 0
 
   const requestSelect = (id: string) => {
@@ -68,28 +76,48 @@ export default function DroneProfilesSection() {
   }
 
   const initial: DroneFormValues = selected
-    ? droneToForm(selected)
-    : droneToForm({ ...DEFAULT_DRONE_PROFILE, name: t('settings.drones.newName') })
+    ? droneToForm({ ...selected, name: name(selected) }, lang)
+    : droneToForm({ ...DEFAULT_DRONE_PROFILE, name: t('settings.drones.newName') }, lang)
+
+  // Длина маршрута зависит от потолка профиля: без пересчёта главная и история показывали бы
+  // старую. Сбой пересчёта не отменяет сохранения — сообщаем о нём отдельно
+  const recompute = async (profileId: string) => {
+    try {
+      await missions.recomputeRouteLengths(profileId)
+    } catch (e) {
+      toast.error(t('settings.drones.recomputeFailed', { message: e instanceof Error ? e.message : String(e) }))
+    }
+  }
 
   const save = async (profile: Omit<DroneProfile, 'id'>) => {
+    // Нетронутое переведённое имя встроенного профиля не записываем: в базе остаётся
+    // встроенное, и в другом языке профиль снова покажется на нём
+    const keepName = selected !== null && hasBuiltinName(selected) && profile.name === name(selected)
+    const next = keepName ? { ...profile, name: selected.name } : profile
+    let saved: DroneProfile
     try {
-      const saved = await droneProfiles.save(selected ? { ...profile, id: selected.id } : profile)
-      setSelectedId(saved.id)
-      toast.success(t('settings.drones.saved', { name: saved.name }))
+      saved = await droneProfiles.save(selected ? { ...next, id: selected.id } : next)
     } catch (e) {
       toast.error(t('settings.drones.saveFailed', { message: e instanceof Error ? e.message : String(e) }))
+      return
     }
+    setSelectedId(saved.id)
+    toast.success(t('settings.drones.saved', { name: name(saved) }))
+    await recompute(saved.id)
   }
 
   const remove = async (p: DroneProfile) => {
     try {
       await droneProfiles.remove(p.id)
-      setPendingDelete(null)
-      setSelectedId(DEFAULT_DRONE_PROFILE_ID)
-      toast.success(t('settings.drones.deleted', { name: p.name }))
     } catch (e) {
       toast.error(t('settings.drones.deleteFailed', { message: e instanceof Error ? e.message : String(e) }))
+      return
     }
+    setPendingDelete(null)
+    setSelectedId(DEFAULT_DRONE_PROFILE_ID)
+    toast.success(t('settings.drones.deleted', { name: name(p) }))
+    // Миссии удалённого профиля теперь считаются по профилю по умолчанию
+    await recompute(p.id)
   }
 
   return (
@@ -116,7 +144,7 @@ export default function DroneProfilesSection() {
                     active ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
                   }`}
                 >
-                  <span className="block text-sm font-medium text-gray-900">{p.name}</span>
+                  <span className="block text-sm font-medium text-gray-900">{name(p)}</span>
                   <span className="block text-xs text-gray-500">
                     {t('settings.drones.summary', {
                       wind: formatNumber(p.maxWindMs, lang, 1),
@@ -143,6 +171,8 @@ export default function DroneProfilesSection() {
           <DroneProfileForm
             key={formKey}
             initial={initial}
+            draft={draftValuesFor(draftKey, baseKey)}
+            onDraftChange={(values) => setDroneDraft(values ? { selectedId: draftKey, baseKey, values } : null)}
             isNew={selected === null}
             canDelete={selected !== null && selected.id !== DEFAULT_DRONE_PROFILE_ID}
             onSave={save}
@@ -180,7 +210,7 @@ export default function DroneProfilesSection() {
       >
         {pendingDelete && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-700">{t('settings.drones.deleteText', { name: pendingDelete.name })}</p>
+            <p className="text-sm text-gray-700">{t('settings.drones.deleteText', { name: name(pendingDelete) })}</p>
             {usedBy(pendingDelete.id) > 0 && (
               <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
                 {t('settings.drones.deleteUsed', { count: usedBy(pendingDelete.id) })}
@@ -208,6 +238,9 @@ function Badge({ children, tone = 'gray' }: { children: string; tone?: 'gray' | 
 
 interface DroneProfileFormProps {
   initial: DroneFormValues
+  // Несохранённые правки, с которыми ушли с экрана
+  draft?: DroneFormValues
+  onDraftChange: (values: DroneFormValues | null) => void
   isNew: boolean
   canDelete: boolean
   onSave: (profile: Omit<DroneProfile, 'id'>) => Promise<void>
@@ -216,10 +249,20 @@ interface DroneProfileFormProps {
   onDirtyChange: (dirty: boolean) => void
 }
 
-function DroneProfileForm({ initial, isNew, canDelete, onSave, onCancelNew, onDelete, onDirtyChange }: DroneProfileFormProps) {
+function DroneProfileForm({
+  initial,
+  draft,
+  onDraftChange,
+  isNew,
+  canDelete,
+  onSave,
+  onCancelNew,
+  onDelete,
+  onDirtyChange,
+}: DroneProfileFormProps) {
   const { t } = useTranslation()
   const id = useId()
-  const [values, setValues] = useState(initial)
+  const [values, setValues] = useState(() => draft ?? initial)
   const [touched, setTouched] = useState<Partial<Record<keyof DroneFormValues, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -228,6 +271,8 @@ function DroneProfileForm({ initial, isNew, canDelete, onSave, onCancelNew, onDe
   const errors = result.ok ? {} : result.errors
   const dirty = (Object.keys(values) as (keyof DroneFormValues)[]).some((k) => values[k] !== initial[k])
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
+  // Размонтирование черновик не стирает: так правки переживают уход с экрана
+  useEffect(() => onDraftChange(dirty ? values : null), [dirty, values, onDraftChange])
 
   const shown = (field: keyof DroneFormValues): FieldError | undefined =>
     submitted || touched[field] ? errors[field] : undefined

@@ -135,24 +135,43 @@ export function formatTimeZone(timezone: string, lang: string): string {
   return name
 }
 
-// Текущее местное время фермы в формате часов Open-Meteo. Часовой пояс по имени учитывает
-// переход на летнее время; если имя незнакомо движку Intl — берём смещение из снимка
+// Текущее время фермы в шкале часов снимка. Open-Meteo подписывает весь ряд одним смещением
+// utc_offset_seconds, без перехода на летнее время, поэтому и «сейчас» считаем по нему:
+// по имени пояса после перехода текущий час ряда оказался бы «прошедшим» или наоборот
 export function farmLocalNow(s: Pick<WeatherSnapshot, 'timezone' | 'utcOffsetSeconds'>, now: Date = new Date()): string {
+  return fromUtc(new Date(now.getTime() + s.utcOffsetSeconds * 1000))
+}
+
+// Смещение пояса в момент instant по его имени; null — пояс незнаком движку Intl
+function zoneOffsetSeconds(timezone: string, instant: Date): number | null {
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: s.timezone,
+      timeZone: timezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       hourCycle: 'h23',
-    }).formatToParts(now)
-    const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+    }).formatToParts(instant)
+    const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((p) => p.type === type)?.value ?? 0)
+    const local = Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'))
+    return Math.round((local - Math.floor(instant.getTime() / 60_000) * 60_000) / 1000)
   } catch {
-    return fromUtc(new Date(now.getTime() + s.utcOffsetSeconds * 1000))
+    return null
   }
+}
+
+// В горизонте прогноза пояс фермы переводит часы: подписи ряда идут по смещению снимка,
+// и после перехода расходятся со стенными часами фермы. Сдвиг в секундах или null
+export function offsetShiftInForecast(s: Pick<WeatherSnapshot, 'timezone' | 'utcOffsetSeconds' | 'hourly'>): number | null {
+  for (const h of [s.hourly[0], s.hourly[s.hourly.length - 1]]) {
+    const p = h && parseLocalTime(h.time)
+    if (!p) continue
+    const offset = zoneOffsetSeconds(s.timezone, new Date(asUtc(p).getTime() - s.utcOffsetSeconds * 1000))
+    if (offset !== null && offset !== s.utcOffsetSeconds) return offset - s.utcOffsetSeconds
+  }
+  return null
 }
 
 // Час уже прошёл на ферме: текущий час (14:00 при 14:35) ещё не прошёл

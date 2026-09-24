@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { FlightPlan, FlightWaypoint } from '@/domain/types'
 import { orbitRadiusM } from '@/domain/flightPlan'
-import { orbitCircles, orderNumbers, planLines, planPath, segmentEndpoints, turbinesAboveCeiling, viewBounds } from '../planGeometry'
+import {
+  orbitCircles,
+  orbitSegmentTurbine,
+  orderNumbers,
+  planLines,
+  planPath,
+  segmentEndpoints,
+  turbinesAboveCeiling,
+  verticalPlace,
+  viewBounds,
+} from '../planGeometry'
 import { planFor, type RouteContext } from '../routeLogic'
-import { at, lineFarm } from './helpers'
+import { at, lineFarm, makeFarm } from './helpers'
 
 function wp(kind: FlightWaypoint['kind'], lat: number, lon: number, turbineId?: string): FlightWaypoint {
   return { kind, lat, lon, altM: 0, ...(turbineId ? { turbineId } : {}) }
@@ -86,6 +96,35 @@ describe('линии плана на карте', () => {
     const first = plan.conflicts.find((c) => c.segmentIndex === 0)
     expect(first?.turbineId).toBe('t1')
   })
+
+  it('дуга облёта с конфликтом — красной линией, без конфликта — не рисуется', () => {
+    const lines = planLines(syntheticPlan([3]))
+    expect(lines.conflict).toEqual([
+      [
+        [0, 1],
+        [1, 1],
+      ],
+    ])
+    // Остальные дуги облёта по-прежнему не попадают ни в транзит, ни в конфликт
+    expect(lines.transit).toHaveLength(2)
+    expect(lines.conflictPoints).toEqual([])
+  })
+
+  it('на настоящем плане облёт, задевший соседа, виден на карте', () => {
+    // T1 и T3 в 140 м: облёт T1 на высоте ступицы проходит сквозь зону ротора T3
+    const farm = makeFarm([
+      [0, 0],
+      [600, 600],
+      [140, 0],
+      [700, -300],
+    ])
+    const plan = planFor({ farm, takeoff: at(-600, 0), flightAltitudeM: 90, maxAltitudeM: 120 }, ['t1', 't2', 't3', 't4'], true)
+    const onOrbit = plan.conflicts.filter((c) => orbitSegmentTurbine(plan, c.segmentIndex) === 't1' && c.turbineId === 't3')
+    expect(onOrbit.length).toBeGreaterThan(0)
+    const orbitKeys = new Set(plan.waypoints.filter((w) => w.kind === 'orbit' && w.turbineId === 't1').map((w) => `${w.lat},${w.lon}`))
+    const redOrbit = planLines(plan).conflict.filter((line) => line.every(([lat, lon]) => orbitKeys.has(`${lat},${lon}`)))
+    expect(redOrbit.length).toBeGreaterThan(0)
+  })
 })
 
 describe('описание отрезков', () => {
@@ -96,6 +135,36 @@ describe('описание отрезков', () => {
     expect(segmentEndpoints(plan, 5)).toEqual({ from: { kind: 'turbine', id: 'A' }, to: { kind: 'takeoff' }, vertical: false })
     expect(segmentEndpoints(plan, 6)).toEqual({ from: { kind: 'takeoff' }, to: { kind: 'landing' }, vertical: true })
     expect(segmentEndpoints(plan, 7)).toBeUndefined()
+  })
+
+  it('дуга облёта узнаётся по турбине, перелёты и подъёмы — нет', () => {
+    const plan = syntheticPlan()
+    expect(orbitSegmentTurbine(plan, 3)).toBe('A')
+    expect(orbitSegmentTurbine(plan, 4)).toBe('A')
+    expect(orbitSegmentTurbine(plan, 1)).toBeUndefined()
+    expect(orbitSegmentTurbine(plan, 2)).toBeUndefined()
+    expect(orbitSegmentTurbine(plan, 5)).toBeUndefined()
+    expect(orbitSegmentTurbine(plan, 7)).toBeUndefined()
+  })
+
+  it('подъём при взлёте — «взлёт», спуск к посадке — «посадка», а не второй «взлёт»', () => {
+    const plan = syntheticPlan()
+    const up = segmentEndpoints(plan, 0)
+    const down = segmentEndpoints(plan, 6)
+    expect(up && verticalPlace(up)).toEqual({ kind: 'takeoff' })
+    expect(down && verticalPlace(down)).toEqual({ kind: 'landing' })
+  })
+
+  it('на настоящем плане с возвратом два конфликта у взлёта описаны разными точками', () => {
+    // Турбина t1 в 83 м от взлёта при радиусе облёта 90 м: и подъём, и спуск задевают её зону
+    const farm = { ...lineFarm(2, 600), turbines: [{ id: 't1', name: 'T1', ...at(83, 0) }, { id: 't2', name: 'T2', ...at(600, 0) }] }
+    const plan = planFor({ farm, takeoff: at(0, 0), flightAltitudeM: 90, maxAltitudeM: 120 }, ['t2', 't1'], true)
+    const vertical = plan.conflicts
+      .filter((c) => c.turbineId === 't1')
+      .map((c) => segmentEndpoints(plan, c.segmentIndex))
+      .filter((e) => e?.vertical)
+    expect(vertical).toHaveLength(2)
+    expect(vertical.map((e) => e && verticalPlace(e))).toEqual([{ kind: 'takeoff' }, { kind: 'landing' }])
   })
 
   it('на настоящем плане без возврата последний отрезок — посадка у последней турбины', () => {

@@ -7,20 +7,22 @@ import StatusBadge from '@/components/common/StatusBadge'
 import ReadOnlyBanner from '@/components/mission/ReadOnlyBanner'
 import { isPreFlight } from '@/domain/missionStatus'
 import type { Mission } from '@/domain/types'
-import { useActiveMission, useMissionDrone, useMissions } from '@/hooks/useMissions'
+import { useActiveMission, useMissionCount, useMissionDrone } from '@/hooks/useMissions'
 import CompleteMissionDialog from '@/features/mission/CompleteMissionDialog'
 import MissionSettingsDialog from '@/features/mission/MissionSettingsDialog'
 import MissionStepper from '@/features/mission/MissionStepper'
 import NewMissionDialog from '@/features/mission/NewMissionDialog'
 import { formatLocalHour, formatValue, routeKm, turbineCount } from '@/features/mission/missionView'
 import FlightForecastCard from '@/features/forecast/FlightForecastCard'
+import { droneDisplayName } from '@/features/settings/droneName'
 import { formatDate } from '@/utils'
 
 export default function Home() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const active = useActiveMission()
-  const all = useMissions()
+  // Главной нужно только «есть ли миссии», а не сами записи со всей историей
+  const missionCount = useMissionCount()
   const [creating, setCreating] = useState(false)
   // id миссии, для которой открыты параметры: окно не должно само открыться у другой миссии,
   // если эта пропала (удалили в истории) и активной потом стала новая
@@ -30,9 +32,9 @@ export default function Home() {
 
   let body: ReactNode
   if (active === undefined) {
-    body = <p className="py-12 text-center text-sm text-gray-400">{t('common.loading')}</p>
+    body = <p className="py-12 text-center text-sm text-gray-500">{t('common.loading')}</p>
   } else if (active === null) {
-    const hasMissions = (all?.length ?? 0) > 0
+    const hasMissions = (missionCount ?? 0) > 0
     body = (
       <>
         <Card>
@@ -114,8 +116,8 @@ function MissionCard({ mission: m, onSettings, onComplete }: MissionCardProps) {
             <StatusBadge status={m.status} />
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            {t(`mission.types.${m.type}`)} · {t('mission.card.createdAt', { date: formatDate(m.createdAt) })}
-            {m.completedAt && <> · {t('mission.card.completedAt', { date: formatDate(m.completedAt) })}</>}
+            {t(`mission.types.${m.type}`)} · {t('mission.card.createdAt', { date: formatDate(m.createdAt, lang) })}
+            {m.completedAt && <> · {t('mission.card.completedAt', { date: formatDate(m.completedAt, lang) })}</>}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -131,7 +133,7 @@ function MissionCard({ mission: m, onSettings, onComplete }: MissionCardProps) {
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-gray-100 pt-4 sm:grid-cols-3 lg:grid-cols-5">
-        <Fact label={t('mission.card.drone')} value={drone?.name ?? '…'} />
+        <Fact label={t('mission.card.drone')} value={drone ? droneDisplayName(drone, t) : '…'} />
         <Fact label={t('mission.card.flightAltitude')} value={t('mission.units.meters', { value: formatValue(m.flightAltitudeM, lang) })} />
         <Fact
           label={t('mission.card.turbines')}
@@ -166,14 +168,15 @@ interface FactProps {
 function Fact({ label, value, empty, sub, title }: FactProps) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</dt>
       <dd className="mt-1 min-w-0" title={title ?? value ?? undefined}>
         {value !== null ? (
           <span className="block truncate text-sm font-medium text-gray-900">{value}</span>
         ) : (
-          <span className="block truncate text-sm text-gray-400">{empty ?? '—'}</span>
+          // «Не рассчитан» — состояние миссии, а не декор: контраст не ниже 4,5:1, на солнце его тоже читают
+          <span className="block truncate text-sm text-gray-600">{empty ?? '—'}</span>
         )}
-        {sub && <span className="block text-xs text-gray-400">{sub}</span>}
+        {sub && <span className="block text-xs text-gray-500">{sub}</span>}
       </dd>
     </div>
   )

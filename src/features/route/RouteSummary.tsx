@@ -5,7 +5,7 @@ import type { DroneProfile, Farm, FlightPlan, RoutePlan } from '@/domain/types'
 import { estimateMission } from '@/domain/flightCheck'
 import { turbineHubM } from '@/domain/flightPlan'
 import { formatKm, formatNumber } from './format'
-import { segmentEndpoints, turbinesAboveCeiling, type EndpointRef } from './planGeometry'
+import { orbitSegmentTurbine, segmentEndpoints, turbinesAboveCeiling, verticalPlace, type EndpointRef } from './planGeometry'
 import { cleanOrder } from './routeLogic'
 
 interface RouteSummaryProps {
@@ -178,6 +178,7 @@ export default function RouteSummary({ farm, route, plan, drone, flightAltitudeM
               <ul className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {plan.conflicts.map((c, i) => {
                   const ends = segmentEndpoints(plan, c.segmentIndex)
+                  const orbitOf = orbitSegmentTurbine(plan, c.segmentIndex)
                   const values = {
                     turbine: nameOf(c.turbineId),
                     distance: formatNumber(c.distanceM, lang),
@@ -187,15 +188,21 @@ export default function RouteSummary({ farm, route, plan, drone, flightAltitudeM
                     <li key={`${c.segmentIndex}-${c.turbineId}-${i}`} className="text-sm text-red-800 bg-red-50 rounded-lg px-3 py-2">
                       {!ends
                         ? t('routePlan.summary.conflictUnknown', values)
-                        : ends.vertical
-                          ? t('routePlan.summary.conflictVertical', { ...values, at: endpoint(ends.from) })
-                          : t('routePlan.summary.conflict', { ...values, from: endpoint(ends.from), to: endpoint(ends.to) })}
+                        : orbitOf !== undefined
+                          ? t('routePlan.summary.conflictOrbit', { ...values, at: nameOf(orbitOf) })
+                          : ends.vertical
+                            ? t('routePlan.summary.conflictVertical', { ...values, at: endpoint(verticalPlace(ends)) })
+                            : t('routePlan.summary.conflict', { ...values, from: endpoint(ends.from), to: endpoint(ends.to) })}
                     </li>
                   )
                 })}
               </ul>
             )}
             {plan.conflicts.length > 0 && <p className="text-xs text-gray-500 mt-2">{t('routePlan.summary.conflictsHint')}</p>}
+            {/* Облёт, задевший соседа, не исправить ни взлётом, ни порядком, ни высотой транзита */}
+            {plan.conflicts.some((c) => orbitSegmentTurbine(plan, c.segmentIndex) !== undefined) && (
+              <p className="text-xs text-gray-500 mt-1">{t('routePlan.summary.conflictsOrbitHint')}</p>
+            )}
           </div>
         )}
       </div>

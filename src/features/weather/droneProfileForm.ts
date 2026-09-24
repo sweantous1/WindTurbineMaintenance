@@ -1,4 +1,5 @@
 import type { DroneProfile } from '@/domain/types'
+import { formatInputNumber } from '@/features/route/format'
 import { parseDecimal } from './location'
 
 // Форма профиля дрона для настроек. Лежит рядом с погодой: эти числа — лимиты,
@@ -41,15 +42,17 @@ export type DroneFormResult =
   | { ok: true; profile: Omit<DroneProfile, 'id'> }
   | { ok: false; errors: DroneFormErrors }
 
-export function droneToForm(p: Omit<DroneProfile, 'id'>): DroneFormValues {
+// Дроби — с десятичным разделителем языка: в русском интерфейсе «12,5», как во всех полях
+export function droneToForm(p: Omit<DroneProfile, 'id'>, lang: string): DroneFormValues {
+  const num = (v: number) => formatInputNumber(v, lang)
   return {
     name: p.name,
-    maxWindMs: String(p.maxWindMs),
-    maxGustMs: String(p.maxGustMs),
-    cruiseSpeedMs: String(p.cruiseSpeedMs),
-    enduranceMin: String(p.enduranceMin),
-    reservePct: String(p.reservePct),
-    maxAltitudeM: String(p.maxAltitudeM),
+    maxWindMs: num(p.maxWindMs),
+    maxGustMs: num(p.maxGustMs),
+    cruiseSpeedMs: num(p.cruiseSpeedMs),
+    enduranceMin: num(p.enduranceMin),
+    reservePct: num(p.reservePct),
+    maxAltitudeM: num(p.maxAltitudeM),
   }
 }
 

@@ -1,9 +1,11 @@
-import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 import Modal from '@/components/common/Modal'
 import Button from '@/components/common/Button'
 import { DEFAULT_LIMITS } from '@/domain/defaults'
+import { formatInputNumber } from '@/features/route/format'
+import { droneDisplayName } from '@/features/settings/droneName'
 import { canEdit, isPreFlight } from '@/domain/missionStatus'
 import type { Mission, MissionPatch, MissionType } from '@/domain/types'
 import { useDroneProfile } from '@/hooks/useMissions'
@@ -49,9 +51,12 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
   const [nameDraft, setName] = useState(mission.name)
   const [typeDraft, setType] = useState<MissionType>(mission.type)
   const [droneDraft, setDroneId] = useState(mission.droneProfileId)
-  const [altitudeDraft, setAltitude] = useState(String(mission.flightAltitudeM))
-  const [limitsDraft, setLimitsForm] = useState<LimitsForm>(() => limitsToForm(mission.limits))
+  const [altitudeDraft, setAltitude] = useState(() => formatInputNumber(mission.flightAltitudeM, lang))
+  const [limitsDraft, setLimitsForm] = useState<LimitsForm>(() => limitsToForm(mission.limits, lang))
   const [submitted, setSubmitted] = useState(false)
+  // Номер неудачной отправки: после перерисовки с ошибками фокус переходит на первое неверное поле
+  const [failedAttempt, setFailedAttempt] = useState(0)
+  const formRef = useRef<HTMLFormElement>(null)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
   // Запрещённое поле показывает записанное значение, а не черновик: миссию могли завершить,
@@ -59,9 +64,19 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
   const name = editable('name') ? nameDraft : mission.name
   const type = editable('type') ? typeDraft : mission.type
   const droneId = editable('droneProfileId') ? droneDraft : mission.droneProfileId
-  const altitude = editable('flightAltitudeM') ? altitudeDraft : String(mission.flightAltitudeM)
-  const limitsForm = editable('limits') ? limitsDraft : limitsToForm(mission.limits)
-  const drone = useDroneProfile(droneId)
+  const altitude = editable('flightAltitudeM') ? altitudeDraft : formatInputNumber(mission.flightAltitudeM, lang)
+  const limitsForm = editable('limits') ? limitsDraft : limitsToForm(mission.limits, lang)
+  // У облетанной миссии — снимок дрона на момент полёта, как в карточке и вердикте:
+  // профиль в настройках с тех пор могли переименовать, поменять или удалить
+  const liveDrone = useDroneProfile(mission.droneSnapshot ? undefined : droneId)
+  const drone = mission.droneSnapshot ?? liveDrone
+
+  // Окно выше экрана ноутбука: ошибка в поле над «Сохранить» уезжает из вида, и без переноса
+  // фокуса нажатие выглядело бы так, будто ничего не произошло. Диктор прочтёт ошибку через aria-describedby
+  useEffect(() => {
+    if (failedAttempt === 0) return
+    formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
+  }, [failedAttempt])
 
   // Запрещённые поля не проверяем: в них то, что записано, и в патч они не попадут
   const nameError = editable('name') ? validateName(name) : null
@@ -82,8 +97,12 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (savingRef.current) return
     setSubmitted(true)
-    if (savingRef.current || nameError || !alt.ok || !limits.limits) return
+    if (nameError || !alt.ok || !limits.limits) {
+      setFailedAttempt((n) => n + 1)
+      return
+    }
     // Патч — от той миссии, что видел человек: если её тем временем завершили,
     // репозиторий откажет с MissionLockedError, и правка не пропадёт молча
     const patch = buildSettingsPatch(mission, {
@@ -130,7 +149,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
   }
 
   return (
-    <form onSubmit={submit} onKeyDown={onKeyDown} noValidate className="space-y-4">
+    <form ref={formRef} onSubmit={submit} onKeyDown={onKeyDown} noValidate className="space-y-4">
       {!isPreFlight(mission.status) && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{lockedHint}</p>
       )}
@@ -162,6 +181,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
             id="mission-settings-drone"
             value={droneId}
             onChange={setDroneId}
+            fixedName={mission.droneSnapshot ? droneDisplayName(mission.droneSnapshot, t) : undefined}
             hasHint={!!drone}
             disabled={!editable('droneProfileId')}
             title={!editable('droneProfileId') ? lockedHint : undefined}
@@ -201,7 +221,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
             size="sm"
             disabled={limitLocked}
             title={limitLocked ? lockedHint : undefined}
-            onClick={() => setLimitsForm(limitsToForm(DEFAULT_LIMITS))}
+            onClick={() => setLimitsForm(limitsToForm(DEFAULT_LIMITS, lang))}
           >
             {t('mission.settings.resetLimits')}
           </Button>

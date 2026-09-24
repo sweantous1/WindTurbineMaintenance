@@ -82,7 +82,7 @@ export default function NumberField({ label, value, range, onCommit, disabled, h
         )}
       </div>
       {note && (
-        <p id={noteId} className={`text-xs mt-1 ${invalid ? 'text-red-600' : 'text-gray-400'}`}>
+        <p id={noteId} className={`text-xs mt-1 ${invalid ? 'text-red-600' : 'text-gray-500'}`}>
           {note}
         </p>
       )}

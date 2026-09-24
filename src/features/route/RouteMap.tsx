@@ -7,6 +7,7 @@ import type { Farm, FlightPlan, GeoPoint, Turbine } from '@/domain/types'
 import { orbitRadiusM, turbineHubM, turbineRotorM } from '@/domain/flightPlan'
 import { escapeHtml } from '@/utils/format'
 import { formatCoord, formatNumber } from './format'
+import { labelElement, localizeMap, tileStatusHandlers } from './mapChrome'
 import { orbitCircles, orderNumbers, planLines, viewBounds, type LatLngTuple } from './planGeometry'
 
 export interface MapFocus {
@@ -134,6 +135,18 @@ function ClickToAdd({ enabled, onAdd }: { enabled: boolean; onAdd: (p: GeoPoint)
       map.doubleClickZoom.enable()
     }
   }, [enabled, map])
+  return null
+}
+
+// Кнопки масштаба, ссылка на Leaflet и закрытие всплывающих окон — на языке интерфейса
+function MapLabels() {
+  const map = useMap()
+  const { t } = useTranslation()
+  const zoomIn = t('routePlan.map.zoomIn')
+  const zoomOut = t('routePlan.map.zoomOut')
+  const closePopup = t('routePlan.map.closePopup')
+  const leafletTitle = t('routePlan.map.leafletTitle')
+  useEffect(() => localizeMap(map, { zoomIn, zoomOut, closePopup, leafletTitle }), [map, zoomIn, zoomOut, closePopup, leafletTitle])
   return null
 }
 
@@ -317,17 +330,33 @@ function RouteMap({
   const circles = useMemo(() => (farm && plan ? orbitCircles(farm, plan.turbineOrder) : []), [farm, plan])
   const conflictTurbines = useMemo(() => new Set(plan?.conflicts.map((c) => c.turbineId)), [plan])
   const takeoffPosition = usePositionRef(takeoff)
-  const takeoffHandlers = useMemo<L.LeafletEventHandlerFnMap>(
-    () => ({ dragend: dragEndHandler(onMoveTakeoff, takeoffPosition) }),
-    [onMoveTakeoff, takeoffPosition],
-  )
-  const takeoffMarker = useRef<L.Marker>(null)
   const takeoffLabel = t('routePlan.map.takeoff')
   // Маркер с клавиатуры доступен как кнопка, но у divIcon Leaflet ставит только title,
-  // а он продублировал бы всплывающую подсказку; имя для экранного диктора — отдельно
+  // а он продублировал бы всплывающую подсказку; имя для экранного диктора — отдельно.
+  // Ставится по 'add': MapContainer рисует маркеры со второго рендера, и эффект при открытии
+  // экрана маркера ещё не застаёт
+  const takeoffHandlers = useMemo<L.LeafletEventHandlerFnMap>(
+    () => ({
+      dragend: dragEndHandler(onMoveTakeoff, takeoffPosition),
+      add: (e) => labelElement((e.target as L.Marker).getElement(), takeoffLabel),
+    }),
+    [onMoveTakeoff, takeoffPosition, takeoffLabel],
+  )
+  const takeoffMarker = useRef<L.Marker>(null)
+  // Смена языка на открытой карте: маркер уже на месте, 'add' не повторится
   useEffect(() => {
-    takeoffMarker.current?.getElement()?.setAttribute('aria-label', takeoffLabel)
-  }, [takeoffLabel, takeoff])
+    labelElement(takeoffMarker.current?.getElement(), takeoffLabel)
+  }, [takeoffLabel])
+
+  const [tilesFailed, setTilesFailed] = useState(false)
+  const tileHandlers = useMemo<L.LeafletEventHandlerFnMap>(() => tileStatusHandlers(setTilesFailed), [])
+  const tileLayer = useRef<L.TileLayer>(null)
+  // Упавшие тайлы Leaflet сам не запрашивает: без этого после возврата сети вид остался бы серым
+  useEffect(() => {
+    const retry = () => tileLayer.current?.redraw()
+    window.addEventListener('online', retry)
+    return () => window.removeEventListener('online', retry)
+  }, [])
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
@@ -358,10 +387,20 @@ function RouteMap({
       {addMode && editable && (
         <div className="px-4 py-1.5 text-xs text-blue-800 bg-blue-50 border-b border-blue-100">{t('routePlan.map.addModeHint')}</div>
       )}
+      {/* Область объявлений есть всегда: вставленную вместе с текстом диктор может не прочесть */}
+      <div role="status">
+        {tilesFailed && (
+          <div className="px-4 py-1.5 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">{t('routePlan.map.tilesUnavailable')}</div>
+        )}
+      </div>
       <div className="h-[540px]">
-        <MapContainer {...initialView} className="h-full w-full" worldCopyJump>
+        {/* Кнопки масштаба ставит MapLabels: у стандартных подписи только английские */}
+        <MapContainer {...initialView} className="h-full w-full" worldCopyJump zoomControl={false}>
+          <MapLabels />
           {/* Условия OpenStreetMap требуют видимой атрибуции */}
           <TileLayer
+            ref={tileLayer}
+            eventHandlers={tileHandlers}
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}

@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M } from '@/domain/defaults'
 import { DEFAULT_ACO_PARAMS, DEFAULT_GA_PARAMS } from '@/domain/route'
 import {
   ALGORITHMS,
   DEFAULT_THETA_DEG,
+  FLIGHT_ALTITUDE_RANGE,
   PARAM_DEFS,
   THETA_RANGE,
   defaultParams,
@@ -117,5 +119,16 @@ describe('ввод чисел', () => {
   it('для целых параметров дробное — ошибка, а не молчаливое округление', () => {
     expect(parseNumberInput('3.5', { min: 1, max: 10, integer: true })).toBeNull()
     expect(parseNumberInput('3', { min: 1, max: 10, integer: true })).toBe(3)
+  })
+})
+
+describe('высота полёта', () => {
+  it('те же границы 10…500 м, что в окне параметров миссии', () => {
+    expect(FLIGHT_ALTITUDE_RANGE).toEqual({ min: FLIGHT_ALTITUDE_MIN_M, max: FLIGHT_ALTITUDE_MAX_M })
+    expect(FLIGHT_ALTITUDE_RANGE).toEqual({ min: 10, max: 500 })
+    expect(parseNumberInput('500', FLIGHT_ALTITUDE_RANGE)).toBe(500)
+    // Раньше экран маршрута принимал до 1000 м, и параметры миссии потом не сохранялись
+    expect(parseNumberInput('600', FLIGHT_ALTITUDE_RANGE)).toBeNull()
+    expect(parseNumberInput('9', FLIGHT_ALTITUDE_RANGE)).toBeNull()
   })
 })

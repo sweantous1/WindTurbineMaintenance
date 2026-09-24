@@ -100,7 +100,7 @@ export default function History() {
 
   let content: ReactNode
   if (list === undefined) {
-    content = <p className="py-12 text-center text-sm text-gray-400">{t('common.loading')}</p>
+    content = <p className="py-12 text-center text-sm text-gray-500">{t('common.loading')}</p>
   } else if (list.length === 0) {
     content = (
       <div className="mx-auto max-w-lg space-y-3 py-10 text-center">
@@ -133,7 +133,7 @@ export default function History() {
                 }`}
               >
                 {t(`missionHistory.filters.${f}`)}
-                <span className="ml-1.5 text-xs text-gray-400">{counts[f]}</span>
+                <span className="ml-1.5 text-xs text-gray-500">{counts[f]}</span>
               </button>
             ))}
           </div>
@@ -151,7 +151,7 @@ export default function History() {
           <div className="relative -mx-5 overflow-x-auto px-5">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wide text-gray-400">
+                <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                   <th className="py-2 pr-3 font-medium">{t('missionHistory.columns.name')}</th>
                   <th className="px-2 py-2 font-medium">{t('missionHistory.columns.status')}</th>
                   <th className="px-2 py-2 font-medium">{t('missionHistory.columns.dates')}</th>
@@ -213,7 +213,7 @@ export default function History() {
                                 </span>
                               </>
                             ) : (
-                              <span className="block text-xs text-gray-400">{t('missionHistory.noHourWeather')}</span>
+                              <span className="block text-xs text-gray-500">{t('missionHistory.noHourWeather')}</span>
                             )}
                           </>
                         ) : (
@@ -322,7 +322,7 @@ export default function History() {
 }
 
 function Dash() {
-  return <span className="text-gray-400">—</span>
+  return <span className="text-gray-500">—</span>
 }
 
 interface IconButtonProps {

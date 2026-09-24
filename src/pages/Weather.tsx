@@ -6,7 +6,7 @@ import Card from '@/components/common/Card'
 import Modal from '@/components/common/Modal'
 import ReadOnlyBanner from '@/components/mission/ReadOnlyBanner'
 import RequireMission from '@/components/mission/RequireMission'
-import { effectiveLimits } from '@/domain/flightCheck'
+import { effectiveLimits, transitAltitudeM } from '@/domain/flightCheck'
 import { canEdit } from '@/domain/missionStatus'
 import type { Mission } from '@/domain/types'
 import { fetchWeatherSnapshot, findHour, isStale } from '@/domain/weather'
@@ -22,7 +22,7 @@ import { assessHours } from '@/features/weather/flightWindow'
 import { formatAge } from '@/features/weather/reasons'
 import { missionFlightPlan } from '@/features/weather/forecast'
 import { formatNumber, formatTimeZone, formatUtcOffset, isPastHour, snapshotAge } from '@/features/weather/format'
-import { DEFAULT_FORECAST_HOURS, farmPoint, initialPoint, parseForecastHours, type ForecastPoint } from '@/features/weather/location'
+import { farmPoint, initialForecastHours, initialPoint, parseForecastHours, type ForecastPoint } from '@/features/weather/location'
 import { buildSnapshotExport, downloadJson, snapshotFileName } from '@/features/weather/snapshotExport'
 import { useNow } from '@/features/weather/useNow'
 import { useMissionDrone } from '@/hooks/useMissions'
@@ -59,7 +59,7 @@ function WeatherScreen({ mission }: { mission: Mission }) {
   // открыт (другое окно), а запрос по старому центру дал бы прогноз не для той фермы
   let point = chosenPoint
   if (chosenPoint?.source === 'farm') point = mission.farm ? farmPoint(mission.farm) : null
-  const [hoursText, setHoursText] = useState(String(DEFAULT_FORECAST_HOURS))
+  const [hoursText, setHoursText] = useState(() => String(initialForecastHours(mission)))
   const [loading, setLoading] = useState(false)
   // Храним саму ошибку, а не текст: после смены языка она переведётся заново
   const [error, setError] = useState<unknown>(null)
@@ -73,7 +73,10 @@ function WeatherScreen({ mission }: { mission: Mission }) {
 
   const plan = useMemo(() => (drone ? missionFlightPlan(mission, drone) : undefined), [mission, drone])
   const limits = useMemo(() => (drone ? effectiveLimits(mission.limits, drone) : undefined), [mission.limits, drone])
-  const altitudes = useMemo(() => chartAltitudes(plan, mission.flightAltitudeM), [plan, mission.flightAltitudeM])
+  // Без плана — высота транзита, прижатая к потолку, как в вердикте: иначе график показывал бы
+  // ветер на 150 м, а вердикт считал бы его на потолке 120 м
+  const noPlanAltM = limits ? transitAltitudeM(mission.flightAltitudeM, limits) : mission.flightAltitudeM
+  const altitudes = useMemo(() => chartAltitudes(plan, noPlanAltM), [plan, noPlanAltM])
   const cells = useMemo(
     () =>
       drone && snapshot
@@ -151,7 +154,7 @@ function WeatherScreen({ mission }: { mission: Mission }) {
   const stale = editable && snapshot !== undefined && isStale(snapshot, now)
   const alt = (m: number) => formatNumber(m, lang, 0)
   let altitudeNote: string
-  if (!plan) altitudeNote = t('weatherScreen.chart.noPlan', { alt: alt(mission.flightAltitudeM) })
+  if (!plan) altitudeNote = t('weatherScreen.chart.noPlan', { alt: alt(noPlanAltM) })
   else if (hasTwoAltitudes(altitudes)) {
     altitudeNote = t('weatherScreen.chart.fromPlan', { transit: alt(altitudes.transitAltM), top: alt(altitudes.topAltM) })
   } else altitudeNote = t('weatherScreen.chart.fromPlanSingle', { alt: alt(altitudes.transitAltM) })
@@ -256,7 +259,7 @@ function WeatherScreen({ mission }: { mission: Mission }) {
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-gray-400">{t('weatherScreen.request.source')}</p>
+              <p className="text-xs text-gray-500">{t('weatherScreen.request.source')}</p>
             </div>
           </Card>
         )}
@@ -294,7 +297,7 @@ function WeatherScreen({ mission }: { mission: Mission }) {
                 isPast={isPast}
               />
             ) : (
-              <p className="py-6 text-center text-sm text-gray-400">{t('common.loading')}</p>
+              <p className="py-6 text-center text-sm text-gray-500">{t('common.loading')}</p>
             )}
           </Card>
 
@@ -303,11 +306,11 @@ function WeatherScreen({ mission }: { mission: Mission }) {
               {limits ? (
                 <WindChart hours={snapshot.hourly} altitudes={altitudes} limits={limits} selectedTime={mission.departureTime} />
               ) : (
-                <p className="py-6 text-center text-sm text-gray-400">{t('common.loading')}</p>
+                <p className="py-6 text-center text-sm text-gray-500">{t('common.loading')}</p>
               )}
             </Card>
             <div>
-              <FlightForecastCard mission={mission} />
+              <FlightForecastCard mission={mission} now={now} />
             </div>
           </div>
 

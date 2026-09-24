@@ -2,7 +2,8 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import type { TFunction } from 'i18next'
 import i18n from '@/i18n'
-import { DEFAULT_LIMITS } from '@/domain/defaults'
+import { DEFAULT_LIMITS, FLIGHT_ALTITUDE_MAX_M as DOMAIN_ALT_MAX, FLIGHT_ALTITUDE_MIN_M as DOMAIN_ALT_MIN } from '@/domain/defaults'
+import { FLIGHT_ALTITUDE_RANGE } from '@/features/route/optimizerParams'
 import type { Farm, Mission, MissionStatus, RoutePlan, WeatherHour, WeatherSnapshot } from '@/domain/types'
 import { planFor } from '@/features/route/routeLogic'
 import {
@@ -12,9 +13,12 @@ import {
   completionGapsKey,
   countByFilter,
   describeHourWeather,
+  FLIGHT_ALTITUDE_MAX_M,
+  FLIGHT_ALTITUDE_MIN_M,
   filterMissions,
   formatLocalHour,
   formatValue,
+  LIMIT_RANGES,
   limitsToForm,
   localDateStamp,
   missionFileName,
@@ -24,6 +28,7 @@ import {
   parseInRange,
   parseLimits,
   routeKm,
+  STATUS_DOT,
   validateName,
   withRouteLength,
 } from '../missionView'
@@ -99,17 +104,30 @@ describe('проверка полей формы', () => {
     expect(parseInRange('500,0', 10, 500)).toEqual({ ok: true, value: 500 })
   })
 
+  it('границы высоты — те же, что у экрана маршрута: высота оттуда проходит проверку здесь', () => {
+    expect([FLIGHT_ALTITUDE_MIN_M, FLIGHT_ALTITUDE_MAX_M]).toEqual([DOMAIN_ALT_MIN, DOMAIN_ALT_MAX])
+    expect(LIMIT_RANGES.maxAltitudeM).toEqual(FLIGHT_ALTITUDE_RANGE)
+    expect(parseInRange(String(FLIGHT_ALTITUDE_RANGE.max), FLIGHT_ALTITUDE_MIN_M, FLIGHT_ALTITUDE_MAX_M).ok).toBe(true)
+  })
+
   it('название обязательно, пробелы не считаются', () => {
     expect(validateName('   ')).toEqual({ key: 'mission.errors.nameRequired' })
     expect(validateName(' Ростов ')).toBeNull()
   })
 
   it('лимиты по умолчанию проходят проверку без изменений', () => {
-    expect(parseLimits(limitsToForm(DEFAULT_LIMITS))).toEqual({ limits: DEFAULT_LIMITS, errors: {} })
+    expect(parseLimits(limitsToForm(DEFAULT_LIMITS, 'ru'))).toEqual({ limits: DEFAULT_LIMITS, errors: {} })
+    expect(parseLimits(limitsToForm(DEFAULT_LIMITS, 'en'))).toEqual({ limits: DEFAULT_LIMITS, errors: {} })
+  })
+
+  it('дробные лимиты в форме — с разделителем языка, как в полях маршрута', () => {
+    expect(limitsToForm(DEFAULT_LIMITS, 'ru').maxPrecipMmH).toBe('0,5')
+    expect(limitsToForm(DEFAULT_LIMITS, 'en').maxPrecipMmH).toBe('0.5')
+    expect(limitsToForm({ ...DEFAULT_LIMITS, minTempC: -12.5 }, 'ru').minTempC).toBe('-12,5')
   })
 
   it('лимиты: порядок температур, порывы не слабее ветра, пустое поле', () => {
-    const form = { ...limitsToForm(DEFAULT_LIMITS), minTempC: '20', maxTempC: '10', maxGustMs: '5', maxPrecipMmH: '' }
+    const form = { ...limitsToForm(DEFAULT_LIMITS, 'ru'), minTempC: '20', maxTempC: '10', maxGustMs: '5', maxPrecipMmH: '' }
     const res = parseLimits(form)
     expect(res.limits).toBeNull()
     expect(res.errors.maxTempC?.key).toBe('mission.errors.tempOrder')
@@ -233,7 +251,9 @@ describe('форматирование', () => {
       ] },
     })
     const r = missionRow(m, tRu, 'ru')
-    expect(r.status).toBe('Готова к полёту')
+    // Статус говорит только о данных — не обещает допуск к полёту, это делает вердикт прогноза
+    expect(r.status).toBe('Час вылета выбран')
+    expect(missionRow(m, tEn, 'en').status).toBe('Departure set')
     expect(r.type).toBe('Плановая')
     expect(r.turbines).toBe(2)
     expect(r.routeKm).toBe('12,3')
@@ -244,6 +264,21 @@ describe('форматирование', () => {
     const r2 = missionRow({ ...m, departureTime: '2026-09-25T09:00' }, tRu, 'ru')
     expect(r2.departure).toBe('25.09.2026, 09:00')
     expect(r2.weather).toBeNull()
+  })
+
+  it('даты создания и завершения — в формате языка интерфейса, а не системы', () => {
+    const m = mission({ status: 'flown', completedAt: '2026-09-21T10:00:00Z' })
+    const ru = missionRow(m, tRu, 'ru')
+    const en = missionRow(m, tEn, 'en')
+    expect(ru.createdAt).toMatch(/^\d{2}\.\d{2}\.\d{4}$/)
+    expect(ru.completedAt).toMatch(/^\d{2}\.\d{2}\.\d{4}$/)
+    expect(en.createdAt).toMatch(/^\d{1,2}\/\d{1,2}\/\d{4}$/)
+    expect(en.completedAt).toMatch(/^\d{1,2}\/\d{1,2}\/\d{4}$/)
+  })
+
+  it('«Час вылета выбран» не красится в зелёный: допуск даёт только вердикт прогноза', () => {
+    expect(STATUS_DOT.ready).not.toMatch(/green|emerald/)
+    expect(STATUS_DOT.ready).not.toBe(STATUS_DOT.planned)
   })
 })
 
@@ -276,6 +311,13 @@ describe('имя файла миссии', () => {
     const name = missionFileName({ id: 'abcdef12-3456', name: 'Ферма: "Юг"/Север*?<>|\u0007 .', createdAt: '2026-09-20T08:00:00Z' }, 'json')
     expect(name).toBe('mission-Ферма-Юг-Север-2026-09-20.json')
     expect(name).not.toMatch(/[\\/:*?"<>|]/)
+  })
+
+  it('дата в имени — по часам компьютера, как в истории, а не UTC', () => {
+    // Полчаса после местной полуночи: в поясах восточнее UTC дата UTC была бы вчерашней
+    const createdAt = new Date(2026, 8, 24, 0, 30).toISOString()
+    expect(missionFileName({ id: 'a', name: 'Юг', createdAt }, 'json')).toBe('mission-Юг-2026-09-24.json')
+    expect(missionFileName({ id: 'a', name: 'Юг', createdAt: '2026-13-45T00:00:00Z' }, 'json')).toBe('mission-Юг.json')
   })
 
   it('пустое название заменяется началом id, длинное обрезается', () => {
