@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import Button from '@/components/common/Button'
 import type { DetectBackend } from '@/services/detectionEngine'
-import { formatDecimal, manifestRecall, recallPercent } from './format'
 import type { EngineStatus } from './useAnalysis'
 
 interface EngineStatusBarProps {
@@ -12,8 +11,7 @@ interface EngineStatusBarProps {
 }
 
 export default function EngineStatusBar({ status, lastBackend, onRecheck }: EngineStatusBarProps) {
-  const { t, i18n } = useTranslation()
-  const lang = i18n.resolvedLanguage ?? 'ru'
+  const { t } = useTranslation()
 
   if (status.kind === 'loading') {
     return (
@@ -51,7 +49,6 @@ export default function EngineStatusBar({ status, lastBackend, onRecheck }: Engi
 
   const { manifest } = status
   const backend = lastBackend ?? status.backend
-  const recall = manifestRecall(manifest.metrics)
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white text-sm">
@@ -66,20 +63,6 @@ export default function EngineStatusBar({ status, lastBackend, onRecheck }: Engi
           <span className="font-medium text-gray-900">{t(`defects.engine.backend.${backend}`)}</span>
         </p>
       </div>
-      <p className="flex items-start gap-2 border-t border-amber-200 bg-amber-50 px-4 py-2 text-amber-900 rounded-b-xl">
-        <svg className="mt-0.5 h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" aria-hidden="true">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
-          />
-        </svg>
-        <span>
-          {recall === undefined
-            ? t('defects.engine.noRecall')
-            : t('defects.engine.recallWarning', { percent: recallPercent(recall), recall: formatDecimal(recall, lang, 3) })}
-        </span>
-      </p>
     </div>
   )
 }

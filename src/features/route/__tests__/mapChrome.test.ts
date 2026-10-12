@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import L from 'leaflet'
-import { labelElement, localizeMap, localizedPrefix, tileStatusHandlers, type MapLabels } from '../mapChrome'
+import { labelElement, leafletPrefix, localizeMap, tileStatusHandlers, type MapLabels } from '../mapChrome'
 
 const LABELS: MapLabels = { zoomIn: 'Приблизить', zoomOut: 'Отдалить', closePopup: 'Закрыть', leafletTitle: 'Библиотека «карт» & <тест>' }
 
@@ -70,12 +70,22 @@ describe('подписи карты на языке интерфейса', () =>
     expect(link?.getAttribute('title')).toBe(LABELS.leafletTitle)
     expect(link?.getAttribute('target')).toBe('_blank')
     expect(link?.getAttribute('href')).toBe('https://leafletjs.com')
-    expect(link?.textContent).toContain('Leaflet')
+    expect(link?.textContent).toBe('Leaflet')
     expect(m.getContainer().innerHTML).not.toContain('A JavaScript library')
   })
 
+  it('в атрибуции нет значка флага из префикса Leaflet по умолчанию', () => {
+    // Сам Leaflet вставляет значок, если браузер умеет встроенный SVG
+    expect(L.Control.Attribution.prototype.options.prefix).toContain('<svg')
+    const m = makeMap()
+    localizeMap(m, LABELS)
+    const attribution = m.getContainer().querySelector('.leaflet-control-attribution')
+    expect(attribution?.querySelector('svg')).toBeNull()
+    expect(attribution?.querySelector('a[href="https://leafletjs.com"]')?.innerHTML).toBe('Leaflet')
+  })
+
   it('подсказка в префиксе экранируется', () => {
-    const prefix = localizedPrefix('<a href="https://leafletjs.com" title="A JavaScript library">Leaflet</a>', '"><img src=x>')
+    const prefix = leafletPrefix('"><img src=x>')
     expect(prefix).not.toContain('<img')
     expect(prefix).toContain('&quot;&gt;&lt;img src=x&gt;')
     expect(prefix.endsWith('>Leaflet</a>')).toBe(true)

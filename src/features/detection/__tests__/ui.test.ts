@@ -120,13 +120,13 @@ async function changeValue(el: HTMLInputElement | HTMLSelectElement, value: stri
 }
 
 describe('экран поиска дефектов', () => {
-  it('строка состояния: модель, версия, процессор и предупреждение о полноте', async () => {
+  it('строка состояния: модель, версия и процессор, без плашки о полноте модели', async () => {
     await missionWithPhotos(['a.jpg'])
     await render(createElement(Detection))
     await waitFor(() => expect(text()).toContain('grant-temp-best-turbine'))
     expect(text()).toContain('версия 2025-03-11')
     expect(text()).toContain('процессор (WASM)')
-    expect(text()).toContain('Модель находит примерно 15% дефектов (recall 0,145) — результат требует проверки человеком.')
+    expect(text()).not.toMatch(/находит примерно|recall/)
   })
 
   it('без модели — баннер «не установлена», анализ недоступен', async () => {

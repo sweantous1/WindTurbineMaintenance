@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { durationParts, formatConfidence, formatDecimal, formatMegabytes, manifestRecall, recallPercent } from '../format'
+import { durationParts, formatConfidence, formatDecimal, formatMegabytes } from '../format'
 
 describe('форматирование', () => {
   it('уверенность — две цифры после запятой по языку', () => {
@@ -8,18 +8,10 @@ describe('форматирование', () => {
     expect(formatConfidence(0.873, 'en')).toBe('0.87')
   })
 
-  it('recall 0,145 — это примерно 15%, а не 14 из-за двоичной погрешности', () => {
-    expect(0.145 * 100).toBeLessThan(14.5)
-    expect(recallPercent(0.145)).toBe(15)
-    expect(recallPercent(0.5)).toBe(50)
+  it('десятичные — без лишних нулей, не больше заданного числа знаков', () => {
     expect(formatDecimal(0.145, 'ru')).toBe('0,145')
-  })
-
-  it('recall берётся из metrics, только если это число 0..1', () => {
-    expect(manifestRecall({ recall: 0.145 })).toBe(0.145)
-    expect(manifestRecall({ recall: '0.145' })).toBeUndefined()
-    expect(manifestRecall({ recall: 14.5 })).toBeUndefined()
-    expect(manifestRecall(undefined)).toBeUndefined()
+    expect(formatDecimal(2.5, 'ru', 1)).toBe('2,5')
+    expect(formatDecimal(3, 'en')).toBe('3')
   })
 
   it('длительность: до 10 с — с десятыми, дальше целые, с минуты — минуты и секунды', () => {

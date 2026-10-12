@@ -19,17 +19,6 @@ export function formatDecimal(value: number, lang: string, maxDigits = 3): strin
   return numberFormat(lang, 0, maxDigits).format(value)
 }
 
-// 0.145 → 15. Умножение даёт 14.499999999999998, поэтому сначала убираем хвост двоичной погрешности
-export function recallPercent(recall: number): number {
-  return Math.round(Number((recall * 100).toPrecision(10)))
-}
-
-// Полнота из manifest.metrics: поле необязательное и без схемы, поэтому проверяем тип
-export function manifestRecall(metrics: Record<string, unknown> | undefined): number | undefined {
-  const r = metrics?.recall
-  return typeof r === 'number' && Number.isFinite(r) && r >= 0 && r <= 1 ? r : undefined
-}
-
 export function formatMegabytes(bytes: number, lang: string): string {
   return numberFormat(lang, 1, 1).format(bytes / (1024 * 1024))
 }

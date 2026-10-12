@@ -36,8 +36,6 @@
         "webgpu": "graphics card (WebGPU)",
         "wasm": "processor (WASM)"
       },
-      "recallWarning": "The model finds roughly {{percent}}% of defects (recall {{recall}}) — results must be checked by a person.",
-      "noRecall": "The model's recall has not been measured — results must be checked by a person.",
       "missingTitle": "The model is not installed",
       "missingHint": "Analysis is unavailable: the app folder needs models/defects/model.onnx and manifest.json. You can still add photos without the model.",
       "failedTitle": "The model failed to load: {{reason}}",
