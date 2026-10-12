@@ -1,40 +1,47 @@
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import MissionSwitcher from '@/features/mission/MissionSwitcher'
 
+// Порядок по сценарию: маршрут, погода, 3D, потом дефекты по фото
 const navItems = [
   { path: '/', labelKey: 'nav.home' },
-  { path: '/detection', labelKey: 'nav.detection' },
   { path: '/router', labelKey: 'nav.router' },
   { path: '/weather', labelKey: 'nav.weather' },
+  { path: '/simulation', labelKey: 'nav.simulation' },
+  { path: '/detection', labelKey: 'nav.detection' },
   { path: '/history', labelKey: 'nav.history' },
+  { path: '/docs', labelKey: 'nav.docs' },
+  { path: '/settings', labelKey: 'nav.settings' },
 ]
 
 export default function Header() {
   const { t, i18n } = useTranslation()
+  // resolvedLanguage уже 'ru' или 'en', а language может быть 'ru-RU'
+  const isRu = i18n.resolvedLanguage === 'ru'
 
   const toggleLang = () => {
-    i18n.changeLanguage(i18n.language === 'ru' ? 'en' : 'ru')
+    i18n.changeLanguage(isRu ? 'en' : 'ru')
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-8">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-            W
-          </div>
-          <span className="font-semibold text-gray-800 text-sm hidden sm:block">
+    <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500] print:hidden">
+      {/* В узком окне (минимум 1024 px) ужимаются отступы меню, дальше оно прокручивается.
+          Правый блок не сжимается, чтобы выбор миссии не наезжал на кнопку языка */}
+      <div className="flex min-w-0 flex-1 items-center gap-4 xl:gap-8">
+        <div className="flex shrink-0 items-center gap-2">
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-8 w-8" />
+          <span className="font-semibold text-gray-800 text-sm hidden xl:block">
             WTM
           </span>
         </div>
-        <nav className="flex items-center gap-1">
+        <nav className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.path === '/'}
               className={({ isActive }) =>
-                `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                `px-2 xl:px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                   isActive
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -46,19 +53,14 @@ export default function Header() {
           ))}
         </nav>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="ml-3 flex shrink-0 items-center gap-3">
+        <MissionSwitcher />
         <button
           onClick={toggleLang}
           className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
         >
-          {i18n.language === 'ru' ? 'EN' : 'RU'}
+          {isRu ? 'EN' : 'RU'}
         </button>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <div className="w-7 h-7 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium">
-            A
-          </div>
-          <span className="hidden sm:block">{t('profile.admin')}</span>
-        </div>
       </div>
     </header>
   )

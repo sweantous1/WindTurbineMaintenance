@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Синтетика: высота берётся только из точки с altitudeMode absolute -->
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2">
+<Document>
+  <Placemark>
+    <name>absolute</name>
+    <Point>
+      <altitudeMode>absolute</altitudeMode>
+      <coordinates>18.7000,52.2000,112.5</coordinates>
+    </Point>
+  </Placemark>
+  <Placemark>
+    <name>clampToGround</name>
+    <Point>
+      <altitudeMode>clampToGround</altitudeMode>
+      <coordinates>18.7040,52.2000,110</coordinates>
+    </Point>
+  </Placemark>
+  <Placemark>
+    <name>relativeToGround</name>
+    <Point>
+      <altitudeMode>relativeToGround</altitudeMode>
+      <coordinates>18.7080,52.2000,20</coordinates>
+    </Point>
+  </Placemark>
+  <Placemark>
+    <name>lookAtOnly</name>
+    <LookAt>
+      <longitude>18.712</longitude>
+      <latitude>52.2</latitude>
+      <altitude>115</altitude>
+      <range>1500</range>
+      <altitudeMode>absolute</altitudeMode>
+    </LookAt>
+    <Point><coordinates>18.7120,52.2000,115</coordinates></Point>
+  </Placemark>
+  <Placemark>
+    <name>gxSeaFloor</name>
+    <Point>
+      <gx:altitudeMode>relativeToSeaFloor</gx:altitudeMode>
+      <coordinates>18.7160,52.2000,30</coordinates>
+    </Point>
+  </Placemark>
+  <Placemark>
+    <name>absoluteNoAlt</name>
+    <Point>
+      <altitudeMode>absolute</altitudeMode>
+      <coordinates>18.7200,52.2000</coordinates>
+    </Point>
+  </Placemark>
+</Document>
+</kml>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Синтетика: ряд турбин одной меткой MultiGeometry (с вложенной MultiGeometry и линией) и отдельная турбина -->
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Ряды</name>
+  <Placemark>
+    <name>Ряд Б</name>
+    <MultiGeometry>
+      <Point><coordinates>18.6000,52.1000</coordinates></Point>
+      <Point><coordinates>18.6040,52.1000</coordinates></Point>
+      <LineString><coordinates>18.6000,52.1000 18.6080,52.1000</coordinates></LineString>
+      <MultiGeometry>
+        <Point><coordinates>18.6080,52.1000</coordinates></Point>
+      </MultiGeometry>
+    </MultiGeometry>
+  </Placemark>
+  <Placemark>
+    <name>WTG-10</name>
+    <Point><coordinates>18.6120,52.1000</coordinates></Point>
+  </Placemark>
+</Document>
+</kml>

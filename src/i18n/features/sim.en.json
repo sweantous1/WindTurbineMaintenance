@@ -1,0 +1,133 @@
+{
+  "nav": {
+    "simulation": "3D flight"
+  },
+  "sim": {
+    "title": "3D flight",
+    "mission": "Mission: {{name}}",
+    "completeFlight": "Complete flight…",
+    "flown": "Flight completed {{date}}: showing the plan as it was",
+    "flownNoDate": "Flight completed: showing the plan as it was",
+    "gaps": {
+      "farm": {
+        "title": "The mission has no farm",
+        "body": "Import turbines from KML/KMZ or place them on the map — without a farm there is nothing to fly around.",
+        "link": "Open Routes"
+      },
+      "route": {
+        "title": "No route yet",
+        "body": "Build the inspection order on the Routes screen: 3D shows the same flight plan as the map.",
+        "link": "Open Routes"
+      },
+      "speed": {
+        "title": "Drone speed is not set",
+        "body": "The cruise speed in the drone profile must be above zero: the flight time is based on it.",
+        "link": "Open Settings"
+      },
+      "flownBody": "The mission is already completed and its data no longer changes."
+    },
+    "scene": {
+      "label": "3D flight scene",
+      "loading": "Loading 3D…",
+      "unavailableTitle": "3D is unavailable",
+      "unavailableBody": "3D graphics (WebGL) could not start on this computer. Playback, the timeline and the panel on the right work without the scene.",
+      "osm": "© OpenStreetMap contributors"
+    },
+    "controls": {
+      "label": "Playback controls",
+      "play": "Play",
+      "pause": "Pause",
+      "restart": "Restart",
+      "timeline": "Flight time",
+      "timeValue": "{{elapsed}} of {{total}}",
+      "speed": "Speed",
+      "speedOption": "×{{value}}",
+      "camera": "Camera",
+      "cameraModes": {
+        "follow": "Follow",
+        "free": "Free",
+        "top": "Top"
+      },
+      "groundMap": "Map on the ground",
+      "hint": "Space — play and pause · R — restart · [ and ] — slower and faster · C — switch camera. Free camera: drag to orbit, wheel to zoom; top view: drag to pan."
+    },
+    "phase": {
+      "takeoff": "Takeoff",
+      "transit": "Flying to turbine {{n}} of {{total}} — {{name}}",
+      "approach": "Climbing to hub height — {{name}}",
+      "orbit": "Inspecting turbine {{n}} of {{total}} — {{name}}",
+      "return": "Returning to the takeoff point",
+      "landing": "Landing",
+      "finished": "Inspection flight complete"
+    },
+    "now": {
+      "title": "Now",
+      "altitude": "Height above ground",
+      "meters": "{{value}} m",
+      "distance": "Distance flown",
+      "ofKm": "{{done}} of {{total}} km",
+      "time": "Flight time",
+      "ofTime": "{{elapsed}} of {{total}}",
+      "inspected": "Turbines inspected",
+      "ofCount": "{{done}} of {{total}}",
+      "battery": "Battery left",
+      "percent": "{{value}}%",
+      "reserve": "The mark is the {{value}}% reserve. Consumption is by flight time without wind.",
+      "belowReserve": "Below the reserve: the rest of the flight would eat into the reserve charge.",
+      "empty": "The battery would not last",
+      "sorties_one": "The route does not fit one battery: {{count}} flight needed",
+      "sorties_few": "The route does not fit one battery: {{count}} flights needed",
+      "sorties_many": "The route does not fit one battery: {{count}} flights needed",
+      "sorties_other": "The route does not fit one battery: {{count}} flights needed",
+      "sortiesImpossible": "The route cannot be flown: the headwind at flight height is close to the drone speed."
+    },
+    "weather": {
+      "title": "Weather at departure",
+      "temperature": "Temperature",
+      "wind": "Wind at {{alt}} m",
+      "gust": "Gusts at {{alt}} m",
+      "conditions": "Conditions",
+      "ms": "{{value}} m/s",
+      "tempC": "{{value}} °C",
+      "more": "Details",
+      "none": "No forecast for the departure hour: rotors are still, nacelles face west.",
+      "noneLink": "Choose the departure hour",
+      "noneFlown": "No departure hour was chosen before the flight was completed: rotors are still, nacelles face west."
+    },
+    "conflicts": {
+      "text_one": "{{count}} route segment passes too close to a tower — it is marked red.",
+      "text_few": "{{count}} route segments pass too close to towers — they are marked red.",
+      "text_many": "{{count}} route segments pass too close to towers — they are marked red.",
+      "text_other": "{{count}} route segments pass too close to towers — they are marked red.",
+      "link": "Fix the route"
+    },
+    "order": {
+      "title": "Inspection order",
+      "goTo": "Go to turbine {{n}} — {{name}}",
+      "inspected": "inspected"
+    },
+    "legend": {
+      "title": "Legend",
+      "transit": "Transit, takeoff and landing",
+      "orbit": "Turbine inspection orbit",
+      "conflict": "Too close to a tower",
+      "passed": "The part already flown is thicker and brighter.",
+      "conflictRing": "Tower the route comes too close to",
+      "currentRing": "Turbine the drone is flying to or around",
+      "droneScale": "The drone is enlarged for visibility: {{span}} m span. The path, heights and turbines are to scale.",
+      "model": "Drone model:"
+    },
+    "end": {
+      "title": "Inspection flight complete",
+      "turbines": "Turbines",
+      "distance": "Distance",
+      "km": "{{value}} km",
+      "time": "Flight time",
+      "battery": "Battery used",
+      "alreadyFlown": "The flight was already completed on {{date}}.",
+      "alreadyFlownNoDate": "The flight was already completed.",
+      "again": "Watch again",
+      "home": "Go to Home"
+    }
+  }
+}

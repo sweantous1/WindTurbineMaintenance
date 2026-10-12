@@ -1,0 +1,14 @@
+{
+  "missionShared": {
+    "noActiveTitle": "No active mission",
+    "noActiveHint": "Create a mission or pick one in the header — this screen saves its data into the mission.",
+    "goHome": "Go to Home",
+    "readOnly": "This mission has been flown: weather, route and farm are read-only."
+  },
+  "nav": {
+    "settings": "Settings"
+  },
+  "common": {
+    "close": "Close"
+  }
+}

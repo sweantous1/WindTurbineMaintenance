@@ -1,0 +1,221 @@
+{
+  "defects": {
+    "title": "Defect detection",
+    "subtitle": "Inspection photos: the model marks possible defects, the operator verifies them and rates severity",
+    "photos_one": "{{count}} photo",
+    "photos_few": "{{count}} photos",
+    "photos_many": "{{count}} photos",
+    "photos_other": "{{count}} photos",
+    "findings_one": "{{count}} finding",
+    "findings_few": "{{count}} findings",
+    "findings_many": "{{count}} findings",
+    "findings_other": "{{count}} findings",
+    "archived": "The mission is archived: photos and findings are read-only.",
+    "classes": {
+      "crack": "Crack",
+      "corrosion": "Corrosion",
+      "erosion": "Erosion",
+      "lightning": "Lightning strike",
+      "contamination": "Contamination",
+      "delamination": "Delamination",
+      "other": "Other"
+    },
+    "severity": {
+      "1": "1 — negligible",
+      "2": "2 — low",
+      "3": "3 — medium",
+      "4": "4 — high",
+      "5": "5 — critical"
+    },
+    "engine": {
+      "loading": "Loading the model…",
+      "model": "Model",
+      "version": "version {{version}}",
+      "device": "Runs on",
+      "backend": {
+        "webgpu": "graphics card (WebGPU)",
+        "wasm": "processor (WASM)"
+      },
+      "missingTitle": "The model is not installed",
+      "missingHint": "Analysis is unavailable: the app folder needs models/defects/model.onnx and manifest.json. You can still add photos without the model.",
+      "failedTitle": "The model failed to load: {{reason}}",
+      "failedHint": "You can still add and view photos. Try loading the model again.",
+      "recheck": "Check again"
+    },
+    "actions": {
+      "addPhotos": "Add photos",
+      "adding": "Adding {{done}} of {{total}}",
+      "analyzeAll": "Analyze all ({{count}})",
+      "analyzeAllHint": "Only photos not analyzed yet; failed photos are retried one by one",
+      "nothingToAnalyze": "No photos left to analyze",
+      "modelMissingHint": "The model is not installed",
+      "busyHint": "Analysis is already running",
+      "retry": "Analyze again",
+      "analyze": "Analyze",
+      "exportPng": "PNG with boxes",
+      "exportPngHint": "The photo with boxes at the current threshold and classes, at most 4096 px on the longer side",
+      "exportJson": "Photo JSON",
+      "exportMission": "Mission JSON",
+      "exportHint": "Findings at the current threshold and classes, boxes as fractions of the photo size",
+      "deletePhoto": "Delete photo",
+      "deleteAll": "Delete all photos",
+      "gpsAssign": "Turbines by GPS ({{count}})",
+      "gpsAssignHint": "Assign the nearest turbine to photos without one that were taken within 300 m of it"
+    },
+    "strip": {
+      "title": "Mission photos",
+      "stats": "{{analyzed}} of {{total}} analyzed",
+      "listLabel": "Mission photos"
+    },
+    "drop": {
+      "title": "Drop inspection photos here",
+      "hint": "…or click “Add photos”. You can select several images at once.",
+      "overlay": "Release to add photos",
+      "readOnlyEmpty": "This mission has no photos."
+    },
+    "ingest": {
+      "added_one": "Added {{count}} photo",
+      "added_few": "Added {{count}} photos",
+      "added_many": "Added {{count}} photos",
+      "added_other": "Added {{count}} photos",
+      "busy": "Wait until the photos already selected are added",
+      "more": "{{names}} and {{count}} more",
+      "errors": {
+        "notImage": "Not images, skipped: {{names}}",
+        "tooLarge": "Files over 100 MB skipped: {{names}}",
+        "decodeFailed": "Could not read images: {{names}}",
+        "saveFailed": "Could not save photos: {{names}}"
+      }
+    },
+    "status": {
+      "pending": "not analyzed",
+      "queued": "queued",
+      "running": "analyzing…",
+      "runningTiles": "analyzing {{tile}}/{{tiles}}",
+      "failed": "error",
+      "none": "no defects",
+      "found": "{{count}} found",
+      "high": "has severity 4–5"
+    },
+    "turbine": {
+      "label": "Turbine",
+      "none": "not selected",
+      "noFarm": "The mission has no farm — there are no turbines to choose from",
+      "byGps": "by GPS",
+      "option": "{{name}} — by GPS, {{distance}} m",
+      "accept": "Assign {{name}}",
+      "acceptHint": "Nearest turbine to where the photo was taken: {{distance}} m",
+      "missing": "turbine removed",
+      "unassigned": "no turbine"
+    },
+    "progress": {
+      "photo": "Photo {{index}} of {{total}}",
+      "tile": "tile {{tile}} of {{tiles}}",
+      "preparing": "preparing",
+      "cancel": "Cancel",
+      "cancelling": "Stopping…",
+      "otherMission": "Photos of another mission are being analyzed"
+    },
+    "result": {
+      "finished": "Analysis finished. Photos analyzed: {{done}}",
+      "withFailures": "Analysis finished. Photos analyzed: {{done}}, failed: {{failed}} — see the reason in the photo strip",
+      "cancelled": "Analysis stopped. Photos analyzed: {{done}}",
+      "skipped": "Analysis not saved for photos: {{count}} — they were deleted during analysis or the database rejected the record",
+      "modelMissing": "The model is not installed — analysis is impossible",
+      "loadFailed": "The model failed to load: {{reason}}",
+      "crashed": "Analysis stopped because of an unexpected error. Photos it did not reach remain unanalyzed."
+    },
+    "errors": {
+      "loadFailed": "the model failed to load",
+      "decodeFailed": "could not read the image",
+      "inferenceFailed": "the model failed while computing",
+      "workerFailed": "the background analysis thread failed",
+      "imageMissing": "the image is missing from the database",
+      "unknown": "unknown error",
+      "saveFailed": "Could not save the change",
+      "deleteFailed": "Could not delete the photo",
+      "exportFailed": "Could not export the file"
+    },
+    "viewer": {
+      "loading": "Loading the image…",
+      "imageMissing": "The image is missing from the database",
+      "imageBroken": "The browser could not display this image",
+      "size": "{{width}} × {{height}} px · {{mb}} MB",
+      "takenAt": "taken {{date}}",
+      "analyzed": "Analyzed {{date}} · {{backend}} · tiles: {{tiles}} · {{duration}}",
+      "notAnalyzed": "The photo has not been analyzed yet",
+      "failed": "Analysis failed: {{reason}}",
+      "zoomIn": "Zoom to finding",
+      "zoomOut": "Show whole photo",
+      "zoomHint": "Select a finding on the photo or in the table",
+      "boxLabel": "{{cls}}, confidence {{confidence}}",
+      "imageAlt": "Photo {{name}}"
+    },
+    "duration": {
+      "seconds": "{{seconds}} s",
+      "minutes": "{{minutes}} min {{seconds}} s"
+    },
+    "filters": {
+      "title": "Filter",
+      "threshold": "Confidence threshold",
+      "thresholdHint": "Findings are stored from 0.1: the threshold changes without re-running the analysis.",
+      "reset": "Default ({{value}})",
+      "classes": "Classes",
+      "noClasses": "Classes appear once the model loads or findings exist"
+    },
+    "table": {
+      "title": "Findings on the photo",
+      "shown": "Showing {{shown}} of {{total}}",
+      "empty": "No findings at this threshold and classes",
+      "noneFound": "The model found nothing on this photo. That does not mean there are no defects: check the photo yourself.",
+      "notAnalyzed": "The photo has not been analyzed yet",
+      "failed": "Analysis failed — retry it with the button above the photo",
+      "failedReadOnly": "Analysis of this photo failed",
+      "columns": {
+        "index": "#",
+        "class": "Class",
+        "modelClass": "Model class",
+        "confidence": "Confidence",
+        "severity": "Severity",
+        "reviewed": "Reviewed"
+      },
+      "severityLabel": "Severity of finding {{index}}",
+      "reviewedLabel": "Finding {{index}} reviewed",
+      "showLabel": "Show finding {{index}} on the photo"
+    },
+    "summary": {
+      "title": "Mission summary",
+      "threshold": "at threshold {{value}}",
+      "total": "Findings",
+      "high": "Severity 4–5",
+      "reviewed": "Reviewed",
+      "of": "{{value}} of {{total}}",
+      "photos": "Photos analyzed",
+      "photosFailed": "Failed",
+      "photosWithFindings": "Photos with findings",
+      "byClass": "By class",
+      "bySeverity": "By severity",
+      "empty": "No findings"
+    },
+    "confirm": {
+      "deleteTitle": "Delete the photo?",
+      "deleteBody": "The photo “{{name}}” and its findings will be deleted permanently.",
+      "deleteAllTitle": "Delete all mission photos?",
+      "deleteAllBody": "All photos of the mission “{{name}}” and all their findings will be deleted. This cannot be undone.",
+      "retryTitle": "Analyze again?",
+      "retryBody": "Findings of the photo “{{name}}” will be replaced: “reviewed” marks and severity edits will be lost.",
+      "delete": "Delete",
+      "deleteAll": "Delete all",
+      "retry": "Analyze again"
+    },
+    "toast": {
+      "deleted": "Photo deleted",
+      "deletedAll": "Mission photos deleted",
+      "gpsAssigned": "Turbine assigned by GPS for photos: {{count}}"
+    },
+    "history": {
+      "column": "Defects",
+      "hint": "All stored model findings, including low-confidence ones (from 0.1). The threshold is applied on the defect detection screen"
+    }
+  }
+}

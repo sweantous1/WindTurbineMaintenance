@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Синтетическая ферма: турбины на разных уровнях вложенности папок плюс объекты, которые не являются турбинами -->
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>Ветропарк «Север» &amp; Co</name>
+  <Placemark>
+    <name>WTG-01</name>
+    <Point><coordinates>18.5000,52.0200,0</coordinates></Point>
+  </Placemark>
+  <Folder>
+    <name>Линия А</name>
+    <Placemark>
+      <name>WTG-02</name>
+      <Point><coordinates>18.5040,52.0230</coordinates></Point>
+    </Placemark>
+    <Folder>
+      <name>Подлиния</name>
+      <Placemark>
+        <name>WTG-03</name>
+        <Point><coordinates>18.5080,52.0260</coordinates></Point>
+      </Placemark>
+      <Placemark>
+        <name>  WTG-04  </name>
+        <Point>
+          <coordinates>
+            18.5120,52.0290
+          </coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+  </Folder>
+  <Folder>
+    <name>Прочее</name>
+    <Placemark>
+      <name>Подъездная дорога</name>
+      <LineString><coordinates>18.49,52.01 18.50,52.02</coordinates></LineString>
+    </Placemark>
+    <Placemark>
+      <name>Граница участка</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing><coordinates>18.49,52.01 18.52,52.01 18.52,52.04 18.49,52.04 18.49,52.01</coordinates></LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+    <Placemark>
+      <name>Широта вне диапазона</name>
+      <Point><coordinates>18.5,95</coordinates></Point>
+    </Placemark>
+    <Placemark>
+      <name>Без геометрии</name>
+      <description>Заметка без координат</description>
+    </Placemark>
+  </Folder>
+</Document>
+</kml>

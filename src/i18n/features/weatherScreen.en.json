@@ -1,0 +1,262 @@
+{
+  "weatherScreen": {
+    "title": "Weather and flight window",
+    "desc": "Open-Meteo forecast for the farm, hourly limit checks and the departure hour",
+    "missionLabel": "Mission:",
+    "windFrom": "wind from {{dir}}, {{deg}}°",
+    "compass": {
+      "N": "N",
+      "NE": "NE",
+      "E": "E",
+      "SE": "SE",
+      "S": "S",
+      "SW": "SW",
+      "W": "W",
+      "NW": "NW"
+    },
+    "units": {
+      "ms": "m/s",
+      "mm": "mm",
+      "mmH": "mm/h",
+      "c": "°C",
+      "min": "min",
+      "pct": "%",
+      "m": "m",
+      "km": "km"
+    },
+    "location": {
+      "modeLabel": "How to set the forecast point",
+      "modes": {
+        "farm": "Farm",
+        "geocode": "City",
+        "manual": "Coordinates"
+      },
+      "farmCenter": "Farm center",
+      "farmCenterNamed": "Center of farm “{{name}}”",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "selected": "Forecast point:",
+      "manualPoint": "point by coordinates",
+      "distanceToFarm": "{{km}} km from the farm center",
+      "farWarning": "This is far from the farm — the weather there may differ.",
+      "farFromFarm": "The forecast place is far from the farm — the weather at the farm may differ.",
+      "hint": {
+        "geocode": "Start typing a city name and pick it from the suggestions.",
+        "manual": "Enter latitude and longitude in degrees, e.g. 48.215 and 40.284."
+      },
+      "errors": {
+        "empty": "Fill in this field",
+        "notNumber": "Enter a number, e.g. 48.215",
+        "range": "Allowed from −{{max}} to {{max}}"
+      },
+      "cityLabel": "City or town",
+      "cityPlaceholder": "e.g. Kamensk-Shakhtinsky",
+      "searching": "Searching…",
+      "nothingFound": "Nothing found. Check the name or enter coordinates."
+    },
+    "age": {
+      "justNow": "just now",
+      "minutes_one": "{{count}} minute ago",
+      "minutes_few": "{{count}} minutes ago",
+      "minutes_many": "{{count}} minutes ago",
+      "minutes_other": "{{count}} minutes ago",
+      "hours_one": "{{count}} hour ago",
+      "hours_few": "{{count}} hours ago",
+      "hours_many": "{{count}} hours ago",
+      "hours_other": "{{count}} hours ago",
+      "days_one": "{{count}} day ago",
+      "days_few": "{{count}} days ago",
+      "days_many": "{{count}} days ago",
+      "days_other": "{{count}} days ago"
+    },
+    "current": {
+      "title": "Now",
+      "observedAt": "Data for {{time}}, farm time",
+      "fetched": "Forecast fetched {{age}}",
+      "gridNode": "Forecast grid point:",
+      "timezone": "Time zone: {{zone}} ({{offset}})",
+      "localNow": "farm time now {{time}}",
+      "clockChange": "The farm changes its clocks within the forecast period: all hours here are labeled in {{offset}}, and after the change local time is {{local}}.",
+      "temperature": "Temperature",
+      "wind10": "Wind at 10 m",
+      "gust10": "Gusts at 10 m",
+      "precip": "Precipitation, last 15 min",
+      "conditions": "Conditions"
+    },
+    "chart": {
+      "title": "Hourly wind and precipitation",
+      "windTransit": "Wind at {{alt}} m (transit)",
+      "windAt": "Wind at {{alt}} m",
+      "windTop": "Wind at {{alt}} m (plan maximum)",
+      "gust": "Gusts at these altitudes",
+      "windLimit": "Wind limit {{value}} m/s",
+      "gustLimit": "Gust limit {{value}} m/s",
+      "windAxis": "Wind, m/s",
+      "windAria": "Hourly wind and gust chart with limit lines",
+      "precipAxis": "Precipitation, mm/h",
+      "precip": "Precipitation",
+      "precipLimit": "limit {{value}} mm/h",
+      "precipAria": "Hourly precipitation bars with the limit line",
+      "note": "Wind aloft is interpolated between the model levels 10, 80, 120 and 180 m; gusts are the wind aloft plus the ground-level (10 m) excess of gusts over the mean wind.",
+      "extrapolatedNote": "Above 180 m the top model level is used — the actual wind may be stronger.",
+      "extrapolatedShort": "above 180 m — top model level value",
+      "noPlan": "No flight plan — wind at the mission flight altitude, {{alt}} m",
+      "fromPlan": "From the flight plan: transit {{transit}} m, maximum {{top}} m",
+      "fromPlanSingle": "From the flight plan: the whole flight at {{alt}} m"
+    },
+    "window": {
+      "title": "Flight window",
+      "subtitle": "Hourly, farm time: {{zone}} ({{offset}})",
+      "hoursCount_one": "{{count}} h",
+      "hoursCount_few": "{{count}} h",
+      "hoursCount_many": "{{count}} h",
+      "hoursCount_other": "{{count}} h",
+      "noWindows": "The forecast has no hours when flying is clearly OK.",
+      "windows": "OK to fly:",
+      "pickStart": "Make the start of this window the departure hour",
+      "more_one": "and {{count}} more window",
+      "more_few": "and {{count}} more windows",
+      "more_many": "and {{count}} more windows",
+      "more_other": "and {{count}} more windows",
+      "clickHint": "Click an hour to make it the departure hour. Past hours cannot be selected."
+    },
+    "table": {
+      "title": "Hourly table",
+      "subtitle_one": "{{count}} forecast hour, farm time",
+      "subtitle_few": "{{count}} forecast hours, farm time",
+      "subtitle_many": "{{count}} forecast hours, farm time",
+      "subtitle_other": "{{count}} forecast hours, farm time",
+      "time": "Time",
+      "conditions": "Conditions",
+      "temp": "Temp., °C",
+      "precip": "Precip., mm",
+      "precipProb": "Precip. chance, %",
+      "wind": "Wind, m/s, and where it blows to",
+      "windAt": "{{alt}} m",
+      "gust10": "Gusts 10 m, m/s",
+      "humidity": "Humidity, %",
+      "pressure": "Pressure, hPa",
+      "cloud": "Cloud, %",
+      "visibility": "Visibility, km"
+    },
+    "request": {
+      "title": "Forecast point and period",
+      "hours": "Forecast period, h",
+      "hoursHint": "From 1 to {{max}} hours ahead",
+      "presets": "Quick period choice, h",
+      "hoursErrors": {
+        "empty": "Enter the number of hours",
+        "notInteger": "Must be a whole number of hours",
+        "range": "Allowed from 1 to {{max}} hours"
+      },
+      "loading": "Fetching forecast…",
+      "fetch": "Get forecast",
+      "source": "Data: Open-Meteo (CC BY 4.0). The forecast is saved to the mission right away."
+    },
+    "actions": {
+      "export": "Export JSON",
+      "clear": "Clear",
+      "refresh": "Refresh"
+    },
+    "stale": "The forecast was fetched {{age}} and may be outdated. Refresh it before the flight.",
+    "toast": {
+      "saved": "Forecast saved to the mission",
+      "departureDropped": "The selected departure hour is not in the new forecast — pick an hour again",
+      "cleared": "Forecast removed from the mission"
+    },
+    "empty": {
+      "title": "No forecast yet",
+      "hint": "Choose a point and press “Get forecast” — the snapshot is saved to the mission right away.",
+      "readOnly": "No forecast was saved for this mission."
+    },
+    "clearConfirm": {
+      "title": "Clear the forecast?",
+      "text": "The forecast snapshot and the selected departure hour will be removed from the mission. Until a forecast is fetched again, no departure hour can be chosen and there is no flight verdict."
+    },
+    "errors": {
+      "locked": "This mission has been flown — its forecast and departure hour cannot be changed.",
+      "unknown": "The action failed: {{message}}"
+    }
+  },
+  "flightForecast": {
+    "title": "Flight forecast",
+    "departure": "Departure: {{time}} (farm time)",
+    "status": {
+      "ok": "OK",
+      "marginal": "Marginal",
+      "no": "No-go",
+      "insufficient": "No data"
+    },
+    "verdict": {
+      "ok": "OK to fly",
+      "marginal": "Marginal — fly with caution",
+      "no": "Do not fly",
+      "insufficient": "Not enough data to decide"
+    },
+    "reasons": {
+      "wind": "wind {{value}} m/s with a limit of {{limit}} m/s",
+      "windAt": "wind {{value}} m/s at {{alt}} m with a limit of {{limit}} m/s",
+      "gust": "gusts {{value}} m/s with a limit of {{limit}} m/s",
+      "gustAt": "gusts {{value}} m/s at {{alt}} m with a limit of {{limit}} m/s",
+      "precip": "precipitation {{value}} mm/h with a limit of {{limit}} mm/h",
+      "tempLow": "temperature {{value}} °C below the minimum of {{limit}} °C",
+      "tempHigh": "temperature {{value}} °C above the maximum of {{limit}} °C",
+      "visibility": "visibility {{value}} km with a minimum of {{limit}} km",
+      "altitude": "flight altitude {{value}} m above the ceiling of {{limit}} m",
+      "battery": "worst case needs {{value}}% battery with {{limit}}% usable — one sortie is not enough",
+      "batteryImpossible": "the headwind is close to the drone speed — the route cannot be flown",
+      "conflict": "the route passes too close to towers (conflicts: {{value}})"
+    },
+    "missingWind": "No wind or gust data at {{alts}} m",
+    "allWithinLimits": "All parameters are within the mission and drone limits.",
+    "windByAlt": "Wind at flight altitudes",
+    "altitude": "{{alt}} m",
+    "gustShort": "gusts {{value}}",
+    "estimate": {
+      "title": "Flight estimate",
+      "length": "Length",
+      "km": "{{value}} km",
+      "time": "Time",
+      "battery": "Battery",
+      "worst": "worst case: {{value}}",
+      "usable": "{{value}}% usable",
+      "impossible": "cannot make it",
+      "minutes": "{{m}} min",
+      "hoursMinutes": "{{h}} h {{m}} min",
+      "oneSortie": "One sortie is enough",
+      "sorties_one": "At least {{count}} sortie needed",
+      "sorties_few": "At least {{count}} sorties needed",
+      "sorties_many": "At least {{count}} sorties needed",
+      "sorties_other": "At least {{count}} sorties needed",
+      "sortiesImpossible": "The route cannot be flown against this wind",
+      "sortiesNote": "Transits to the base and back between sorties are not included — more sorties may be needed.",
+      "worstNote": "Worst case: headwind along the whole route."
+    },
+    "gaps": {
+      "route": "Compute the inspection route first — there is nothing to assess without it.",
+      "weather": "Get a weather forecast for the mission.",
+      "departure": "Pick a departure hour on the “Flight window” strip of the weather screen.",
+      "departureMissing": "The selected departure hour is not in the saved forecast — refresh the forecast or pick the hour again."
+    },
+    "gapLinks": {
+      "route": "Open routes",
+      "weather": "Open weather",
+      "departure": "Pick departure hour",
+      "departureMissing": "Open weather"
+    },
+    "readOnlyGap": "This mission has been flown, and it has no saved data for a flight forecast.",
+    "planIssues": {
+      "takeoff": "No takeoff point — length, time and battery cannot be estimated.",
+      "staleRoute": "The inspection order refers to turbines that are no longer in the farm — recompute the route."
+    },
+    "links": {
+      "route": "Go to routes",
+      "weather": "Refresh forecast",
+      "changeHour": "Change departure hour"
+    },
+    "staleWeather": "The forecast is older than 3 hours.",
+    "departurePast": "The selected departure hour has already passed.",
+    "farFromFarm": "The forecast was fetched for a place {{km}} km from the farm center — the weather at the farm may differ.",
+    "droneProfile": "Drone profile: {{name}}"
+  }
+}
