@@ -16,11 +16,11 @@ export function stateAfter(m: Pick<Mission, 'farm' | 'route'>, patch: MissionPat
   }
 }
 
-// Данные из IndexedDB приходят копией, поэтому сравнение по содержимому
+// из IndexedDB приходят копии, поэтому сравниваем по содержимому
 const sameData = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
-// Откат только если с тех пор ферму и маршрут никто не менял: иначе он затёр бы более поздние правки.
-// null — отменять уже нельзя
+// откатываем, только если ферму и маршрут с тех пор не меняли, иначе затрём более поздние правки.
+// null - отменять уже нельзя
 export function undoPatch(current: Pick<Mission, 'farm' | 'route'>, before: FarmState, after: FarmState): MissionPatch | null {
   if (!before.farm) return null
   if (!sameData(current.farm, after.farm) || !sameData(current.route, after.route)) return null

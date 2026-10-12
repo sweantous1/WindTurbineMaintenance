@@ -18,7 +18,7 @@ interface PhotoPanelProps {
   labelText: (d: Detection) => string
   ariaLabel: (d: Detection) => string
   readOnly: boolean
-  // Причина, по которой анализ сейчас недоступен (модели нет, идёт другой анализ); undefined — можно
+  // Почему анализ сейчас недоступен (нет модели, идёт другой анализ), undefined если можно
   analyzeBlocked: string | undefined
   // Фото сейчас в очереди анализа
   inRun: boolean

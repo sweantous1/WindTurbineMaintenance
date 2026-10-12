@@ -9,8 +9,8 @@ import { planFor, routeContext } from '@/features/route/routeLogic'
 import { makeLocalFrame, type LocalFrame, type LocalPoint } from '@/lib/geo'
 import { sceneBounds, type LocalBounds } from './sceneMath'
 
-// Всё, что нужно сцене и панели 3D-облёта, из миссии и профиля дрона. План строится ровно как
-// на экране маршрута (тот же потолок и точка взлёта), поэтому 3D показывает тот же путь, что карта
+// Данные для сцены и панели из миссии и профиля дрона. План строим как на экране маршрута,
+// чтобы путь в 3D совпадал с картой
 
 // Чего не хватает для облёта: фермы, маршрута или скорости дрона
 export type SimGap = 'farm' | 'route' | 'speed'
@@ -22,7 +22,7 @@ export interface SimTurbine {
   hubM: number
   rotorM: number
   orbitRadiusM: number
-  // Номер в порядке облёта с нуля; null — турбины нет в маршруте
+  // Номер в порядке облёта с нуля, null если турбины нет в маршруте
   visitIndex: number | null
   // Какой-то отрезок плана заходит в безопасную зону этой башни
   conflict: boolean
@@ -50,7 +50,7 @@ export interface SimReady {
   turbines: SimTurbine[]
   // Номера отрезков траектории (= FlightConflict.segmentIndex), которые заходят в зону башен
   conflictSegments: ReadonlySet<number>
-  // null — нет прогноза или не выбран час вылета
+  // null, если нет прогноза или не выбран час вылета
   wind: SimWind | null
   estimate: MissionEstimate
 }
@@ -63,7 +63,7 @@ export function buildSimData(mission: Mission, drone: DroneProfile): SimData {
   const ctx = routeContext(mission, effectiveLimits(mission.limits, drone).maxAltitudeM)
   if (!ctx || !route || route.order.length === 0) return { kind: 'gap', gap: 'route' }
   const plan = planFor(ctx, route.order, route.returnToTakeoff)
-  // В порядке остались только удалённые турбины — облетать нечего
+  // В порядке только удалённые турбины, облетать нечего
   if (plan.turbineOrder.length === 0) return { kind: 'gap', gap: 'route' }
   // buildTrajectory бросает RangeError на неположительной или нечисловой скорости
   if (!(drone.cruiseSpeedMs > 0) || !Number.isFinite(drone.cruiseSpeedMs)) return { kind: 'gap', gap: 'speed' }
@@ -96,7 +96,7 @@ export function buildSimData(mission: Mission, drone: DroneProfile): SimData {
     turbines,
     conflictSegments: new Set(plan.conflicts.map((c) => c.segmentIndex)),
     wind,
-    // Ветер для оценки заряда — худший на высотах плана, как у вердикта часа на экране погоды
+    // Для заряда берём худший ветер на высотах плана, как вердикт часа на экране погоды
     estimate: estimateMission(plan.lengthM, drone, wind ? planWorstWindMs(wind.hour, plan) : undefined),
   }
 }
@@ -112,7 +112,7 @@ function simWind(hour: WeatherHour | undefined, transitAltM: number, hubAltM: nu
   }
 }
 
-// Направление не интерполируется между уровнями (350° и 10° дали бы 180°): берём ближайший уровень с данными
+// Направление не интерполируем (350° и 10° дали бы 180°), берём ближайший уровень с данными
 export function windDirNear(hour: WeatherHour, altM: number): number | null {
   let best: { gap: number; deg: number } | null = null
   for (const level of WIND_LEVELS_M) {
@@ -124,7 +124,7 @@ export function windDirNear(hour: WeatherHour, altM: number): number | null {
   return best ? best.deg : null
 }
 
-// undefined — профиль дрона ещё загружается
+// undefined, пока профиль дрона грузится
 export function useSimData(mission: Mission, drone: DroneProfile | undefined): SimData | undefined {
   return useMemo(() => (drone ? buildSimData(mission, drone) : undefined), [mission, drone])
 }

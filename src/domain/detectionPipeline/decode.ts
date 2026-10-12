@@ -1,6 +1,6 @@
 import type { Box } from './letterbox'
 
-// Кандидат до NMS: рамка во входных пикселях модели (или, после переноса, в пикселях оригинала)
+// Кандидат до NMS, рамка во входных пикселях модели (после переноса - в пикселях оригинала)
 export interface Candidate extends Box {
   classIndex: number
   score: number
@@ -8,12 +8,12 @@ export interface Candidate extends Box {
 
 export interface DecodeOptions {
   confidence: number
-  // Если задано — проверяется, что выход модели соответствует манифесту
+  // Если задано, сверяем с манифестом
   numClasses?: number
 }
 
-// Сырой выход YOLO [1, 4 + nc, anchors]: строки 0..3 — cx, cy, w, h, дальше вероятности классов
-// (сигмоида уже внутри графа). Класс — argmax, порог — по его вероятности, строго больше, как в ultralytics
+// Выход YOLO [1, 4 + nc, anchors]: строки 0..3 - cx, cy, w, h, дальше вероятности классов (сигмоида уже в графе).
+// Класс = argmax, порог строго больше, как в ultralytics
 export function decodeYolo(output: ArrayLike<number>, dims: readonly number[], options: DecodeOptions): Candidate[] {
   if (dims.length !== 3 || dims[0] !== 1 || dims[1] < 5 || dims[2] < 1) {
     throw new Error(`Неожиданная форма выхода модели: [${dims.join(', ')}]`)
@@ -39,7 +39,7 @@ export function decodeYolo(output: ArrayLike<number>, dims: readonly number[], o
         classIndex = c
       }
     }
-    // Отрицательная форма сравнения отсекает и NaN
+    // Так отсекается и NaN
     if (!(best > options.confidence)) continue
     const cx = output[a]
     const cy = output[anchors + a]

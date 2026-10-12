@@ -9,8 +9,7 @@ import {
 import type { Farm, GeoPoint, Mission } from '@/domain/types'
 import { countByClass, countBySeverity, visibleDetections, type DetectionFilter } from './detectionView'
 
-// Выгрузка находок для отчёта или другой программы. Рамки — в долях ширины и высоты
-// оригинала (0..1), поэтому не зависят от того, в каком размере снимок откроют
+// Рамки в выгрузке - доли ширины и высоты оригинала (0..1)
 
 export const DEFECTS_EXPORT_FORMAT = 'wtm-defects'
 export const DEFECTS_EXPORT_VERSION = 1
@@ -47,7 +46,7 @@ export interface DefectsExport {
   version: typeof DEFECTS_EXPORT_VERSION
   exportedAt: string
   mission: { id: string; name: string; status: Mission['status'] }
-  // Находки выгружаются так, как их видно на экране: с этим порогом и этими классами
+  // Порог и классы, как на экране в момент выгрузки
   filter: { minConfidence: number; classes: AppDefectClass[] }
   summary: {
     photos: number
@@ -130,12 +129,12 @@ export function defectsExportJson(input: DefectsExportInput): string {
 const MAX_BASE_LENGTH = 80
 // Символы, запрещённые в именах файлов Windows, и управляющие
 const isForbiddenFileChar = (ch: string) => ch.charCodeAt(0) < 0x20 || ch.charCodeAt(0) === 0x7f || '<>:"/\\|?*'.includes(ch)
-// Зарезервированные имена устройств Windows: такой файл не создать
+// Зарезервированные имена устройств Windows
 const RESERVED_NAMES = /^(con|prn|aux|nul|com\d|lpt\d)$/i
 
 export function exportFileName(base: string, ext: 'json' | 'png'): string {
   const replaced = Array.from(base.normalize('NFKC'), (ch) => (isForbiddenFileChar(ch) ? ' ' : ch)).join('')
-  // Режем по символам, а не по UTF-16: суррогатная пара не разрывается
+  // Режем по символам, чтобы не порвать суррогатную пару
   const clean = Array.from(replaced.replace(/\s+/g, ' ').trim())
     .slice(0, MAX_BASE_LENGTH)
     .join('')
@@ -144,7 +143,7 @@ export function exportFileName(base: string, ext: 'json' | 'png'): string {
   return `${safe}.${ext}`
 }
 
-// Имя снимка без расширения: «DJI_0042.JPG» → «DJI_0042»
+// DJI_0042.JPG -> DJI_0042
 export function photoBaseName(fileName: string): string {
   const dot = fileName.lastIndexOf('.')
   return dot > 0 ? fileName.slice(0, dot) : fileName

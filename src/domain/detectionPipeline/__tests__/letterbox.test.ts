@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fromLetterbox, letterbox, rgbaToChw, toLetterbox, LETTERBOX_FILL, type Box } from '../letterbox'
 
-// Детерминированный генератор для воспроизводимых «случайных» размеров
+// Детерминированный rng для "случайных" размеров
 function lcg(seed: number) {
   let s = seed >>> 0
   return () => {
@@ -47,7 +47,7 @@ describe('letterbox', () => {
       const y1 = rnd() * srcH
       const box: Box = { x1, y1, x2: x1 + rnd() * (srcW - x1), y2: y1 + rnd() * (srcH - y1) }
       const input = toLetterbox(lb, box)
-      // Во входе рамка не выходит за область изображения
+      // Во входе рамка не вылезает за картинку
       expect(input.x1).toBeGreaterThanOrEqual(lb.padX - 1e-9)
       expect(input.x2).toBeLessThanOrEqual(lb.padX + lb.newW + 1e-9)
       expect(input.y2).toBeLessThanOrEqual(lb.padY + lb.newH + 1e-9)
@@ -55,7 +55,7 @@ describe('letterbox', () => {
       for (const k of ['x1', 'y1', 'x2', 'y2'] as const) {
         expect(Math.abs(back[k] - box[k])).toBeLessThan(1e-6)
       }
-      // Отличие от идеального равномерного масштаба — только округление размера, меньше пикселя входа
+      // Расхождение с идеальным масштабом только из-за округления, меньше пикселя
       expect(Math.abs(input.x2 - input.x1 - (box.x2 - box.x1) * lb.scale)).toBeLessThan(1)
       expect(Math.abs(input.y2 - input.y1 - (box.y2 - box.y1) * lb.scale)).toBeLessThan(1)
     }
@@ -69,7 +69,7 @@ describe('letterbox', () => {
       x2: 1280,
       y2: 960,
     })
-    // Центр входа — центр кадра
+    // Центр входа = центр кадра
     const c = fromLetterbox(lb, { x1: 320, y1: 320, x2: 320, y2: 320 })
     expect(c.x1).toBe(640)
     expect(c.y1).toBe(480)
@@ -77,13 +77,13 @@ describe('letterbox', () => {
 
   it('RGBA → CHW 0..1 по плоскостям R, G, B; альфа отбрасывается', () => {
     const size = 2
-    // 4 пикселя: красный, зелёный, синий, серый фона
+    // 4 пикселя: красный, зелёный, синий, серый
     const rgba = new Uint8ClampedArray([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 0, 114, 114, 114, 255])
     const chw = rgbaToChw(rgba, size)
     expect(Array.from(chw.subarray(0, 4))).toEqual([1, 0, 0, LETTERBOX_FILL].map(Math.fround))
     expect(Array.from(chw.subarray(4, 8))).toEqual([0, 1, 0, LETTERBOX_FILL].map(Math.fround))
     expect(Array.from(chw.subarray(8, 12))).toEqual([0, 0, 1, LETTERBOX_FILL].map(Math.fround))
-    // Буфер переиспользуется, если подходит по размеру
+    // Буфер подходящего размера переиспользуется
     const out = new Float32Array(12)
     expect(rgbaToChw(rgba, size, out)).toBe(out)
     expect(() => rgbaToChw(new Uint8ClampedArray(8), size)).toThrow(RangeError)

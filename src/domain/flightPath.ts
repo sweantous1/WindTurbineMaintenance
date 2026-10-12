@@ -1,14 +1,12 @@
 import { makeLocalFrame, type LocalPoint } from '@/lib/geo'
 import type { Farm, FlightPlan, FlightWaypoint } from './types'
 
-// Траектория облёта для 3D-просмотра: те же путевые точки, что у плана полёта на карте
-// и в прогнозе, в тех же локальных метрах от центра фермы. Время — по крейсерской скорости
-// дрона на всём пути, как в estimateMission: длительность проигрывания совпадает с оценкой
-// времени полёта, которую показывают главная и погода
+// Траектория для 3D-просмотра по путевым точкам плана, в локальных метрах от центра фермы.
+// Время по крейсерской скорости, как в estimateMission
 
 export type FlightPhase = 'takeoff' | 'transit' | 'approach' | 'orbit' | 'return' | 'landing'
 
-// x — метры на восток, y — на север от центра фермы, z — высота над землёй
+// x - метры на восток, y - на север от центра фермы, z - высота над землёй
 export interface Vec3 {
   x: number
   y: number
@@ -17,19 +15,19 @@ export interface Vec3 {
 
 export interface TrajectorySegment {
   phase: FlightPhase
-  // Турбина, к которой летим (transit), на высоту ступицы которой выходим (approach) или которую облетаем
+  // Турбина текущего перелёта, выхода на высоту ступицы или облёта
   turbineId?: string
   // Номер турбины в порядке облёта, с нуля
   visitIndex?: number
   from: Vec3
   to: Vec3
   lengthM: number
-  // Пройдено и прошло к началу отрезка
+  // Путь и время к началу отрезка
   startM: number
   startS: number
   durationS: number
-  // Азимут носа дрона на отрезке (от севера по часовой, радианы). Для облёта и выхода
-  // на высоту ступицы нос смотрит на турбину, и курс считается в каждой точке — см. sampleAt
+  // Курс на отрезке, рад от севера по часовой. На облёте и выходе на высоту ступицы нос
+  // смотрит на турбину, это считает sampleAt
   headingRad: number
 }
 
@@ -44,7 +42,7 @@ export interface TurbineVisit {
 }
 
 export interface Trajectory {
-  // Отрезок i — между путевыми точками i и i + 1 плана: индексы совпадают с FlightConflict.segmentIndex
+  // Отрезок i - между точками i и i + 1 плана, как FlightConflict.segmentIndex
   segments: TrajectorySegment[]
   visits: TurbineVisit[]
   lengthM: number
@@ -63,12 +61,12 @@ export interface TrajectorySample {
   timeS: number
   // Сколько турбин уже облетели целиком
   inspectedCount: number
-  // Доля времени полёта, 0…1
+  // Доля времени полёта, 0..1
   progress: number
   finished: boolean
 }
 
-// Отрезок короче сантиметра по горизонтали считается вертикальным: курс у него не определён
+// Короче сантиметра по горизонтали - считаем вертикальным, курса у него нет
 const HORIZONTAL_EPS_M = 0.01
 const TIME_EPS_S = 1e-9
 const FULL_TURN = 2 * Math.PI
@@ -77,7 +75,7 @@ export function buildTrajectory(plan: FlightPlan, farm: Farm, speedMs: number): 
   if (!Number.isFinite(speedMs) || speedMs <= 0) {
     throw new RangeError(`Скорость должна быть положительной, получено ${speedMs}`)
   }
-  // Та же система координат, что у buildFlightPlan: центр фермы
+  // Те же координаты, что в buildFlightPlan
   const frame = makeLocalFrame(farm.center)
   const points: Vec3[] = plan.waypoints.map((w) => ({ ...frame.toLocal(w), z: w.altM }))
   const visitIndexOf = new Map(plan.turbineOrder.map((id, i) => [id, i]))
@@ -132,7 +130,7 @@ function classify(a: FlightWaypoint, b: FlightWaypoint): { phase: FlightPhase; t
   if (a.kind === 'takeoff') return { phase: 'takeoff' }
   if (b.kind === 'landing') return { phase: 'landing' }
   if (b.kind === 'orbit') {
-    // Со входа на высоте транзита — вертикально на высоту ступицы; дальше — по кругу
+    // Со входа вертикально к ступице, дальше по кругу
     return { phase: a.kind === 'orbit' ? 'orbit' : 'approach', ...(b.turbineId !== undefined ? { turbineId: b.turbineId } : {}) }
   }
   if (b.turbineId !== undefined) return { phase: 'transit', turbineId: b.turbineId }
@@ -143,8 +141,8 @@ function isHorizontal(s: TrajectorySegment): boolean {
   return Math.hypot(s.to.x - s.from.x, s.to.y - s.from.y) >= HORIZONTAL_EPS_M
 }
 
-// Курс по ходу движения; вертикальный отрезок держит прежний курс, а подъём со взлётки —
-// курс первого перелёта, чтобы дрон не разворачивался в воздухе сразу после взлёта
+// Курс по ходу; вертикали держат прежний, а взлёт сразу берёт курс первого перелёта,
+// чтобы дрон не разворачивался в воздухе
 function fillHeadings(segments: TrajectorySegment[]): void {
   let last: number | undefined
   for (const s of segments) {
@@ -159,7 +157,7 @@ function fillHeadings(segments: TrajectorySegment[]): void {
   }
 }
 
-// Азимут от a на b: 0 — север, π/2 — восток
+// Азимут от a на b: 0 - север, pi/2 - восток
 export function bearingRad(a: LocalPoint, b: LocalPoint): number {
   const r = Math.atan2(b.x - a.x, b.y - a.y) % FULL_TURN
   return r < 0 ? r + FULL_TURN : r
@@ -205,8 +203,7 @@ export function sampleAt(traj: Trajectory, timeS: number): TrajectorySample {
   }
 }
 
-// Последний отрезок, начавшийся не позже t. Отрезки нулевой длины начинаются одновременно
-// со следующим — берётся следующий: нулевой отрезок к этому моменту уже пройден
+// Последний отрезок, начавшийся не позже t; нулевой отрезок к этому моменту уже пройден, берём следующий
 function segmentIndexAt(segments: readonly TrajectorySegment[], t: number): number {
   let lo = 0
   let hi = segments.length - 1
@@ -226,7 +223,7 @@ function yawAt(traj: Trajectory, seg: TrajectorySegment, p: Vec3): number {
   return seg.headingRad
 }
 
-// Израсходованный заряд к моменту t — той же моделью, что estimateMission (без ветра)
+// Расход заряда к моменту t, как в estimateMission без ветра
 export function batteryUsedPct(timeS: number, enduranceMin: number): number {
   if (!(enduranceMin > 0)) return Infinity
   return (Math.max(0, timeS) / 60 / enduranceMin) * 100

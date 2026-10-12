@@ -14,17 +14,14 @@ import { formatReason, missingWindAltitudes } from '@/features/weather/reasons'
 import { useNow } from '@/features/weather/useNow'
 import { droneDisplayName } from '@/features/settings/droneName'
 
-// Вердикт на выбранный час вылета: та же проверка, что и в полосе окна вылета, но с причинами
-// и оценкой длины, времени и заряда по плану полёта
+// Вердикт на выбранный час вылета: проверка как в полосе окна, плюс причины и оценка по плану полёта
 export default function FlightForecastCard({ mission, now: screenNow }: { mission: Mission; now?: Date }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
   const drone = useMissionDrone(mission)
-  // Главная перерисовывается только при смене данных: без таймера «прогноз устарел»
-  // и «час вылета прошёл» так и не появились бы у открытого экрана
+  // свой таймер, иначе на открытой главной не появятся "прогноз устарел" и "час прошёл"
   const ownNow = useNow(60_000)
-  // На «Погоде» — часы экрана: «час прошёл» и «прогноз устарел» меняются одновременно
-  // с полосой окна вылета и баннером, а не со сдвигом до минуты
+  // на "Погоде" берём часы экрана, чтобы обновляться вместе с полосой окна и баннером
   const now = screenNow ?? ownNow
   const forecast = useMemo(() => (drone ? missionForecast(mission, drone) : undefined), [mission, drone])
 
@@ -41,7 +38,7 @@ export default function FlightForecastCard({ mission, now: screenNow }: { missio
   if (forecast.gap !== null) {
     return (
       <Card title={t('flightForecast.title')}>
-        {/* Облетанную миссию уже не дополнить: ссылка «получите прогноз» только запутает */}
+        {/* облетанную миссию уже не дополнить, ссылка на прогноз тут лишняя */}
         {preFlight ? (
           <GapHint gap={forecast.gap} />
         ) : (
@@ -55,7 +52,7 @@ export default function FlightForecastCard({ mission, now: screenNow }: { missio
   const look = statusLook(assessment.status)
   const missing = missingWindAltitudes(assessment)
   const staleWeather = preFlight && mission.weather !== undefined && isStale(mission.weather, now)
-  // Час вылета, выбранный вчера, сегодня уже в прошлом: вердикт на него ничего не решает
+  // час вылета мог уже пройти (выбрали вчера)
   const departurePast = preFlight && mission.weather !== undefined && isPastHour(hour.time, mission.weather, now)
   const ms = t('weatherScreen.units.ms')
 
@@ -194,7 +191,7 @@ function EstimateBlock({ estimate: e, lang }: { estimate: MissionEstimate; lang:
         </dd>
       </dl>
       <p className={`mt-2 text-sm font-medium ${e.sorties > 1 ? 'text-amber-900' : 'text-gray-900'}`}>{sorties}</p>
-      {/* Число вылетов — оценка снизу: перелёты между точкой разбиения и базой в неё не входят */}
+      {/* оценка снизу: перелёты от точки разбиения до базы не учтены */}
       {e.sorties > 1 && Number.isFinite(e.sorties) && (
         <p className="mt-1 text-xs text-gray-500">{t('flightForecast.estimate.sortiesNote')}</p>
       )}
@@ -223,7 +220,7 @@ function PlanIssueNote({ issue }: { issue: PlanIssue }) {
   )
 }
 
-// На том же экране ссылка не нужна: подсказка и так относится к нему
+// на том же экране ссылка не нужна
 function ScreenLink({ to, children }: { to: string; children: ReactNode }) {
   const { pathname } = useLocation()
   if (pathname === to) return null

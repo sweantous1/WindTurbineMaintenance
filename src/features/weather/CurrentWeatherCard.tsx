@@ -21,7 +21,7 @@ import { formatAge } from './reasons'
 interface CurrentWeatherCardProps {
   snapshot: WeatherSnapshot
   farm?: Farm
-  // Часы экрана (useNow): возраст снимка здесь и в баннере «устарел» считается от одного момента
+  // часы экрана, чтобы возраст снимка совпадал с баннером "устарел"
   now: Date
 }
 
@@ -43,7 +43,7 @@ export default function CurrentWeatherCard({ snapshot, farm, now }: CurrentWeath
   const ageText = formatAge(age, t)
   const dir = compassPoint(c.windDirDeg10)
   const farmNow = farmLocalNow(snapshot, now)
-  // Расстояние — до нынешнего центра фермы: число из снимка устаревает после импорта другой фермы
+  // считаем до текущего центра фермы, в снимке расстояние могло остаться от старой
   const distanceM = farm ? forecastDistanceM({ farm, weather: snapshot }) : snapshot.distanceToFarmM
   const far = farm !== undefined && isFarFromFarm(distanceM)
   const shift = offsetShiftInForecast(snapshot)

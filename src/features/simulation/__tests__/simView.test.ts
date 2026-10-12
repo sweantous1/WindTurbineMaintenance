@@ -41,7 +41,7 @@ describe('скорость и камера', () => {
     expect(nextSpeed(10, -1)).toBe(5)
     expect(nextSpeed(SPEED_OPTIONS[SPEED_OPTIONS.length - 1], 1)).toBe(100)
     expect(nextSpeed(1, -1)).toBe(1)
-    // Не из списка — к ближайшей в нужную сторону
+    // Не из списка: к ближайшей в нужную сторону
     expect(nextSpeed(7, 1)).toBe(10)
     expect(nextSpeed(7, -1)).toBe(5)
   })

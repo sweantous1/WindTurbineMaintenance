@@ -55,7 +55,6 @@ describe('форма профиля дрона', () => {
     expect(validateDroneForm(form({ maxWindMs: '12', maxGustMs: '12' })).ok).toBe(true)
   })
 
-  // Находка: в русском интерфейсе дроби в полях профиля шли через точку, везде — через запятую
   it('дроби в полях — с разделителем языка и читаются обратно', () => {
     const p = { ...base, maxWindMs: 12.5, cruiseSpeedMs: 9.75 }
     const ruForm = droneToForm(p, 'ru')

@@ -4,7 +4,7 @@ import { currentTile, runFraction, type RunProgress } from './analysisRunner'
 
 interface AnalysisProgressProps {
   run: RunProgress
-  // Анализ запущен на другой миссии: показываем, что движок занят, и даём его остановить
+  // Анализ идёт по другой миссии: движок занят, но остановить можно
   otherMission: boolean
   onCancel: () => void
 }
@@ -19,7 +19,7 @@ export default function AnalysisProgress({ run, otherMission, onCancel }: Analys
     <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-blue-900">
-          {/* Озвучивается смена фото; фрагменты меняются несколько раз в секунду — их не зачитываем */}
+          {/* Озвучиваем только смену фото, фрагменты меняются слишком часто */}
           {otherMission ? (
             <span className="font-medium" role="status">
               {t('defects.progress.otherMission')}

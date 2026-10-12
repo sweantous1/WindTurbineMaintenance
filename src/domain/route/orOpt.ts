@@ -2,21 +2,20 @@ import type { RouteModel } from './matrix'
 import { fillPathTurnPenalties } from './turns'
 import { IMPROVE_EPS_M } from './twoOpt'
 
-// Or-opt переносит цепочку из 1–3 соседних турбин в другое место пути (как есть или
-// развёрнутой). Дополняет 2-opt: тот не умеет переставить одну турбину, не развернув
-// всё, что между
+// Or-opt: переносим цепочку из 1-3 турбин в другое место (можно развёрнутой).
+// 2-opt так не умеет, он разворачивает всё между
 export const OR_OPT_MAX_SEGMENT = 3
 
 export function orOptPass(model: RouteModel, path: Int32Array, shouldStop?: () => boolean): boolean {
   const m = path.length
-  // Последняя позиция, которую можно двигать, и последняя позиция, после которой можно вставить
+  // Последняя позиция и для переноса, и для вставки после неё
   const last = model.closed ? m - 2 : m - 1
   if (last < 2) return false
   const { dist, size } = model
   const pen = model.rule.limited ? new Float64Array(m) : null
   if (pen) fillPathTurnPenalties(model, path, pen)
 
-  // Параметры проверяемого хода: цепочка path[s..e] встаёт между позициями p и p + 1
+  // Текущий ход: path[s..e] встаёт между p и p + 1
   let s = 0
   let e = 0
   let len = 0
@@ -32,7 +31,7 @@ export function orOptPass(model: RouteModel, path: Int32Array, shouldStop?: () =
     if (k <= p || k > e) return path[k]
     return k <= p + len ? seg(k - p - 1) : path[k - len]
   }
-  // Куда после хода попадёт узел с позиции q
+  // Куда переедет узел с позиции q
   const newPos = (q: number) => {
     if (p > e) {
       if (q < s || q > p) return q
@@ -43,7 +42,7 @@ export function orOptPass(model: RouteModel, path: Int32Array, shouldStop?: () =
   }
   const turnAt = (k: number) => (k > 0 && k < m - 1 ? model.turnPenalty(at(k - 1), at(k), at(k + 1)) : 0)
 
-  // Позиции, у которых меняются соседи: концы цепочки и их старые и новые соседи
+  // Позиции, у которых меняются соседи
   const touched = new Int32Array(6)
   let touchedCount = 0
   const touch = (q: number) => {
@@ -75,8 +74,7 @@ export function orOptPass(model: RouteModel, path: Int32Array, shouldStop?: () =
           const tail = r === 0 ? lastNode : first
           let delta = dist[c * size + head] + (hasD ? dist[tail * size + d] - dist[c * size + d] : 0) - removeGain
           if (pen) {
-            // Сначала грубая оценка: сумма штрафов без учёта совпадающих позиций не меньше
-            // точной, и если даже она не окупает ход, точный подсчёт не нужен
+            // Грубая верхняя оценка (позиции могут повторяться), если даже она не окупает ход - пропускаем
             const upperPen = pen[si - 1] + pen[si] + pen[ei] + (hasB ? pen[ei + 1] : 0) + pen[pi] + (hasD ? pen[pi + 1] : 0)
             if (delta - upperPen >= -IMPROVE_EPS_M) continue
             s = si
@@ -94,7 +92,7 @@ export function orOptPass(model: RouteModel, path: Int32Array, shouldStop?: () =
             let oldPen = 0
             for (let k = 0; k < touchedCount; k++) oldPen += pen[touched[k]]
             if (delta - oldPen >= -IMPROVE_EPS_M) continue
-            // Новые штрафы только добавляются: как только ход перестал окупаться, дальше не считаем
+            // Новые штрафы только растут, считаем пока ход окупается
             delta -= oldPen
             for (let k = 0; k < touchedCount && delta < -IMPROVE_EPS_M; k++) delta += turnAt(newPos(touched[k]))
           }
@@ -120,7 +118,7 @@ export function orOpt(model: RouteModel, path: Int32Array, shouldStop?: () => bo
   return improved
 }
 
-// Переносит path[s..e] так, чтобы цепочка встала между прежними позициями p и p + 1
+// path[s..e] встаёт между прежними p и p + 1
 export function moveSegment(path: Int32Array, s: number, e: number, p: number, reversed: boolean): void {
   const len = e - s + 1
   const buf = path.slice(s, e + 1)

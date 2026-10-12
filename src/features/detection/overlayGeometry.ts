@@ -1,5 +1,5 @@
-// Геометрия рамок поверх снимка. Координаты — в пикселях оригинала (viewBox SVG совпадает
-// с натуральным размером), поэтому толщина линий и шрифт задаются через «единиц на пиксель экрана»
+// Координаты в пикселях оригинала (viewBox = натуральный размер), поэтому толщины
+// и шрифт пересчитываем через единицы на пиксель экрана
 
 export interface Size {
   width: number
@@ -22,7 +22,7 @@ export interface OverlayStyle {
   labelHeight: number
 }
 
-// unitsPerPx — сколько пикселей оригинала приходится на пиксель экрана (или готового PNG)
+// unitsPerPx - пикселей оригинала на пиксель экрана (или PNG)
 export function overlayStyle(unitsPerPx: number): OverlayStyle {
   const u = Number.isFinite(unitsPerPx) && unitsPerPx > 0 ? unitsPerPx : 1
   return {
@@ -34,7 +34,7 @@ export function overlayStyle(unitsPerPx: number): OverlayStyle {
   }
 }
 
-// Ширина подписи — оценка: в SVG текст до отрисовки не измерить, а подпись короткая («Трещина 0,87»)
+// Примерно: в SVG текст до отрисовки не измерить, а подписи короткие
 export function labelWidth(text: string, fontSize: number): number {
   return Array.from(text).length * fontSize * 0.62
 }
@@ -45,7 +45,7 @@ export interface OverlayLabel {
   width: number
   height: number
   textX: number
-  // Середина плашки: текст рисуется с базовой линией по центру
+  // Середина плашки, baseline по центру
   textY: number
   text: string
 }
@@ -75,7 +75,7 @@ export function layoutOverlay<T extends FracBox>(
     const text = labelText(item)
     const width = Math.min(size.width, labelWidth(text, style.fontSize) + 2 * style.labelPadX)
     const height = style.labelHeight
-    // Подпись над рамкой, а у верхнего края кадра — внутри рамки; по ширине не выходит за кадр
+    // Подпись над рамкой, у верхнего края кадра внутри неё; за кадр не вылезает
     const lx = Math.max(0, Math.min(x0, size.width - width))
     const ly = y0 - height >= 0 ? y0 - height : Math.min(y0, Math.max(0, size.height - height))
     return {
@@ -87,7 +87,7 @@ export function layoutOverlay<T extends FracBox>(
       label: { x: lx, y: ly, width, height, textX: lx + style.labelPadX, textY: ly + height / 2, text },
     }
   })
-  // Большие рамки рисуются первыми: маленькая внутри большой остаётся сверху и по ней можно кликнуть
+  // Большие рисуем первыми, чтобы по маленькой внутри можно было кликнуть
   return laid.sort((a, b) => b.w * b.h - a.w * a.h)
 }
 
@@ -97,7 +97,7 @@ export function fitScale(natural: Size, box: Size): number {
   return Math.min(box.width / natural.width, box.height / natural.height)
 }
 
-// CSS-преобразование обёртки со снимком и рамками: translate(tx, ty) scale(scale), начало — левый верхний угол
+// translate(tx, ty) scale(scale) от левого верхнего угла
 export interface ZoomTransform {
   scale: number
   tx: number
@@ -109,14 +109,14 @@ export const NO_ZOOM: ZoomTransform = { scale: 1, tx: 0, ty: 0 }
 export interface ZoomOptions {
   // Какую долю области просмотра займёт рамка
   fill: number
-  // Не крупнее, чем столько экранных пикселей на пиксель оригинала: дальше видно только размытие
+  // Предел экранных пикселей на пиксель оригинала, дальше одно размытие
   maxPixelScale: number
   maxScale: number
 }
 
 const DEFAULT_ZOOM: ZoomOptions = { fill: 0.45, maxPixelScale: 4, maxScale: 64 }
 
-// По одной оси: центр рамки — в центр области, но снимок, если он крупнее области, не отъезжает от края
+// Центр рамки в центр области, но край снимка от края области не отрываем
 function axisShift(center: number, scale: number, container: number, imgStart: number, imgLength: number): number {
   const scaledLength = imgLength * scale
   if (scaledLength <= container) return (container - scaledLength) / 2 - imgStart * scale
@@ -147,7 +147,7 @@ export function zoomToBox(box: FracBox, natural: Size, container: Size, options:
   }
 }
 
-// PNG для выгрузки: в размере оригинала, но не больше 4096 по большей стороне
+// PNG в размере оригинала, но не больше 4096 по длинной стороне
 export const PNG_MAX_SIDE = 4096
 
 export function exportSize(natural: Size, maxSide = PNG_MAX_SIDE): Size {
@@ -159,7 +159,7 @@ export function exportSize(natural: Size, maxSide = PNG_MAX_SIDE): Size {
   }
 }
 
-// Линии и подписи в PNG — как на экране, где снимок занимает около 1600 px по большей стороне
+// Линии в PNG как на экране, где снимок около 1600 px по длинной стороне
 export function exportUnitsPerPx(size: Size): number {
   return Math.max(1, Math.max(size.width, size.height) / 1600)
 }

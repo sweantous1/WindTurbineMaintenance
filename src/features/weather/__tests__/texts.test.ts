@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import type { TFunction } from 'i18next'
 import { makeT } from './testI18n'
 
-// Тексты, которые описывают расчёт: разойдясь с ним, они вводят оператора в заблуждение
+// тексты, описывающие расчёт, должны с ним совпадать
 
 let ru: TFunction
 let en: TFunction
@@ -20,7 +20,7 @@ describe('тексты экрана погоды совпадают с расч�
     expect(en('weatherScreen.table.wind')).toContain('blows to')
   })
 
-  // current.precipitation у Open-Meteo — сумма за 15 минут (current.interval = 900)
+  // current.precipitation у Open-Meteo это сумма за 15 минут (current.interval = 900)
   it('осадки в карточке «Сейчас» — за 15 минут, а не за час', () => {
     expect(ru('weatherScreen.current.precip')).toBe('Осадки за 15 мин')
     expect(en('weatherScreen.current.precip')).toBe('Precipitation, last 15 min')

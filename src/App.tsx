@@ -5,8 +5,7 @@ import Layout from '@/components/layout/Layout'
 import Home from '@/pages/Home'
 import { missions } from '@/storage/missions'
 
-// Тяжёлые экраны (карта, графики) грузятся, только когда их открыли:
-// так стартовый бандл не тянет Leaflet, recharts, three.js и разбор KML
+// Тяжёлые экраны грузятся лениво, чтобы стартовый бандл не тянул Leaflet, recharts, three.js и KML
 const Detection = lazy(() => import('@/pages/Detection'))
 const Router = lazy(() => import('@/pages/Router'))
 const Weather = lazy(() => import('@/pages/Weather'))
@@ -21,9 +20,8 @@ function PageFallback() {
 }
 
 export default function App() {
-  // Длина маршрута хранится в миссии, а построение плана облёта с версиями меняется: без пересчёта
-  // при запуске главная и история показывали бы старую длину, пока не откроют экран маршрута.
-  // Пересчёт идемпотентен, повторный запуск эффекта в StrictMode ничего не меняет
+  // Длина маршрута хранится в миссии, а построение плана меняется от версии к версии, поэтому
+  // пересчитываем при запуске. Пересчёт идемпотентен, двойной вызов в StrictMode не мешает
   useEffect(() => {
     missions.recomputeRouteLengths().catch((error: unknown) => {
       console.warn('Не удалось пересчитать длины маршрутов:', error)

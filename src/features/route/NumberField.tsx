@@ -10,12 +10,12 @@ interface NumberFieldProps {
   onCommit: (value: number) => void
   disabled?: boolean
   hint?: string
-  // Единица справа от поля: «м», «°»
+  // единица справа от поля: м, °
   unit?: string
 }
 
-// Поле числа с черновиком: значение уходит наверх только целым и в границах,
-// по Enter или при уходе из поля; неверный ввод при уходе возвращается к прежнему
+// Числовое поле с черновиком: наверх уходит только валидное значение в границах (по Enter или blur),
+// неверный ввод откатывается к прежнему
 export default function NumberField({ label, value, range, onCommit, disabled, hint, unit }: NumberFieldProps) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
@@ -26,7 +26,7 @@ export default function NumberField({ label, value, range, onCommit, disabled, h
   const [shown, setShown] = useState(value)
   const invalid = parseNumberInput(draft, range) === null
 
-  // Значение поменялось снаружи (сброс, другой экран) — черновик подтягивается
+  // значение поменяли снаружи (сброс, другой экран) - обновляем черновик
   if (!Object.is(shown, value)) {
     setShown(value)
     setDraft(show(value))
@@ -53,7 +53,7 @@ export default function NumberField({ label, value, range, onCommit, disabled, h
     <div>
       <label htmlFor={id} className="block text-xs font-medium text-gray-600 mb-1">
         {label}
-        {/* Единица видна справа от поля, а в имени поля — для экранного диктора */}
+        {/* единица для скринридера, визуально она справа от поля */}
         {unit && <span className="sr-only"> ({unit})</span>}
       </label>
       <div className="flex items-center gap-2">

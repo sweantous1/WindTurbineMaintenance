@@ -4,15 +4,15 @@ import { DEFAULT_DRONE_PROFILE } from '@/domain/defaults'
 import { isPreFlight, PRE_FLIGHT } from '@/domain/missionStatus'
 import type { DroneProfile, Mission } from '@/domain/types'
 
-// Живые запросы: любой экран обновится сам, когда миссию поменяли на другом экране
+// Живые запросы: экран обновится сам, если миссию поменяли на другом экране
 
-// Полная выборка со фермой, маршрутом и погодой каждой миссии — только там, где нужен весь список
-// (история). Запрос перечитывается после любой записи в миссии, и с длинной историей это сотни мс
+// Полная выборка с фермой, маршрутом и погодой - только для истории. Перечитывается
+// после любой записи в миссии, на длинной истории это сотни мс
 export function useMissions(): Mission[] | undefined {
   return useLiveQuery(() => db.missions.orderBy('updatedAt').reverse().toArray(), [])
 }
 
-// Сколько всего миссий: count() не читает и не копирует сами записи
+// count() не читает сами записи
 export function useMissionCount(): number | undefined {
   return useLiveQuery(() => db.missions.count(), [])
 }
@@ -37,7 +37,7 @@ export async function loadMissionMenu(flownLimit: number): Promise<MissionMenu> 
     .filter((m) => !isPreFlight(m.status))
     .limit(flownLimit)
     .toArray()
-  // Облетанные — всё, что не до полёта, как и в фильтре выше: так учитываются и статусы из старой базы
+  // Облетанные - всё, что не до полёта, как в фильтре выше, чтобы учесть статусы из старой базы
   const flownTotal = (await db.missions.count()) - inWork.length
   return { inWork, flown, flownTotal }
 }
@@ -46,7 +46,7 @@ export function useMissionMenu(flownLimit: number): MissionMenu | undefined {
   return useLiveQuery(() => loadMissionMenu(flownLimit), [flownLimit])
 }
 
-// undefined — ещё загружается; null — активной миссии нет
+// undefined - ещё грузится, null - активной миссии нет
 export function useActiveMission(): Mission | null | undefined {
   return useLiveQuery(async () => {
     const row = await db.settings.get('activeMissionId')
@@ -59,8 +59,7 @@ export function useDroneProfiles(): DroneProfile[] | undefined {
   return useLiveQuery(() => db.droneProfiles.toArray(), [])
 }
 
-// Профиль дрона для расчётов по миссии: у облетанной — снимок на момент полёта,
-// у остальных — текущий профиль из настроек
+// У облетанной миссии снимок профиля на момент полёта, у остальных текущий из настроек
 export function useMissionDrone(mission: Mission): DroneProfile | undefined {
   const live = useDroneProfile(mission.droneSnapshot ? undefined : mission.droneProfileId)
   return mission.droneSnapshot ?? live

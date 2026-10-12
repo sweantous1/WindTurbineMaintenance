@@ -13,13 +13,13 @@ import { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M, formatValue, parseInRange
 interface NewMissionDialogProps {
   isOpen: boolean
   onClose: () => void
-  // Вызывается после записи; новая миссия к этому моменту уже активная
+  // Вызывается после записи, когда новая миссия уже активна
   onCreated?: (mission: Mission) => void
 }
 
 export default function NewMissionDialog({ isOpen, onClose, onCreated }: NewMissionDialogProps) {
   const { t } = useTranslation()
-  // Modal не рисует содержимое закрытым, поэтому форма каждый раз открывается чистой
+  // Закрытый Modal ничего не рендерит, так что форма каждый раз чистая
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('mission.newDialog.title')}>
       <NewMissionForm onClose={onClose} onCreated={onCreated} />
@@ -36,13 +36,13 @@ function NewMissionForm({ onClose, onCreated }: Omit<NewMissionDialogProps, 'isO
   const [altitude, setAltitude] = useState(String(DEFAULT_FLIGHT_ALTITUDE_M))
   const [touched, setTouched] = useState({ name: false, altitude: false })
   const [saving, setSaving] = useState(false)
-  // Два Enter подряд успевают до перерисовки с заблокированной кнопкой — без флага вышли бы две миссии
+  // Флаг в ref: два Enter подряд успевают до перерисовки и создали бы две миссии
   const savingRef = useRef(false)
   const drone = useDroneProfile(droneId)
 
   const nameError = validateName(name)
   const alt = parseInRange(altitude, FLIGHT_ALTITUDE_MIN_M, FLIGHT_ALTITUDE_MAX_M)
-  // Лимиты новой миссии — по умолчанию; для потолка действует меньшее из миссии и дрона
+  // У новой миссии лимиты по умолчанию, потолок - меньшее из миссии и дрона
   const ceilingM = drone ? Math.min(drone.maxAltitudeM, DEFAULT_LIMITS.maxAltitudeM) : DEFAULT_LIMITS.maxAltitudeM
   const aboveCeiling = alt.ok && alt.value > ceilingM
 
@@ -65,8 +65,7 @@ function NewMissionForm({ onClose, onCreated }: Omit<NewMissionDialogProps, 'isO
     }
   }
 
-  // Escape обрабатываем здесь: во время записи окно не закрывается.
-  // preventDefault сообщает Modal, что Escape уже обработан
+  // Escape сами: во время записи окно не закрывается, preventDefault говорит Modal, что уже обработано
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return
     e.preventDefault()

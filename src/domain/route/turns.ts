@@ -1,20 +1,19 @@
 import type { LocalPoint } from '@/lib/geo'
 import type { RouteModel } from './matrix'
 
-// Отрезки короче миллиметра считаем точкой: направление у них не определено, поворота нет
+// Короче миллиметра считаем точкой, поворота нет
 const MIN_LEG_M = 1e-3
-// Допуск в косинусах: поворот ровно на предельный угол (прямые углы сетки и т. п.)
-// нарушением не считается, несмотря на ошибки округления
+// Чтобы поворот ровно на предельный угол (например прямые углы сетки) не считался нарушением из-за округления
 const COS_TOLERANCE = 1e-12
 const DEG = 180 / Math.PI
-// До стольких точек штрафы всех троек считаются заранее: 65³ чисел — около 2 МБ
+// До стольких точек считаем таблицу штрафов всех троек заранее, 65^3 чисел ~ 2 МБ
 const TURN_TABLE_MAX_SIZE = 65
 
-// Штраф за нарушение — порядка поперечника фермы: объезд ради допустимого поворота выгоден,
-// пока он не длиннее самой фермы; при равном числе нарушений выигрывает более пологий поворот
+// Штраф ~ размер фермы: объезд выгоден, пока он не длиннее самой фермы.
+// При равном числе нарушений выигрывает более пологий поворот
 export const TURN_PENALTY_FACTOR = 1
 
-// Отклонение от прямой в вершине b при полёте a → b → c: 0 — прямо, 180 — разворот назад
+// Отклонение в b на пути a -> b -> c: 0 прямо, 180 разворот
 export function turnAngleDeg(a: LocalPoint, b: LocalPoint, c: LocalPoint): number {
   const ux = b.x - a.x
   const uy = b.y - a.y
@@ -25,7 +24,7 @@ export function turnAngleDeg(a: LocalPoint, b: LocalPoint, c: LocalPoint): numbe
 }
 
 export interface TurnRule {
-  // Есть ли ограничение вообще: при 180° любой поворот допустим, и углы не считаются
+  // false при 180, тогда углы не считаем
   limited: boolean
   thetaMaxDeg: number
   penaltyPerViolationM: number
@@ -41,14 +40,12 @@ export function makeTurnRule(thetaMaxDeg: number, scaleM: number): TurnRule {
 }
 
 export interface TurnEvaluator {
-  // Штраф за поворот в вершине b на пути a → b → c (индексы точек): 0, если он не круче
-  // предела, иначе база плюс доля за каждый лишний градус
+  // 0 если не круче предела, иначе база + доля за каждый лишний градус
   penalty(a: number, b: number, c: number): number
   violates(a: number, b: number, c: number): boolean
 }
 
-// Поворот проверяется тысячи раз за поиск, поэтому единичные векторы всех рёбер считаются
-// заранее: проверка сводится к скалярному произведению, арккосинус — только при нарушении
+// Единичные векторы рёбер считаем заранее: проверка = скалярное произведение, acos только при нарушении
 export function makeTurnEvaluator(points: LocalPoint[], dist: Float64Array, rule: TurnRule): TurnEvaluator {
   if (!rule.limited) return { penalty: () => 0, violates: () => false }
   const size = points.length
@@ -63,7 +60,7 @@ export function makeTurnEvaluator(points: LocalPoint[], dist: Float64Array, rule
     }
   }
   const cosLimit = Math.cos(rule.thetaMaxDeg / DEG) - COS_TOLERANCE
-  // Косинус угла отклонения; NaN — поворота нет (одно из плеч нулевое)
+  // NaN - одно из плеч нулевое, поворота нет
   const cosAt = (a: number, b: number, c: number) => {
     const ab = a * size + b
     const bc = b * size + c
@@ -79,7 +76,7 @@ export function makeTurnEvaluator(points: LocalPoint[], dist: Float64Array, rule
   const violates = (a: number, b: number, c: number) => cosAt(a, b, c) < cosLimit
   if (size > TURN_TABLE_MAX_SIZE) return { penalty, violates }
 
-  // На небольших фермах все тройки помещаются в таблицу — поиск ускоряется в разы
+  // Небольшая ферма - кладём все тройки в таблицу, так в разы быстрее
   const table = new Float64Array(size * size * size)
   for (let a = 0; a < size; a++) {
     for (let b = 0; b < size; b++) {
@@ -89,7 +86,7 @@ export function makeTurnEvaluator(points: LocalPoint[], dist: Float64Array, rule
   return { penalty: (a, b, c) => table[(a * size + b) * size + c], violates }
 }
 
-// Число нарушений на маршруте взлёт → visit → (взлёт). В точке взлёта и в конце пути поворота нет
+// Нарушения на маршруте взлёт -> visit -> (взлёт), на взлёте и в конце поворота нет
 export function countTurnViolations(model: RouteModel, visit: ArrayLike<number>): number {
   if (!model.rule.limited) return 0
   let count = 0
@@ -105,8 +102,7 @@ export function countTurnViolations(model: RouteModel, visit: ArrayLike<number>)
   return count
 }
 
-// Штрафы во всех позициях пути (на концах — 0); локальный поиск держит их под рукой,
-// чтобы быстро отбрасывать ходы, которые заведомо не окупаются
+// Штрафы по позициям пути (на концах 0), чтобы локальный поиск быстро отсеивал ходы
 export function fillPathTurnPenalties(model: RouteModel, path: Int32Array, out: Float64Array): void {
   const m = path.length
   out[0] = 0

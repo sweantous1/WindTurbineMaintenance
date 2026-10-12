@@ -51,7 +51,6 @@ function dialog(): HTMLElement {
 }
 
 describe('профили дронов', () => {
-  // Находка: потолок профиля меняет длину маршрута, а в миссиях оставалась старая
   it('после сохранения профиля пересчитываются длины маршрутов его миссий', async () => {
     const recompute = vi.spyOn(missions, 'recomputeRouteLengths')
     await render(createElement(DroneProfilesSection))
@@ -75,7 +74,7 @@ describe('профили дронов', () => {
     expect(await db.droneProfiles.get('mavic')).toBeUndefined()
   })
 
-  // Находка: правки молча пропадали при переходе по шапке — секция размонтируется
+  // cleanup() здесь как переход по шапке: секция размонтируется
   it('несохранённые правки переживают уход с экрана', async () => {
     await render(createElement(DroneProfilesSection))
     await waitFor(() => expect(field('Макс. ветер').value).toBe('12'))
@@ -86,7 +85,7 @@ describe('профили дронов', () => {
     await waitFor(() => expect(field('Макс. ветер').value).toBe('10,5'))
     expect(getByText('p', 'Есть несохранённые изменения')).toBeTruthy()
 
-    // «Отменить изменения» стирает и черновик
+    // "Отменить изменения" стирает и черновик
     await click(getByText('button', 'Отменить изменения'))
     expect(field('Макс. ветер').value).toBe('12')
     await cleanup()
@@ -112,7 +111,6 @@ describe('профили дронов', () => {
     await waitFor(() => expect(field('Макс. ветер').value).toBe('12,5'))
   })
 
-  // Находка: встроенный профиль показывался по-русски и в английском интерфейсе
   it('встроенный профиль — на языке интерфейса, а сохранение не записывает перевод в базу', async () => {
     const success = vi.spyOn(toast, 'success')
     await db.droneProfiles.update(DEFAULT_DRONE_PROFILE.id, { name: LEGACY_DEFAULT_DRONE_NAME })

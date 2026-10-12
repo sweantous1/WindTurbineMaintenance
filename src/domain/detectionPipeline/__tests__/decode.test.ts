@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { decodeYolo } from '../decode'
 
-// Синтетический выход [1, 4 + nc, anchors]: по якорю — cx, cy, w, h и вероятности классов
+// Фейковый выход [1, 4 + nc, anchors]: на якорь cx, cy, w, h и вероятности классов
 function yoloOutput(anchors: { box: [number, number, number, number]; probs: number[] }[]): { data: Float32Array; dims: number[] } {
   const nc = anchors[0].probs.length
   const n = anchors.length
@@ -29,7 +29,7 @@ describe('decodeYolo', () => {
     expect(got[0].classIndex).toBe(1)
     expect(got[0].score).toBeCloseTo(0.9, 6)
     expect([got[0].x1, got[0].y1, got[0].x2, got[0].y2]).toEqual([90, 45, 110, 55])
-    // Второй класс (0.28) выше порога, но берётся только лучший — рамка одна
+    // 0.28 тоже выше порога, но берём только лучший класс
     expect(got[1].classIndex).toBe(0)
     expect(got[1].score).toBeCloseTo(0.3, 6)
     expect([got[1].x1, got[1].y1, got[1].x2, got[1].y2]).toEqual([268, 284, 332, 316])
@@ -57,7 +57,7 @@ describe('decodeYolo', () => {
   it('размер как у модели дефектов: [1, 11, 8400]', () => {
     const anchors = 8400
     const out = new Float32Array(11 * anchors)
-    // Один уверенный якорь в конце — проверка индексации по последней оси
+    // Уверенный якорь в самом конце, проверяем индексацию
     const a = anchors - 1
     out[a] = 320
     out[anchors + a] = 200
@@ -66,7 +66,7 @@ describe('decodeYolo', () => {
     out[(4 + 6) * anchors + a] = 0.8
     const got = decodeYolo(out, [1, 11, anchors], { confidence: 0.25, numClasses: 7 })
     expect(got).toEqual([{ classIndex: 6, score: Math.fround(0.8), x1: 300, y1: 170, x2: 340, y2: 230 }])
-    // Транспонированный выход [1, 8400, 11] (так его отдают экспорты с другой раскладкой) не читается молча как мусор
+    // Транспонированный выход [1, 8400, 11] (другой экспорт) должен падать, а не читаться как мусор
     expect(() => decodeYolo(out, [1, anchors, 11], { confidence: 0.25, numClasses: 7 })).toThrow(/8396/)
   })
 })

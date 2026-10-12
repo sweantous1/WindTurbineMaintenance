@@ -1,6 +1,6 @@
 import type { AppDefectClass, Detection, ModelManifest, PhotoAnalysis, PhotoRecord, Severity } from '@/domain/detection'
 
-// Манифест как у настоящей модели (public/models/defects/manifest.json), без лишних полей
+// Как public/models/defects/manifest.json, без лишних полей
 export const MANIFEST: ModelManifest = {
   name: 'grant-temp-best-turbine',
   version: '2025-03-11',

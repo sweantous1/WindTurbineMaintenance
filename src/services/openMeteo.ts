@@ -6,7 +6,7 @@ export const OPEN_METEO_FORECAST_URL = 'https://api.open-meteo.com/v1/forecast'
 export const OPEN_METEO_GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search'
 
 export const MAX_FORECAST_HOURS = 168
-// Без ответа за это время запрос считается зависшим, иначе экран погоды ждёт бесконечно
+// Дольше считаем запрос зависшим
 export const FETCH_TIMEOUT_MS = 20_000
 const GEOCODE_COUNT = 10
 const MAX_REASON_LENGTH = 300
@@ -44,12 +44,12 @@ export type OpenMeteoErrorCode = 'badPoint' | 'network' | 'timeout' | 'http' | '
 
 type ErrorParams = Record<string, string | number>
 
-// Сервис вызывают и вне React (тесты, фоновое обновление): пока i18next не поднят, в тексте остаётся ключ
+// Зовут и вне React; пока i18next не поднят, отдаём ключ
 function translate(key: string, params: ErrorParams): string {
   return i18next.isInitialized ? i18next.t(key, params) : key
 }
 
-// Без reason или без единицы в шаблоне остались бы пустые кавычки — для них отдельные тексты
+// Без reason или unit свои тексты, иначе в шаблоне пустые кавычки
 function errorKey(code: OpenMeteoErrorCode, params: ErrorParams): string {
   if (code === 'http' && !params.reason) return 'wmo.errors.httpStatus'
   if (code === 'units' && !params.unit) return 'wmo.errors.unitsMissing'
@@ -58,7 +58,7 @@ function errorKey(code: OpenMeteoErrorCode, params: ErrorParams): string {
 
 export class OpenMeteoError extends Error {
   readonly code: OpenMeteoErrorCode
-  // Ключ и параметры перевода: UI может перевести сообщение заново после смены языка
+  // Чтобы UI мог перевести заново после смены языка
   readonly i18nKey: string
   readonly params: ErrorParams
 
@@ -77,7 +77,7 @@ export function clampForecastHours(hours: number): number {
   return Math.min(MAX_FORECAST_HOURS, Math.max(1, Math.ceil(hours)))
 }
 
-// Сетка Open-Meteo — километры, пять знаков (~1 м) хватает с запасом и не тащат хвост 0.30000000000000004
+// Сетка Open-Meteo в километрах, пяти знаков (~1 м) хватает
 const coord = (x: number) => String(Math.round(x * 1e5) / 1e5)
 
 function assertPoint(p: GeoPoint): void {
@@ -92,9 +92,9 @@ export function buildForecastUrl(p: GeoPoint, hours: number): string {
     ['longitude', coord(p.lon)],
     ['current', CURRENT_VARS.join(',')],
     ['hourly', HOURLY_VARS.join(',')],
-    // Без этого параметра ветер приходит в км/ч — на этом ошибся эталон Grant-temp
+    // Ветер в м/с, по умолчанию Open-Meteo отдаёт км/ч
     ['wind_speed_unit', 'ms'],
-    // Время часов — местное время фермы, в нём же выбирают час вылета
+    // Часы в местном времени фермы
     ['timezone', 'auto'],
     ['forecast_hours', String(clampForecastHours(hours))],
   ]
@@ -120,7 +120,7 @@ async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
     res = await fetch(url, { signal: combined })
     text = await res.text()
   } catch (e) {
-    // Отмену вызывающим пробрасываем как есть: это не ошибка, показывать её не нужно
+    // Отмену пробрасываем как есть, это не ошибка
     if (signal?.aborted) throw e
     if (timeout.aborted) throw new OpenMeteoError('timeout', { seconds: FETCH_TIMEOUT_MS / 1000 }, { cause: e })
     throw new OpenMeteoError('network', {}, { cause: e })

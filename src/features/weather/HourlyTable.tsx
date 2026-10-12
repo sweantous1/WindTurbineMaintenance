@@ -20,7 +20,7 @@ export default function HourlyTable({ hours, selectedTime }: HourlyTableProps) {
   const regionId = useId()
   const n = (v: number | null, digits = 1) => formatNumber(v, lang, digits)
 
-  // Заголовки переносятся на две строки: иначе 14 колонок не помещаются в окно шириной 1024 px
+  // заголовки в две строки, иначе 14 колонок не влезают в 1024px
   const thBase = 'px-1.5 py-2 align-bottom text-[11px] leading-tight font-medium text-gray-600'
   const th = `${thBase} text-right`
   const td = 'px-1.5 py-1.5 text-right tabular-nums whitespace-nowrap'
@@ -115,7 +115,7 @@ export default function HourlyTable({ hours, selectedTime }: HourlyTableProps) {
                         <td key={level} className={td}>
                           <span className="inline-flex items-center justify-end gap-1">
                             {n(h.windMs[level])}
-                            {/* Направление — стрелкой; румб и градусы — в подсказке и для экранного диктора */}
+                            {/* румб и градусы в title/aria-label у стрелки */}
                             <WindArrow deg={h.windDirDeg[level]} className="h-3.5 w-3.5 text-gray-500" />
                           </span>
                         </td>

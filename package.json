@@ -1,7 +1,7 @@
 {
   "name": "wind-turbine-maintenance",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Планирование облёта ветропарка дроном: маршрут, погода и окно вылета, 3D-просмотр облёта, поиск дефектов на фото",
   "author": "WindTurbineMaintenance contributors",
   "type": "module",

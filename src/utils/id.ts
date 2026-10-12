@@ -1,5 +1,5 @@
-// crypto.randomUUID есть только в защищённом контексте (HTTPS, localhost, file://).
-// Если веб-версию открыть по http из локальной сети, его нет, а getRandomValues есть.
+// randomUUID есть только в защищённом контексте (HTTPS, localhost, file://),
+// а по http из локальной сети остаётся только getRandomValues
 export function makeId(): string {
   const c = globalThis.crypto
   if (typeof c?.randomUUID === 'function') return c.randomUUID()

@@ -45,7 +45,7 @@ describe('турбины кликом по карте', () => {
     expect(farm.center.lat).toBeCloseTo(p.lat, 12)
     expect(farm.center.lon).toBeCloseTo(p.lon, 12)
     expect(farm.defaults).toEqual(DEFAULT_FARM_DEFAULTS)
-    // Копия: правка параметров фермы не должна менять общие значения по умолчанию
+    // копия, чтобы правка фермы не меняла общие дефолты
     expect(farm.defaults).not.toBe(DEFAULT_FARM_DEFAULTS)
     expect(farm.source).toBeUndefined()
   })
@@ -84,9 +84,9 @@ describe('правка фермы', () => {
     expect(haversineM(next.center, at(200, 0))).toBeLessThan(0.5)
     const empty = removeTurbine(removeTurbine(next, 't1'), 't2')
     expect(empty.turbines).toEqual([])
-    // Центр остаётся прежним: от него строится локальная система, пустой набор центра не имеет
+    // центр не меняется: от него строится локальная система, а у пустого набора центра нет
     expect(empty.center).toEqual(removeTurbine(next, 't1').center)
-    // Неизвестный id — без изменений
+    // неизвестный id ничего не меняет
     expect(removeTurbine(farm, 'nope').turbines).toHaveLength(3)
   })
 
@@ -138,7 +138,7 @@ describe('замена фермы импортом', () => {
   })
 
   it('прогноз для места дальше порога от новой фермы сбрасывается вместе с часом вылета', () => {
-    // Ферма А в районе BASE, прогноз по её центру; ферма Б — в сотнях километров
+    // ферма А около BASE, прогноз по её центру; ферма Б в сотнях км
     const farmA = lineFarm(4)
     const mission = {
       farm: farmA,
@@ -152,7 +152,7 @@ describe('замена фермы импортом', () => {
     const patch = importPatch(mission, farB, { moveTakeoff: true })
     expect('weather' in patch && patch.weather === undefined).toBe(true)
     expect('departureTime' in patch && patch.departureTime === undefined).toBe(true)
-    // Новый маршрут больше не делает миссию «Готовой к полёту» по чужой погоде
+    // новый маршрут не должен делать миссию "Готовой к полёту" по чужой погоде
     const after = { ...mission, ...patch, route: makeRoute(['b0', 'b1', 'b2']) }
     expect(derivePreFlightStatus(after)).toBe('planned')
   })

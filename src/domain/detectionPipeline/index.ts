@@ -12,7 +12,7 @@ export { decodeYolo } from './decode'
 export type { Candidate, DecodeOptions } from './decode'
 export { nmsPerClass, boxIou, boxArea } from './nms'
 
-// Находка модели на кадре: рамка в долях ширины и высоты оригинала 0..1, уже обрезанная по его краям
+// Рамка в долях кадра 0..1, обрезана по краям
 export interface RawDetection {
   modelClass: string
   classIndex: number
@@ -23,10 +23,10 @@ export interface RawDetection {
   h: number
 }
 
-// Предел рамок на один проход модели, как max_det в ultralytics
+// Как max_det в ultralytics
 export const MAX_DET_PER_TILE = 300
 
-// Фрагменты режутся по размеру входа модели; целиком — кадры не больше двух фрагментов по стороне
+// Фрагмент = вход модели, целиком гоняем кадры до двух фрагментов по стороне
 export function tilingForModel(imgsz: number): TilingOptions {
   return { ...DEFAULT_TILING, tile: imgsz, singlePassMaxSide: imgsz * 2 }
 }
@@ -39,35 +39,34 @@ export interface FrameSize {
 export interface TileOutputOptions {
   confidence: number
   iou: number
-  // Размер всего кадра: по нему видно, какие края фрагмента внутренние
+  // Нужен, чтобы понять, какие края фрагмента внутренние
   frame: FrameSize
   numClasses?: number
   maxDet?: number
 }
 
-// Стороны рамки, упёртые во внутренний край фрагмента: кадр за ним продолжается, и объект, скорее всего, тоже
+// Стороны рамки, упёртые во внутренний край фрагмента (объект, скорее всего, продолжается дальше)
 export const CUT_LEFT = 1
 export const CUT_TOP = 2
 export const CUT_RIGHT = 4
 export const CUT_BOTTOM = 8
 
-// Кандидат в пикселях кадра и фрагмент, на котором его нашли
+// Кандидат в пикселях кадра + фрагмент, где его нашли
 export interface FrameCandidate extends Candidate {
   tile?: TileRect
-  // Биты CUT_*; нет поля — рамка целиком видна на своём фрагменте
+  // Биты CUT_*, нет поля - рамка видна целиком
   cut?: number
 }
 
-// Насколько близко к краю фрагмента (доля его стороны) должна подойти рамка, чтобы считаться обрезанной им:
-// модель тянет рамку обрезанного объекта к краю входа, но не всегда до последнего пикселя
+// Допуск до края фрагмента (доля стороны): модель тянет обрезанную рамку к краю, но не всегда до последнего пикселя
 const CUT_TOLERANCE = 0.01
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
-// Кандидаты во входных пикселях → пиксели оригинала: снимаем letterbox, обрезаем по фрагменту
-// (как clip_boxes в ultralytics), сдвигаем на его положение в кадре и отмечаем стороны, срезанные внутренним краем
+// Входные пиксели -> пиксели оригинала: снять letterbox, обрезать по фрагменту (clip_boxes в ultralytics),
+// сдвинуть в кадр и пометить стороны, срезанные внутренним краем
 export function tileCandidatesToFrame(candidates: readonly Candidate[], tile: TileRect, lb: Letterbox, frame: FrameSize): FrameCandidate[] {
-  // У края кадра объект действительно кончается; обрезанным считаем только то, что упёрлось во внутренний край
+  // У края кадра объект и правда кончается, поэтому смотрим только внутренние края
   const inner =
     (tile.x > 0 ? CUT_LEFT : 0) |
     (tile.y > 0 ? CUT_TOP : 0) |
@@ -99,7 +98,7 @@ export function tileCandidatesToFrame(candidates: readonly Candidate[], tile: Ti
   return result
 }
 
-// Один прогон модели по фрагменту: декодирование, NMS внутри фрагмента, перенос в координаты кадра
+// decode + NMS внутри фрагмента + перенос в кадр
 export function processTileOutput(
   output: ArrayLike<number>,
   dims: readonly number[],
@@ -112,7 +111,7 @@ export function processTileOutput(
   return tileCandidatesToFrame(kept, tile, lb, options.frame)
 }
 
-// Область кадра, которую видят оба фрагмента
+// Общая область двух фрагментов
 function sharedArea(a: TileRect, b: TileRect): Box | null {
   const x1 = Math.max(a.x, b.x)
   const y1 = Math.max(a.y, b.y)
@@ -128,13 +127,12 @@ const clipTo = (b: Box, area: Box): Box => ({
   y2: clamp(b.y2, area.y1, area.y2),
 })
 
-// Та же ли это находка. Рамки с разных фрагментов сравниваются ещё и в общей для фрагментов области:
-// там оба видят одни и те же пиксели, и один объект даёт почти одинаковые рамки, даже если один из фрагментов
-// видит его лишь частично. Обычный IoU целых рамок такие пары пропускает: половинка объекта против целого — IoU < 0.7
+// Рамки с разных фрагментов сравниваем ещё и в их общей области: там один объект даёт почти одинаковые рамки,
+// а IoU целых рамок для половинки против целого обычно < 0.7
 function sameObject(kept: FrameCandidate, box: FrameCandidate, iou: number): boolean {
   const overlap = boxIou(kept, box)
   if (overlap > iou) return true
-  // Непересекающиеся рамки не пересекутся и в общей области
+  // Не пересекаются - в общей области тоже не пересекутся
   if (overlap === 0) return false
   const a = kept.tile
   const b = box.tile
@@ -143,8 +141,8 @@ function sameObject(kept: FrameCandidate, box: FrameCandidate, iou: number): boo
   return area !== null && boxIou(clipTo(kept, area), clipTo(box, area)) > iou
 }
 
-// Сторона оставленной рамки срезана краем её фрагмента, а подавленная рамка того же объекта уходит дальше —
-// продолжаем по ней. Иначе крупный дефект на стыке остаётся урезанным: у частичной рамки уверенность бывает выше, чем у целой
+// Срезанную сторону тянем по подавленной рамке того же объекта, если та уходит дальше.
+// Иначе крупный дефект на стыке остаётся урезанным: у частичной рамки score бывает выше, чем у целой
 function extendCutSides(kept: FrameCandidate, box: FrameCandidate): void {
   const cut = kept.cut ?? 0
   if (!cut) return
@@ -172,8 +170,8 @@ function extendCutSides(kept: FrameCandidate, box: FrameCandidate): void {
   kept.cut = next
 }
 
-// Все фрагменты собраны: общий жадный NMS по классу в координатах оригинала убирает дубли из зон перекрытия.
-// Для кадра, обработанного за один проход, это ровно NMS ultralytics: внутренних краёв нет
+// Общий жадный NMS по классам в координатах кадра, убирает дубли из зон перекрытия.
+// Для кадра в один проход совпадает с NMS ultralytics
 export function mergeTileDetections(
   boxes: readonly FrameCandidate[],
   frame: FrameSize,
@@ -190,7 +188,7 @@ export function mergeTileDetections(
       extendCutSides(owner, box)
       continue
     }
-    // Копия: стороны оставленной рамки ещё могут продолжиться
+    // Копия, extendCutSides её меняет
     const copy = { ...box }
     if (sameClass) sameClass.push(copy)
     else keptByClass.set(box.classIndex, [copy])
@@ -223,7 +221,7 @@ const isText = (v: unknown): v is string => typeof v === 'string' && v.length > 
 const isShare = (v: unknown): v is number => typeof v === 'number' && v > 0 && v <= 1
 const APP_CLASSES: readonly string[] = APP_DEFECT_CLASSES
 
-// Проверка manifest.json: битый или чужой файл должен давать понятную ошибку при загрузке, а не странные рамки
+// Битый manifest.json должен падать с понятной ошибкой, а не давать странные рамки
 export function parseManifest(raw: unknown): ModelManifest {
   const fail = (what: string): never => {
     throw new Error(`manifest.json: ${what}`)

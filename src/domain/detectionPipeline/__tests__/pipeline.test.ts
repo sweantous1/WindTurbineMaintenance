@@ -19,7 +19,7 @@ import {
   type TileRect,
 } from '../index'
 
-// Выход модели с заданными рамками во входных пикселях: { class, score, x1..y2 }
+// Выход модели с нужными рамками во входных пикселях
 function outputWith(boxes: (Box & { classIndex: number; score: number })[], nc = 3, anchors = 16): { data: Float32Array; dims: number[] } {
   const data = new Float32Array((4 + nc) * anchors)
   boxes.forEach((b, i) => {
@@ -37,7 +37,7 @@ const WHOLE = { width: 640, height: 640 }
 
 type TileBox = Box & { classIndex: number; score: number }
 
-// Прогон «модели» по фрагментам кадра: рамки задаются во входных пикселях каждого фрагмента
+// "Модель" по фрагментам, рамки во входных пикселях каждого фрагмента
 function runTiles(frame: FrameSize, perTile: Map<string, TileBox[]>): { tiles: TileRect[]; found: FrameCandidate[] } {
   const tiles = planTiles(frame.width, frame.height, tilingForModel(640))
   const found = tiles.flatMap((tile) => {
@@ -60,7 +60,7 @@ describe('перенос рамок фрагмента в кадр', () => {
     const got = processTileOutput(data, dims, tile, letterbox(640, 640), opts({ width: 1664, height: 640 }))
     expect(got).toHaveLength(2)
     expect(got[0]).toMatchObject({ classIndex: 1, x1: 592, y1: 190, x2: 632, y2: 210, cut: 0 })
-    // Упёрлась в правый край фрагмента, а за ним кадр продолжается — сторона отмечена как срезанная
+    // Упёрлась в правый край фрагмента, кадр дальше продолжается - сторона срезана
     expect(got[1]).toMatchObject({ classIndex: 0, x1: 1122, x2: 1152, cut: CUT_RIGHT })
   })
 
@@ -71,10 +71,10 @@ describe('перенос рамок фрагмента в кадр', () => {
     const { data, dims } = outputWith([{ classIndex: 2, score: 0.5, x1: 270, y1: 295, x2: 370, y2: 345 }])
     const [b] = processTileOutput(data, dims, tile, lb, opts(frame))
     expect([b.x1, b.y1, b.x2, b.y2]).toEqual([540, 430, 740, 530])
-    // Рамка, целиком лежащая в сером поле, пропадает при обрезке
+    // Рамка целиком в сером поле пропадает
     const inPad = outputWith([{ classIndex: 0, score: 0.9, x1: 10, y1: 5, x2: 50, y2: 60 }])
     expect(processTileOutput(inPad.data, inPad.dims, tile, lb, opts(frame))).toEqual([])
-    // Рамка у самого края кадра: краёв-стыков у одного прохода нет
+    // У края кадра: при одном проходе стыков нет
     const edge = outputWith([{ classIndex: 0, score: 0.9, x1: 0, y1: 80, x2: 640, y2: 560 }])
     const [whole] = processTileOutput(edge.data, edge.dims, tile, lb, opts(frame))
     expect(whole).toMatchObject({ x1: 0, y1: 0, x2: 1280, y2: 960, cut: 0 })
@@ -103,7 +103,7 @@ describe('перенос рамок фрагмента в кадр', () => {
     expect([lb.scale, lb.newW, lb.newH, lb.padX, lb.padY]).toEqual([1, 640, 500, 0, 70])
     const { data, dims } = outputWith([{ classIndex: 0, score: 0.9, x1: 100, y1: 60, x2: 200, y2: 575 }])
     const [b] = processTileOutput(data, dims, last, lb, opts(frame))
-    // Сверху и снизу — край кадра, слева — стык с соседним фрагментом, но рамка до него не доходит
+    // Сверху и снизу край кадра, слева стык, но рамка до него не доходит
     expect(b).toMatchObject({ x1: 2460, y1: 0, x2: 2560, y2: 500, cut: 0 })
   })
 
@@ -121,7 +121,7 @@ describe('сборка фрагментов', () => {
     const frame = { width: 1664, height: 640 }
     const tiles = planTiles(frame.width, frame.height, tilingForModel(640))
     expect(tiles.map((t) => t.x)).toEqual([0, 512, 1024])
-    // Дефект в полосе перекрытия [512, 640): виден в фрагментах 0 и 1 с немного разными рамками
+    // Дефект в перекрытии [512, 640), виден во фрагментах 0 и 1 чуть по-разному
     const perTile = [
       [{ classIndex: 0, score: 0.8, x1: 560, y1: 100, x2: 620, y2: 160 }],
       [
@@ -168,8 +168,8 @@ describe('сборка фрагментов', () => {
 })
 
 describe('сборка фрагментов: крупный дефект на стыке', () => {
-  // Рамки — из настоящего прогона model.onnx по мозаике 1920×1280 из эталонных фото: дефект surface_eye
-  // [1501, 642, 1768, 1280] попал на стык четырёх фрагментов. Эталон ultralytics по его фото — одна рамка
+  // Рамки из реального прогона model.onnx по мозаике 1920x1280: дефект surface_eye [1501, 642, 1768, 1280]
+  // на стыке четырёх фрагментов, ultralytics по исходному фото даёт одну рамку
   const frame = { width: 1920, height: 1280 }
   const seam = new Map<string, TileBox[]>([
     ['1280,512', [{ classIndex: 1, score: 0.795, x1: 224, y1: 124, x2: 479, y2: 640 }]],
@@ -185,7 +185,7 @@ describe('сборка фрагментов: крупный дефект на с
 
   it('один дефект — одна рамка; срезанная стыком сторона достраивается по соседнему фрагменту', () => {
     const { found } = runTiles(frame, seam)
-    // Обычный NMS оставил бы три урезанные рамки, а целую (0.714) подавил бы частичной (0.795)
+    // Обычный NMS оставляет три урезанные рамки, а целую (0.714) давит частичной (0.795)
     expect(nmsPerClass(found, 0.7).map((b) => b.score)).toEqual([0.795, 0.775, 0.706].map(Math.fround))
     const merged = mergeTileDetections(found, frame, ['a', 'b', 'c'], 0.7)
     expect(merged).toHaveLength(1)
@@ -199,7 +199,7 @@ describe('сборка фрагментов: крупный дефект на с
 
   it('дефект шире перекрытия: две половинки с соседних фрагментов сливаются в одну рамку', () => {
     const wide = { width: 1664, height: 640 }
-    // Объект [900..1400]: фрагмент 512 видит его до своего правого края 1152, фрагмент 1024 — от левого края
+    // Объект [900..1400]: фрагмент 512 видит его до 1152, фрагмент 1024 - от своего левого края
     const { found } = runTiles(
       wide,
       new Map([

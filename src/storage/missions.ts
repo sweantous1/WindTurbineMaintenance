@@ -9,16 +9,14 @@ const ACTIVE_KEY = 'activeMissionId'
 // Тот же допуск, что у пересчёта длины на экране маршрута (lengthDrifted)
 const LENGTH_DRIFT_M = 0.01
 
-// Маршрут с длиной плана по этому профилю дрона: длина зависит от его потолка.
-// Возвращает тот же объект, если пересчитывать нечего
+// Длина плана зависит от потолка дрона. Если пересчитывать нечего, возвращает тот же объект
 function syncedRoute(m: Mission, drone: DroneProfile): RoutePlan | undefined {
   if (!m.route) return m.route
   let lengthM: number | undefined
   try {
     lengthM = missionPlanLengthM(m, drone)
   } catch (e) {
-    // Испорченная высота в миссии или профиле не должна мешать записать полёт
-    // или сохранить профиль: длина тогда остаётся прежней
+    // Битая высота не должна мешать записать полёт или сохранить профиль, длина остаётся прежней
     if (e instanceof RangeError) return m.route
     throw e
   }
@@ -85,7 +83,7 @@ export function createMissionRepository(database: WtmDatabase = db) {
     return database.missions.orderBy('updatedAt').reverse().toArray()
   }
 
-  // Правка с проверкой статуса: облетанную миссию нельзя «переписать задним числом»
+  // Облетанную миссию задним числом не переписать
   async function update(id: string, patch: MissionPatch): Promise<Mission> {
     return database.transaction('rw', database.missions, async () => {
       const current = await database.missions.get(id)
@@ -93,7 +91,7 @@ export function createMissionRepository(database: WtmDatabase = db) {
       const locked = lockedFields(current.status, patch)
       if (locked.length > 0) throw new MissionLockedError(locked)
       const next: Mission = { ...current, ...patch, updatedAt: now() }
-      // undefined в patch означает «очистить поле»
+      // undefined в patch очищает поле
       for (const [k, v] of Object.entries(patch)) {
         if (v === undefined) delete (next as unknown as Record<string, unknown>)[k]
       }
@@ -103,8 +101,8 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Завершение одной транзакцией: статус, дата, снимок профиля дрона и сброс активной миссии.
-  // Ничего не удаляется. Без force сначала сообщает, чего не хватает.
+  // Одной транзакцией: статус, дата, снимок профиля и сброс активной миссии.
+  // Без force сначала возвращает, чего не хватает
   async function complete(id: string, opts: { force?: boolean } = {}): Promise<CompleteResult> {
     return database.transaction('rw', database.missions, database.settings, database.droneProfiles, async () => {
       const current = await database.missions.get(id)
@@ -119,8 +117,8 @@ export function createMissionRepository(database: WtmDatabase = db) {
         (await database.droneProfiles.get(current.droneProfileId)) ??
         (await database.droneProfiles.get(DEFAULT_DRONE_PROFILE_ID)) ??
         DEFAULT_DRONE_PROFILE
-      // Длина — по тому же профилю, что уходит в снимок: профиль могли поменять в настройках,
-      // не открывая экран маршрута, а после полёта маршрут уже не пересчитать
+      // Длина по тому же профилю, что уходит в снимок: его могли поменять в настройках,
+      // а после полёта маршрут уже не пересчитать
       const route = syncedRoute(current, drone)
       const next: Mission = {
         ...current,
@@ -136,10 +134,8 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Профиль дрона правили или удалили в настройках: длина маршрута зависит от его потолка,
-  // и без пересчёта главная и история показывали бы старую длину, пока кто-нибудь не откроет
-  // экран маршрута. Пересчитываются миссии до полёта с этим профилем (без id — все);
-  // миссии удалённого профиля считаются по профилю по умолчанию. Возвращает число изменённых
+  // После правки профиля пересчитываем длину у миссий до полёта с ним (без id - у всех), миссии
+  // удалённого профиля считаем по профилю по умолчанию. Возвращает число изменённых
   async function recomputeRouteLengths(droneProfileId?: string): Promise<number> {
     return database.transaction('rw', database.missions, database.droneProfiles, async () => {
       const profiles = new Map((await database.droneProfiles.toArray()).map((p) => [p.id, p]))
@@ -151,13 +147,12 @@ export function createMissionRepository(database: WtmDatabase = db) {
         const affected =
           droneProfileId === undefined ||
           m.droneProfileId === droneProfileId ||
-          // Профиль миссии удалили раньше — она тоже летит на профиле по умолчанию
+          // Профиль миссии удалён, она летит на профиле по умолчанию
           (droneProfileId === DEFAULT_DRONE_PROFILE_ID && !own)
         if (!affected) continue
         const route = syncedRoute(m, own ?? fallback)
         if (route === m.route) continue
-        // updatedAt не трогаем: длина — производное поле, человек миссию не правил,
-        // а список миссий упорядочен по updatedAt и не должен перескакивать
+        // updatedAt не трогаем: длина производная, а список по updatedAt не должен прыгать
         await database.missions.put({ ...m, route })
         changed++
       }
@@ -174,7 +169,7 @@ export function createMissionRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Удаление миссии удаляет и её фото с находками — иначе они остались бы в базе сиротами
+  // Вместе с миссией удаляем её фото и находки, чтобы не висели сиротами
   async function remove(id: string): Promise<void> {
     await database.transaction('rw', [database.missions, database.settings, database.photos, database.photoBlobs, database.detections], async () => {
       const photoIds = await database.photos.where('missionId').equals(id).primaryKeys()

@@ -14,9 +14,8 @@ import type { SimTurbine, SimWind } from '../simData'
 import { nacelleRotationY, rotorRpm } from '../sceneMath'
 import { RING_COLORS } from '../simView'
 
-// Процедурная ветроустановка в реальном масштабе по высоте ступицы и диаметру ротора.
-// Геометрии и материалы общие для всех турбин (единичные размеры, масштаб — у меша):
-// на ферме в 200 башен это 200 наборов мешей, но одна копия данных
+// Турбина в реальном масштабе по высоте ступицы и диаметру ротора.
+// Геометрии и материалы единичные и общие на всю ферму, размер задаёт scale меша
 
 // Без прогноза ветра гондолы смотрят на запад, роторы стоят
 const NO_WIND_FROM_DEG = 270
@@ -37,7 +36,7 @@ interface TurbineKit {
 }
 
 function createKit(): TurbineKit {
-  // Башня сужается к верху; основание в нуле
+  // Башня сужается к верху, основание в нуле
   const tower = new CylinderGeometry(0.55, 1, 1, 24, 1)
   tower.translate(0, 0.5, 0)
   // Лопасть длиной 1: широкая у ступицы, узкая к концу, плоская
@@ -125,10 +124,10 @@ function Turbine({ turbine: t, kit, nacelleY, current, rotorRef }: TurbineProps)
   return (
     <group position={[t.local.x, 0, -t.local.y]}>
       <mesh geometry={kit.tower} material={kit.body} scale={[towerR, t.hubM, towerR]} />
-      {/* Гондола: нос с ротором при нулевом повороте смотрит на север (−Z) */}
+      {/* Гондола: нос с ротором при нулевом повороте смотрит на север (-Z) */}
       <group position-y={t.hubM} rotation-y={nacelleY}>
         <mesh geometry={kit.box} material={kit.body} position-z={nacelleLen * 0.25} scale={[nacelleSide, nacelleSide, nacelleLen]} />
-        {/* Положительный поворот вокруг Z — по часовой стрелке, если смотреть навстречу ветру, как у настоящих машин */}
+        {/* Плюс по Z это по часовой, если смотреть навстречу ветру, как у настоящих турбин */}
         <group ref={rotorRef} position-z={-nacelleLen * 0.25 - spinnerR * 0.4}>
           <mesh geometry={kit.spinner} material={kit.body} scale={[spinnerR, spinnerR, spinnerR * 1.4]} />
           {BLADE_ANGLES.map((a) => (

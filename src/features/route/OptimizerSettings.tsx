@@ -27,10 +27,10 @@ interface OptimizerSettingsProps {
   flightAltitudeM: number
   onFlightAltitudeChange: (altM: number) => void
   ceilingM: number
-  // Миссия облетана — всё только для просмотра
+  // миссия уже облетана, только просмотр
   readOnly: boolean
   solving: SolvingState | null
-  // Почему строить нельзя (нет турбин); undefined — можно
+  // почему строить нельзя (нет турбин); undefined - можно
   buildBlockedReason?: string
   hasRoute: boolean
   changedFromRoute: boolean
@@ -227,7 +227,7 @@ export default function OptimizerSettings({
           </div>
         )}
 
-        {/* Одна и та же кнопка становится «Отменой» на время расчёта: фокус клавиатуры не теряется */}
+        {/* на время расчёта та же кнопка работает как "Отмена", чтобы не терять фокус */}
         {(solving || !readOnly) && (
           <div className="space-y-1.5">
             <Button
@@ -236,7 +236,7 @@ export default function OptimizerSettings({
               disabled={!solving && buildBlockedReason !== undefined}
               onClick={(e) => {
                 if (!solving) onBuild()
-                // Второй щелчок двойного клика по «Построить» не должен тут же отменить расчёт
+                // второй щелчок даблклика по "Построить" не должен сразу отменять расчёт
                 else if (e.detail <= 1) onCancel()
               }}
             >

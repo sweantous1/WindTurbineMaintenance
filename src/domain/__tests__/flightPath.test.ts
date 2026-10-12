@@ -84,7 +84,7 @@ describe('buildTrajectory', () => {
     expect(b.orbitEndS).toBeLessThanOrEqual(a.transitStartS + 1e-9)
     expect(b.center.x).toBeCloseTo(600, 3)
     for (const seg of traj.segments.filter((x) => x.turbineId === 'a')) expect(seg.visitIndex).toBe(1)
-    // Облёт — полный круг: на всех отрезках облёта дрон на высоте ступицы
+    // На всех отрезках облёта дрон на высоте ступицы
     for (const seg of traj.segments.filter((x) => x.phase === 'orbit')) {
       expect(seg.from.z).toBe(100)
       expect(seg.to.z).toBe(100)
@@ -110,7 +110,7 @@ describe('buildTrajectory', () => {
     const firstTransit = segs.find((s) => s.phase === 'transit')!
     expect(segs[0].phase).toBe('takeoff')
     expect(segs[0].headingRad).toBeCloseTo(firstTransit.headingRad, 12)
-    // Взлёт на юге фермы, первая турбина в центре — летим на север
+    // Взлёт южнее фермы, первая турбина в центре, летим на север
     expect(firstTransit.headingRad).toBeCloseTo(0, 6)
     for (const s of segs) expect(Number.isFinite(s.headingRad)).toBe(true)
     const landing = segs[segs.length - 1]

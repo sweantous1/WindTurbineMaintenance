@@ -12,7 +12,7 @@ interface DetectionFiltersProps {
   options: readonly AppDefectClass[]
   hidden: ReadonlySet<AppDefectClass>
   onToggleClass: (cls: AppDefectClass, visible: boolean) => void
-  // Находок каждого класса выше порога по всей миссии — подсказка, что прячет фильтр
+  // Сколько находок каждого класса выше порога по всей миссии
   counts: Record<AppDefectClass, number>
 }
 

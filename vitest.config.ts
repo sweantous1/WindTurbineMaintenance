@@ -9,8 +9,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
-    // По умолчанию node; тесты, которым нужен DOM (разбор KML), объявляют
-    // `// @vitest-environment happy-dom` в первой строке файла
+    // По умолчанию node, тесты с DOM (разбор KML) ставят @vitest-environment happy-dom в первой строке
     environment: 'node',
   },
 })

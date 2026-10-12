@@ -8,7 +8,7 @@ import { formatReason, missingWindAltitudes } from './reasons'
 interface FlightWindowStripProps {
   cells: WindowCell[]
   selectedTime?: string
-  // Нет обработчика — только просмотр (облетанная миссия)
+  // без обработчика только просмотр (облетанная миссия)
   onSelect?: (time: string) => void
   // Прошедшие часы видны, но выбрать их вылетом нельзя
   isPast?: (time: string) => boolean
@@ -42,7 +42,7 @@ export default function FlightWindowStrip({ cells, selectedTime, onSelect, isPas
         {days.map((d) => (
           <div key={d.day} className="flex items-center gap-2">
             <div className="w-20 shrink-0 text-xs font-medium text-gray-600">{formatDay(d.day + 'T00:00', lang)}</div>
-            {/* Колонка = час суток: одинаковые часы разных дней стоят друг под другом */}
+            {/* колонка = час суток, чтобы одни и те же часы разных дней шли друг под другом */}
             <div className="grid flex-1 grid-cols-[repeat(24,minmax(0,1fr))] gap-0.5">
               {d.cells.map((c) => {
                 const look = statusLook(c.status)
@@ -103,7 +103,7 @@ export default function FlightWindowStrip({ cells, selectedTime, onSelect, isPas
             {windows.slice(0, MAX_WINDOWS_SHOWN).map((w) => {
               const label = `${formatWindowRange(w, lang)} · ${t('weatherScreen.window.hoursCount', { count: w.hours })}`
               const cls = 'rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 text-xs text-green-900'
-              // Клик по окну выбирает его первый час вылетом
+              // клик по окну ставит вылет на его первый час
               return onSelect ? (
                 <button
                   key={w.start}

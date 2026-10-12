@@ -5,7 +5,7 @@ interface UndoToastProps {
   onUndo: () => void
 }
 
-// Содержимое уведомления «Турбина перенесена · Отменить»
+// тост вида "Турбина перенесена · Отменить"
 export default function UndoToast({ message, onUndo }: UndoToastProps) {
   const { t } = useTranslation()
   return (

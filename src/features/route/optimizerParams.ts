@@ -3,8 +3,8 @@ import { FLIGHT_ALTITUDE_MAX_M, FLIGHT_ALTITUDE_MIN_M } from '@/domain/defaults'
 import { DEFAULT_ACO_PARAMS, DEFAULT_GA_PARAMS } from '@/domain/route'
 import type { OptimizerSettings } from './routeLogic'
 
-// Параметры оптимизатора для формы: границы совпадают с тем, как их очищает решатель,
-// чтобы в маршрут записывалось ровно то, с чем он считался
+// Параметры оптимизатора для формы. Границы те же, что у решателя, чтобы в маршрут
+// записывалось ровно то, с чем он считался
 
 export interface NumberRange {
   min: number
@@ -15,7 +15,7 @@ export interface NumberRange {
 export interface ParamDef extends NumberRange {
   key: string
   step: number
-  // Выбор из вариантов вместо числа (отбор в GA); labelKey — ключ перевода
+  // выбор из вариантов вместо числа (отбор в GA), labelKey - ключ перевода
   options?: readonly { value: number; labelKey: string }[]
 }
 
@@ -55,18 +55,18 @@ export const PARAM_DEFS: Readonly<Record<RouteAlgorithm, readonly ParamDef[]>> =
 const DEFAULTS: Readonly<Record<RouteAlgorithm, Readonly<Record<string, number>>>> = {
   auto: { seed: 1 },
   aco: { ...DEFAULT_ACO_PARAMS },
-  // 0 — турнир, как у решателя по умолчанию
+  // 0 = турнир, как по умолчанию у решателя
   ga: { ...DEFAULT_GA_PARAMS, selection: 0 },
 }
 
 export const ALGORITHMS: readonly RouteAlgorithm[] = ['auto', 'aco', 'ga']
 
 export const THETA_RANGE: NumberRange = { min: 10, max: 180 }
-// 180° — ограничения нет
+// 180° = без ограничения
 export const DEFAULT_THETA_DEG = 180
 
-// Высота транзита над землёй; выше потолка план всё равно прижмёт её к потолку.
-// Границы те же, что в окне параметров миссии: иначе там миссия с высотой отсюда не сохранялась бы
+// Высота транзита над землёй, выше потолка план всё равно прижмёт её к потолку.
+// Границы как в окне параметров миссии, иначе миссия там не сохранится
 export const FLIGHT_ALTITUDE_RANGE: NumberRange = { min: FLIGHT_ALTITUDE_MIN_M, max: FLIGHT_ALTITUDE_MAX_M }
 
 // Параметры турбин: с запасом на крупнейшие морские турбины (ротор ~250 м)
@@ -85,7 +85,7 @@ export function clampToRange(value: number, range: NumberRange): number {
   return Math.min(range.max, Math.max(range.min, v))
 }
 
-// Только ключи выбранного алгоритма; нечисловое — по умолчанию, вне границ — обрезается
+// только ключи выбранного алгоритма; нечисловое заменяем дефолтом, вне границ обрезаем
 export function normalizeParams(algorithm: RouteAlgorithm, params: Record<string, number> | undefined): Record<string, number> {
   const out: Record<string, number> = {}
   for (const def of PARAM_DEFS[algorithm]) {
@@ -103,7 +103,7 @@ export function defaultSettings(): OptimizerSettings {
   return { algorithm: 'auto', params: defaultParams('auto'), thetaMaxDeg: DEFAULT_THETA_DEG, returnToTakeoff: true }
 }
 
-// Черновик формы начинается с того, с чем посчитан сохранённый маршрут
+// черновик формы берём из настроек сохранённого маршрута
 export function settingsFromRoute(route: RoutePlan | undefined): OptimizerSettings {
   if (!route) return defaultSettings()
   const algorithm = isAlgorithm(route.algorithm) ? route.algorithm : 'auto'
@@ -123,14 +123,14 @@ export function sameSettings(a: OptimizerSettings, b: OptimizerSettings): boolea
   return PARAM_DEFS[a.algorithm].every((d) => pa[d.key] === pb[d.key])
 }
 
-// Другой алгоритм — его параметры по умолчанию: у алгоритмов разные наборы ключей
+// при смене алгоритма берём его дефолты, наборы ключей у них разные
 export function withAlgorithm(settings: OptimizerSettings, algorithm: RouteAlgorithm): OptimizerSettings {
   if (settings.algorithm === algorithm) return settings
   return { ...settings, algorithm, params: defaultParams(algorithm) }
 }
 
-// Число из поля ввода: запятая как десятичный разделитель, пробелы между разрядами.
-// null — не число или вне границ; дробное для целого параметра тоже ошибка, а не округление
+// Принимает запятую как десятичный разделитель и пробелы между разрядами.
+// null, если не число или вне границ; дробное для целого параметра тоже ошибка, без округления
 export function parseNumberInput(text: string, range: NumberRange): number | null {
   const s = text.replace(/[\s  ]/g, '').replace(',', '.')
   if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(s)) return null

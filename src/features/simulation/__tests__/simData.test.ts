@@ -61,7 +61,7 @@ describe('buildSimData: сцена', () => {
       ['c', true],
     ])
     expect([...data.conflictSegments].sort((x, y) => x - y)).toEqual([...new Set(data.plan.conflicts.map((c) => c.segmentIndex))].sort((x, y) => x - y))
-    // Отрезок траектории с тем же номером — перелёт от A к B
+    // Отрезок траектории с тем же номером это перелёт A -> B
     for (const i of data.conflictSegments) expect(data.trajectory.segments[i].phase).toBe('transit')
   })
 
@@ -82,7 +82,7 @@ describe('buildSimData: сцена', () => {
     expect(data.plan.transitAltM).toBe(100)
     expect(data.trajectory.lengthM).toBeCloseTo(plan.lengthM, 6)
     expect(data.trajectory.durationS).toBeCloseTo(plan.lengthM / DRONE.cruiseSpeedMs, 6)
-    // Потолок дрона ниже потолка миссии — берётся он
+    // Потолок дрона ниже потолка миссии, берётся он
     const low = ready(buildSimData(mission, { ...DRONE, maxAltitudeM: 60 }))
     expect(low.plan.transitAltM).toBe(60)
   })
@@ -115,7 +115,7 @@ describe('buildSimData: ветер и оценка', () => {
     expect(wind.transitMs).toBeCloseTo(windAtAltitude(HOUR, data.plan.transitAltM).ms ?? NaN, 9)
     expect(wind.hubMs).toBeCloseTo(windAtAltitude(HOUR, 100).ms ?? NaN, 9)
     expect(wind.gustMs).toBeCloseTo(gustAtAltitude(HOUR, data.plan.transitAltM) ?? NaN, 9)
-    // Ступица 100 м ровно между уровнями 80 и 120 — берётся нижний
+    // Ступица 100 м ровно между уровнями 80 и 120, берётся нижний
     expect(wind.fromDeg).toBe(210)
     expect(data.estimate).toEqual(estimateMission(data.plan.lengthM, DRONE, planWorstWindMs(HOUR, data.plan)))
     expect(data.estimate.timeWorstMin).toBeGreaterThan(data.estimate.timeMin)

@@ -21,11 +21,11 @@ export default function Home() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const active = useActiveMission()
-  // Главной нужно только «есть ли миссии», а не сами записи со всей историей
+  // Главной достаточно числа миссий, сами записи не нужны
   const missionCount = useMissionCount()
   const [creating, setCreating] = useState(false)
-  // id миссии, для которой открыты параметры: окно не должно само открыться у другой миссии,
-  // если эта пропала (удалили в истории) и активной потом стала новая
+  // id, а не флаг: если миссию удалили в истории и активной стала другая,
+  // окно параметров не должно само открыться у неё
   const [settingsFor, setSettingsFor] = useState<string | null>(null)
   // Снимок миссии для диалога завершения: после записи активная миссия сбрасывается
   const [completing, setCompleting] = useState<Mission | null>(null)
@@ -81,7 +81,7 @@ export default function Home() {
 
       {body}
 
-      {/* Диалоги стоят вне веток: смена активной миссии не должна закрывать их посреди работы */}
+      {/* Диалоги вне веток, чтобы смена активной миссии не закрывала их посреди работы */}
       <NewMissionDialog isOpen={creating} onClose={() => setCreating(false)} />
       {active && (
         <MissionSettingsDialog mission={active} isOpen={settingsFor === active.id} onClose={() => setSettingsFor(null)} />
@@ -173,7 +173,7 @@ function Fact({ label, value, empty, sub, title }: FactProps) {
         {value !== null ? (
           <span className="block truncate text-sm font-medium text-gray-900">{value}</span>
         ) : (
-          // «Не рассчитан» — состояние миссии, а не декор: контраст не ниже 4,5:1, на солнце его тоже читают
+          // Пустое значение тоже состояние миссии, не декор: контраст не ниже 4,5:1, читают и на солнце
           <span className="block truncate text-sm text-gray-600">{empty ?? '—'}</span>
         )}
         {sub && <span className="block text-xs text-gray-500">{sub}</span>}

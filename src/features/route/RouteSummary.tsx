@@ -12,13 +12,13 @@ interface RouteSummaryProps {
   farm: Farm
   route?: RoutePlan
   plan?: FlightPlan
-  // undefined — профиль ещё загружается
+  // undefined - профиль ещё грузится
   drone?: DroneProfile
   flightAltitudeM: number
   ceilingM: number
 }
 
-// Сколько имён турбин перечислять в предупреждении, остальные — числом
+// сколько имён показывать в предупреждении, остальные числом
 const MAX_LISTED_NAMES = 5
 
 function Tile({ label, value, sub, tone = 'normal' }: { label: string; value: ReactNode; sub?: ReactNode; tone?: 'normal' | 'bad' }) {
@@ -199,7 +199,7 @@ export default function RouteSummary({ farm, route, plan, drone, flightAltitudeM
               </ul>
             )}
             {plan.conflicts.length > 0 && <p className="text-xs text-gray-500 mt-2">{t('routePlan.summary.conflictsHint')}</p>}
-            {/* Облёт, задевший соседа, не исправить ни взлётом, ни порядком, ни высотой транзита */}
+            {/* если облёт задевает соседа, ни взлёт, ни порядок, ни высота транзита не помогут */}
             {plan.conflicts.some((c) => orbitSegmentTurbine(plan, c.segmentIndex) !== undefined) && (
               <p className="text-xs text-gray-500 mt-1">{t('routePlan.summary.conflictsOrbitHint')}</p>
             )}

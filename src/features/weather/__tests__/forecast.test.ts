@@ -85,7 +85,7 @@ describe('план полёта для проверки погоды', () => {
     const plan = missionFlightPlan(m, { ...drone, maxAltitudeM: 80 })
     expect(plan).toBeDefined()
     expect(plan!.turbineOrder).toEqual(['t1', 't2', 't3'])
-    // Потолок дрона ниже высоты полёта миссии — транзит прижат к нему
+    // потолок дрона ниже высоты миссии, транзит прижат к нему
     expect(plan!.transitAltM).toBe(80)
     expect(plan!.lengthM).toBeCloseTo(
       buildFlightPlan({
@@ -134,7 +134,7 @@ describe('вердикт на час вылета', () => {
     const m = mission({ takeoff: undefined, flightAltitudeM: 150, limits: { ...DEFAULT_LIMITS, maxAltitudeM: 120 } })
     const f = missionForecast(m, drone)
     if (f.gap !== null) throw new Error('ожидался вердикт')
-    // Экран погоды строит график по transitAltitudeM, вердикт — assessHour
+    // график строится по transitAltitudeM, вердикт по assessHour
     const chartAltM = transitAltitudeM(m.flightAltitudeM, effectiveLimits(m.limits, drone))
     expect(chartAltitudes(undefined, chartAltM)).toEqual({ transitAltM: 120, topAltM: 120 })
     expect(f.assessment.windByAlt.map((w) => w.altM)).toEqual([chartAltM])
@@ -151,9 +151,8 @@ describe('вердикт на час вылета', () => {
     expect(missionForecast(mission({ departureTime: undefined }), drone)).toEqual({ gap: 'departure' })
   })
 
-  // Находка: после импорта фермы в 400 км вердикт «Можно лететь» давался по погоде прежнего места
   it('прогноз далеко от нынешнего центра фермы — не «можно», с расстоянием', () => {
-    // Две башни без конфликтов плана: рядом с прогнозом вердикт «можно»
+    // две башни без конфликтов плана, рядом с прогнозом вердикт "можно"
     const at = (northM: number): Pick<Mission, 'farm' | 'takeoff' | 'route'> => {
       const center = offsetGeo(CENTER, 0, northM)
       return {

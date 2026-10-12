@@ -9,8 +9,8 @@ import ErrorBoundary from '@/components/common/ErrorBoundary'
 const isEditable = (target: EventTarget | null) =>
   target instanceof HTMLElement && (target.isContentEditable || target.matches('input, textarea'))
 
-// Файл, брошенный мимо зоны загрузки, иначе открывается в окне вместо приложения.
-// Текст в поля ввода перетаскивать можно, а зона загрузки на экране дефектов обрабатывает drop сама.
+// Иначе файл, брошенный мимо зоны загрузки, откроется в окне вместо приложения.
+// Текст в поля тащить можно, зона загрузки дефектов обрабатывает drop сама
 const preventStrayDrop = (e: DragEvent) => {
   if (e.defaultPrevented) return
   const hasFiles = e.dataTransfer?.types.includes('Files') ?? false
@@ -19,9 +19,8 @@ const preventStrayDrop = (e: DragEvent) => {
   if (e.type === 'dragover' && e.dataTransfer) e.dataTransfer.dropEffect = 'none'
 }
 
-// Кнопка закрытия как у react-toastify, но с переведённой подписью: у стандартной она «close»
-// и снаружи не задаётся, а CloseButton пакет объявляет только в типах — в сборке его нет.
-// closeToast и theme подставляет сам react-toastify, клонируя элемент для каждого уведомления
+// Копия кнопки react-toastify с переводом: у стандартной подпись close не настраивается,
+// а CloseButton есть только в типах. closeToast и theme подставляет сам react-toastify
 function ToastCloseButton({ closeToast, theme = 'light', label }: Partial<CloseButtonProps> & { label: string }) {
   return (
     <button
@@ -60,14 +59,14 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      {/* tabIndex=-1: сюда окно возвращает фокус, если кнопки, которая его открыла, уже нет */}
+      {/* tabIndex=-1: сюда модалка возвращает фокус, если открывшей кнопки уже нет */}
       <main tabIndex={-1} className="p-6 max-w-7xl mx-auto focus:outline-none">
         {/* key сбрасывает ошибку при переходе на другой экран */}
         <ErrorBoundary key={location.pathname}>
           <Outlet />
         </ErrorBoundary>
       </main>
-      {/* У react-toastify подписи области уведомлений и кнопки закрытия только английские */}
+      {/* У react-toastify свои подписи только на английском */}
       <ToastContainer
         position="bottom-right"
         autoClose={3000}

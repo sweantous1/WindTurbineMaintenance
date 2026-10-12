@@ -3,8 +3,8 @@ import { farmToKml } from '@/lib/kml'
 import { cleanOrder } from './routeLogic'
 import { planPath } from './planGeometry'
 
-// Выгрузка фермы и маршрута: JSON — полные данные для другой программы или архива,
-// KML — для просмотра в Google Earth
+// Выгрузка фермы и маршрута: JSON с полными данными (для других программ или архива),
+// KML для просмотра в Google Earth
 
 export const ROUTE_EXPORT_FORMAT = 'wtm-route'
 export const ROUTE_EXPORT_VERSION = 1

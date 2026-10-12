@@ -5,7 +5,7 @@ import { CAMERA_MODES, PATH_KINDS, PHASE_KEYS } from '../simView'
 
 type Dict = { [key: string]: string | Dict }
 
-// Исходники экрана: ключи ищутся прямо в коде, чтобы опечатка в ключе не дошла до интерфейса
+// Ключи ищем прямо в исходниках экрана, чтобы опечатка не дошла до интерфейса
 const sources = import.meta.glob<string>(['/src/features/simulation/**/*.{ts,tsx}', '/src/pages/Simulation.tsx'], {
   query: '?raw',
   import: 'default',

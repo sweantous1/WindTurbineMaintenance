@@ -2,11 +2,8 @@ import { visitCost, type RouteModel } from './matrix'
 import { nearestNeighborVisit } from './nearestNeighbor'
 import { mulberry32 } from './random'
 
-// Муравьиный алгоритм (Ant System с элитным муравьём). Муравей из точки i выбирает
-// непосещённую j с вероятностью ∝ τ^α · η^β, η = 1 / расстояние. При ограничении угла
-// к расстоянию прибавляется штраф за поворот в i — иначе муравьи строят зигзаги, которые
-// доводка потом не исправит. После итерации феромон испаряется (доля ρ), каждый муравей
-// добавляет Q / стоимость на рёбра своего маршрута, лучший найденный маршрут — ещё столько же
+// Ant System с элитным муравьём: вес перехода i->j = tau^alpha * eta^beta, eta = 1/dist.
+// При ограничении угла к dist добавляем штраф за поворот, иначе получаются зигзаги
 
 export type AcoParams = {
   iterations: number
@@ -40,9 +37,9 @@ export interface SearchOutcome {
   stopped: boolean
 }
 
-// Совпадающие точки дали бы η = ∞; сантиметр — меньше любой осмысленной дистанции между башнями
+// 1 см, чтобы совпадающие точки не давали eta = Infinity
 const MIN_DIST_M = 0.01
-// Нижняя граница феромона: при тысячах итераций он иначе уходит в машинный ноль
+// Пол для феромона, иначе за тысячи итераций он уходит в ноль
 const TAU_FLOOR_FRACTION = 1e-12
 
 export function runAco(model: RouteModel, params: AcoParams, hooks: SearchHooks): SearchOutcome {
@@ -52,7 +49,7 @@ export function runAco(model: RouteModel, params: AcoParams, hooks: SearchHooks)
   let best = nearestNeighborVisit(model)
   let bestCost = visitCost(model, best)
 
-  // Стартовый феромон — как если бы все муравьи прошли маршрут «ближайшего соседа»
+  // Старт как будто все муравьи прошли маршрут ближайшего соседа
   const tau0 = bestCost > 0 ? (params.ants * params.q) / bestCost : 1
   const tauFloor = tau0 * TAU_FLOOR_FRACTION
   const tau = new Float64Array(size * size).fill(tau0)
@@ -122,7 +119,7 @@ export function runAco(model: RouteModel, params: AcoParams, hooks: SearchHooks)
             if (r <= 0) break
           }
         } else {
-          // Веса выродились (переполнение или ноль) — берём ближайшую, чтобы муравей не застрял
+          // Веса выродились (переполнение или 0), берём ближайшую
           let nearest = Infinity
           for (let j = 1; j < size; j++) {
             if (used[j]) continue

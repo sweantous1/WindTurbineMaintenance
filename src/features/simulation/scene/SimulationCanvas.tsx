@@ -16,7 +16,7 @@ import { LabelLayer, LabelProjector, TakeoffPad } from './Labels'
 import Turbines from './Turbine'
 import { createDroneFrame, createLabelRegistry, FRAME_PRIORITY, type DroneFrame, type LabelRegistry } from './droneFrame'
 
-// Сцена 3D-облёта. Ленивый модуль: three.js, R3F и drei попадают только в его чанк
+// Грузится лениво, чтобы three.js, R3F и drei были только в этом чанке
 
 interface SimulationCanvasProps {
   data: SimReady
@@ -25,8 +25,7 @@ interface SimulationCanvasProps {
   groundMap: boolean
 }
 
-// Дальняя плоскость — с запасом от диагонали рамки, но не ближе 20 км: камера сверху
-// над большой фермой и дымка у горизонта должны в неё помещаться
+// Дальняя плоскость с запасом от диагонали, но не ближе 20 км, чтобы влезали вид сверху и дымка
 const MIN_FAR_M = 20_000
 const FOV_DEG = 50
 const NEAR_M = 0.5
@@ -34,7 +33,7 @@ const NEAR_M = 0.5
 const YAW_RATE = 6
 // Солнце с юго-запада, высоко: тени от башен не нужны, а свет ровный
 const SUN_DIRECTION = new Vector3(-0.45, 0.75, 0.5).normalize()
-// Дымка у горизонта — она же цвет тумана: земля уходит в небо без шва
+// Дымка и туман одного цвета, чтобы земля уходила в небо без шва
 const HAZE_COLOR = '#cddbe8'
 const ZENITH_COLOR = '#5b93cf'
 
@@ -45,7 +44,7 @@ export default function SimulationCanvas({ data, clock, cameraMode, groundMap }:
   const { width, depth } = boundsSize(data.bounds)
   const diagonal = Math.hypot(width, depth)
   const farM = Math.max(MIN_FAR_M, diagonal * 4)
-  // Камера сразу встаёт за дроном: «За дроном» — режим по умолчанию, и подлёт из центра фермы не нужен
+  // По умолчанию камера за дроном, сразу ставим её туда
   const [initialCamera] = useState(() => {
     const s = sampleAt(data.trajectory, clock.timeS())
     const [x, y, z] = toScene(s.position)
@@ -122,8 +121,7 @@ function SceneContent({ data, clock, cameraMode, groundMap, frame, farM, diagona
   )
 }
 
-// Единственное место, где идут часы: кадр R3F двигает время, считает точку траектории
-// и сглаженный курс, а остальные объекты сцены только читают frame
+// Часы тикают только здесь: считаем точку траектории и курс, остальные только читают frame
 function SimDriver({ clock, trajectory, frame }: { clock: SimClock; trajectory: Trajectory; frame: DroneFrame }) {
   useFrame((_, delta) => {
     clock.tick(delta)
@@ -131,10 +129,8 @@ function SimDriver({ clock, trajectory, frame }: { clock: SimClock; trajectory: 
     const [x, y, z] = toScene(s.position)
     frame.position.set(x, y, z)
     const target = yawToRotationY(s.yawRad)
-    // Доворот носа идёт во времени полёта: на ×20 облёт турбины занимает три секунды, и сглаживание
-    // в реальном времени оставляло нос на десятки градусов позади турбины. На паузе доворот идёт
-    // в реальном времени, а перемотка на большой шаг доворачивает сразу.
-    // Первый кадр — сразу по курсу
+    // Доворот во времени полёта, иначе на x20 нос отстаёт от турбины. На паузе в реальном времени,
+    // при большой перемотке и на первом кадре сразу по курсу
     const advanced = frame.sample ? Math.abs(s.timeS - frame.sample.timeS) : Infinity
     frame.rotationY = smoothAngle(frame.rotationY, target, Math.max(delta, advanced), YAW_RATE)
     frame.pace = delta > 0 && Number.isFinite(advanced) ? Math.max(1, advanced / delta) : 1
@@ -154,8 +150,7 @@ function CameraFar({ farM }: { farM: number }) {
   return null
 }
 
-// Небо — градиент от дымки у горизонта к синему в зените. Sky из drei при экспозиции R3F
-// по умолчанию выгорал у горизонта почти в белый и не совпадал с цветом тумана
+// Градиент от дымки к синему в зените. Sky из drei при экспозиции R3F выгорает у горизонта и не совпадает с туманом
 function SkyDome({ radius }: { radius: number }) {
   const camera = useThree((s) => s.camera)
   const mesh = useRef<Mesh>(null)

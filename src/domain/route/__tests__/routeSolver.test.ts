@@ -2,12 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SolveInput, SolveProgress } from '../index'
 import { handleRouteMessage, type RouteWorkerResponse } from '@/workers/route.worker'
 
-// В Node нет Web Worker, поэтому воркер подменяется объектом, который гоняет настоящий
-// обработчик воркера (и настоящий решатель) асинхронно — как это делал бы поток
+// В Node нет Web Worker, подменяем объектом, который асинхронно гоняет настоящий обработчик и решатель
 class FakeWorker {
   static instances: FakeWorker[] = []
   static failToStart = false
-  // false — сообщения воркеру не обрабатываются, тест отвечает за него сам через emit
+  // false - тест сам отвечает за воркер через emit
   static autoRun = true
   onmessage: ((event: MessageEvent<RouteWorkerResponse>) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null

@@ -3,7 +3,7 @@ import { autoSpeed, createSimClock, SPEED_OPTIONS } from '../simClock'
 
 describe('autoSpeed', () => {
   it('подбирает скорость, при которой облёт идёт около двух минут', () => {
-    // 55 минут полёта → ×20 даёт 2,75 мин, ×50 — 1,1 мин; ближе по порядку ×20
+    // 55 мин полёта: x20 даёт 2,75 мин, x50 1,1 мин, ближе по порядку x20
     expect(autoSpeed(55 * 60)).toBe(20)
     expect(autoSpeed(100)).toBe(1)
     expect(autoSpeed(10 * 3600)).toBe(100)
@@ -42,7 +42,7 @@ describe('createSimClock', () => {
     expect(c.timeS()).toBe(10)
     expect(listener).toHaveBeenCalledTimes(1)
     expect(c.getSnapshot()).toMatchObject({ playing: false, ended: true, timeS: 10 })
-    // Повтор после конца — с начала
+    // Повтор после конца идёт с начала
     c.play()
     expect(c.timeS()).toBe(0)
     expect(c.getSnapshot().playing).toBe(true)

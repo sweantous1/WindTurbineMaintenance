@@ -14,9 +14,8 @@ export function boxIou(a: Box, b: Box): number {
   return union > 0 ? inter / union : 0
 }
 
-// Жадный NMS отдельно по каждому классу, как batched NMS в ultralytics: рамка отбрасывается,
-// если её IoU с уже оставленной рамкой того же класса строго больше порога.
-// Результат упорядочен по убыванию уверенности и обрезан до maxDet
+// Жадный NMS по классам как batched NMS в ultralytics (отбрасываем при IoU строго больше порога).
+// Результат по убыванию score, не больше maxDet
 export function nmsPerClass<T extends Candidate>(boxes: readonly T[], iou: number, maxDet = Infinity): T[] {
   const order = [...boxes].sort((a, b) => b.score - a.score)
   const keptByClass = new Map<number, T[]>()

@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import Button from '@/components/common/Button'
 
-// Шаги — в порядке работы с миссией, как на главной и в меню. Описание — только того,
-// что приложение действительно делает
+// Шаги в порядке работы с миссией, как на главной и в меню
 const STEPS = ['mission', 'farm', 'route', 'weather', 'forecast', 'simulation', 'complete', 'detection', 'history'] as const
 
 export default function Docs() {
@@ -15,8 +14,7 @@ export default function Docs() {
           <h1 className="text-2xl font-bold text-gray-900">{t('docs.title')}</h1>
           <p className="mt-1 text-gray-500">{t('docs.intro')}</p>
         </div>
-        {/* PDF — печать этой же страницы: отдельный файл не хранится и не устаревает. В окне печати
-            Chromium и Electron есть «Сохранить как PDF» */}
+        {/* PDF через печать этой же страницы, в окне печати Chromium и Electron есть "Сохранить как PDF" */}
         <div className="print:hidden">
           <Button variant="secondary" onClick={() => window.print()} title={t('docs.printHint')}>
             {t('docs.print')}

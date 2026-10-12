@@ -15,9 +15,7 @@ import {
   type TileRect,
 } from '@/domain/detectionPipeline'
 
-// Детекция дефектов в отдельном потоке: 176 прогонов YOLO по кадру 45 Мп не должны морозить интерфейс.
-// Без заголовков COOP/COEP нет SharedArrayBuffer, поэтому wasm однопоточный; прокси-воркер ORT
-// не нужен — мы уже в воркере
+// Без COOP/COEP нет SharedArrayBuffer, поэтому wasm однопоточный; proxy не нужен, мы и так в воркере
 ort.env.wasm.numThreads = 1
 ort.env.wasm.proxy = false
 
@@ -57,7 +55,7 @@ export interface TileSource {
   close(): void
 }
 
-// Всё, что зависит от браузера и ONNX Runtime, — снаружи: обработчик проверяется в тестах без них
+// Всё браузерное и ORT снаружи, чтобы тестировать обработчик без них
 export interface DetectWorkerDeps {
   fetch(url: string): Promise<Response>
   createRunner(model: Uint8Array, manifest: ModelManifest): Promise<InferenceRunner>
@@ -115,7 +113,7 @@ const LFS_POINTER = 'version https://git-lfs'
 async function fetchModel(deps: DetectWorkerDeps, url: string): Promise<Uint8Array> {
   const res = await fetchModelFile(deps, url)
   const bytes = new Uint8Array(await res.arrayBuffer())
-  // Пустой файл или указатель Git LFS вместо весов — модель фактически не установлена
+  // Пустой файл или указатель Git LFS вместо весов
   const head = new TextDecoder().decode(bytes.subarray(0, LFS_POINTER.length))
   if (bytes.byteLength === 0 || head === LFS_POINTER) {
     throw new DetectWorkerFailure('modelMissing', `Вместо модели лежит пустой файл или указатель Git LFS: ${url}`)
@@ -129,12 +127,12 @@ function validOptions(o: DetectWorkerOptions | undefined): o is DetectWorkerOpti
 
 export function createDetectWorkerHandler(deps: DetectWorkerDeps, post: (msg: DetectWorkerResponse) => void): (data: unknown) => void {
   let model: { runner: InferenceRunner; manifest: ModelManifest } | null = null
-  // Запросы выполняются строго по одному: модель одна, и память под декодированный кадр тоже
+  // Строго по одному: модель одна, память под кадр тоже
   let chain: Promise<void> = Promise.resolve()
   const queued = new Set<number>()
   const cancelled = new Set<number>()
 
-  // Задачи ловят свои ошибки сами; catch — чтобы очередь не встала навсегда, если упадёт и отправка ответа
+  // Задачи ловят ошибки сами, catch - чтобы очередь не встала, если упадёт сам post
   const enqueue = (task: () => Promise<void>) => {
     chain = chain.then(task).catch((err: unknown) => console.error('Воркер детекции:', err))
   }
@@ -181,7 +179,7 @@ export function createDetectWorkerHandler(deps: DetectWorkerDeps, post: (msg: De
         post({ type: 'progress', id, tile: 0, tiles: tiles.length })
         const found: FrameCandidate[] = []
         for (let i = 0; i < tiles.length; i++) {
-          // Отмена проверяется между фрагментами: начатый прогон модели прервать нельзя
+          // Отмену проверяем между фрагментами, начатый прогон не прервать
           if (cancelled.has(id)) {
             post({ type: 'cancelled', id })
             return
@@ -258,8 +256,8 @@ async function hasWebGpuAdapter(): Promise<boolean> {
   }
 }
 
-// ORT молча выкидывает недоступный webgpu из списка провайдеров. В 1.30 env.webgpu — простой объект,
-// и поле device в нём выставляет сам бэкенд, только когда сессия действительно создана на WebGPU
+// ORT молча выкидывает недоступный webgpu из провайдеров; env.webgpu.device (1.30)
+// появляется, только если сессия реально создана на WebGPU
 function webGpuDeviceCreated(): boolean {
   return Reflect.get(ort.env.webgpu, 'device') != null
 }
@@ -283,7 +281,7 @@ export async function createOrtRunner(model: Uint8Array, manifest: ModelManifest
     await session.release().catch(() => undefined)
     throw new DetectWorkerFailure('loadFailed', `У модели нет входа ${manifest.input} или выхода ${manifest.output} (${names})`)
   }
-  // Байты модели держим, пока работаем на WebGPU, — на случай перехода на wasm
+  // Держим байты модели на случай отката на wasm
   let spare: Uint8Array | null = backend === 'webgpu' ? model : null
   const size = manifest.imgsz
 
@@ -303,7 +301,7 @@ export async function createOrtRunner(model: Uint8Array, manifest: ModelManifest
         return await runOnce(input)
       } catch (err) {
         if (backend !== 'webgpu' || !spare) throw err
-        // WebGPU может отказать и на прогоне (потеря устройства, нехватка видеопамяти) — один раз переходим на wasm
+        // WebGPU может упасть и на прогоне (потеря устройства, мало видеопамяти), один раз уходим на wasm
         console.warn('Прогон на WebGPU не удался, переход на wasm:', err)
         const bytes = spare
         spare = null
@@ -319,8 +317,8 @@ export async function createOrtRunner(model: Uint8Array, manifest: ModelManifest
 // ---------- Изображение ----------
 
 export async function openBitmapSource(image: Blob, imgsz: number): Promise<TileSource> {
-  // Поворот из EXIF — как у миниатюр и размеров в photoIngest, чтобы доли рамок совпали с картинкой.
-  // ICC-профиль не применяем: при обучении кадры читались без цветового преобразования
+  // Поворот из EXIF как в photoIngest, чтобы рамки совпали с картинкой.
+  // ICC не применяем, при обучении кадры читались без цветового преобразования
   const bitmap = await createImageBitmap(image, { imageOrientation: 'from-image', colorSpaceConversion: 'none' })
   try {
     const canvas = new OffscreenCanvas(imgsz, imgsz)
@@ -332,7 +330,7 @@ export async function openBitmapSource(image: Blob, imgsz: number): Promise<Tile
       width: bitmap.width,
       height: bitmap.height,
       readTile(tile, lb) {
-        // Кадр целиком в тензор не превращается: в холст попадает только вырезанный фрагмент
+        // В холст идёт только вырезанный фрагмент, а не весь кадр
         ctx.fillStyle = fill
         ctx.fillRect(0, 0, imgsz, imgsz)
         ctx.drawImage(bitmap, tile.x, tile.y, tile.w, tile.h, lb.padX, lb.padY, lb.newW, lb.newH)
@@ -340,7 +338,7 @@ export async function openBitmapSource(image: Blob, imgsz: number): Promise<Tile
       },
       close() {
         bitmap.close()
-        // Буфер холста отпускаем сразу, не дожидаясь сборщика мусора
+        // Отпускаем буфер холста, не дожидаясь GC
         canvas.width = 0
         canvas.height = 0
       },
@@ -351,13 +349,13 @@ export async function openBitmapSource(image: Blob, imgsz: number): Promise<Tile
   }
 }
 
-// В сборке tsconfig нет библиотеки WebWorker, поэтому нужную часть области воркера описываем сами
+// В tsconfig нет lib WebWorker, описываем нужное сами
 interface DetectWorkerScope {
   onmessage: ((event: MessageEvent) => void) | null
   postMessage(message: DetectWorkerResponse): void
 }
 
-// Подписываемся, только если это действительно воркер: в Node (тесты) нет self, в основном потоке есть document
+// Только внутри воркера: в Node (тесты) нет self, в основном потоке есть document
 if (typeof self !== 'undefined' && typeof document === 'undefined') {
   const scope = self as unknown as DetectWorkerScope
   const handle = createDetectWorkerHandler(

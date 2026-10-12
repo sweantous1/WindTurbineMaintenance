@@ -1,5 +1,4 @@
-// localStorage может быть недоступен (приватный режим, запрет сайта) или переполнен —
-// для мелких настроек интерфейса такая ошибка не должна ронять экран
+// localStorage бывает недоступен (приватный режим) или переполнен, экран из-за этого падать не должен
 export function readLocal(key: string): string | null {
   try {
     return localStorage.getItem(key)

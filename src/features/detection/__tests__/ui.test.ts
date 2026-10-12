@@ -32,7 +32,7 @@ vi.mock('@/services/detectionEngine', async (importOriginal) => {
   }
 })
 
-// Декодирование снимков в happy-dom недоступно; сама подготовка фото проверяется в браузере
+// В happy-dom снимки не декодируются
 vi.mock('@/services/photoIngest', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/services/photoIngest')>()
   return {
@@ -152,7 +152,7 @@ describe('экран поиска дефектов', () => {
     expect(stored.find((d) => d.modelClass === 'thunderstrike')).toMatchObject({ defectClass: 'lightning', severity: 4, reviewed: false })
     expect((await db.missions.get(m.id))?.status).toBe('draft')
 
-    // Порог по умолчанию из манифеста — 0,25: находка 0,15 скрыта
+    // Порог из манифеста 0,25, находка 0,15 скрыта
     await waitFor(() => expect(text()).toContain('Показано 2 из 3'))
     expect(text()).toContain('найдено 2')
     expect(queryByText('td', 'Эрозия')).toBeUndefined()
@@ -239,7 +239,7 @@ describe('экран поиска дефектов', () => {
       ],
     )
     await render(createElement(Detection))
-    // Рамки появляются, когда снимок загрузился: в happy-dom событие load отправляем сами
+    // Рамки только после load, в happy-dom шлём его сами
     await waitFor(() => expect(document.querySelector('img[alt="Снимок a.jpg"]')).toBeTruthy())
     expect(document.querySelectorAll('svg g[role="button"]')).toHaveLength(0)
     expect(text()).toContain('Загрузка изображения…')

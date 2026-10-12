@@ -46,7 +46,7 @@ describe('сводка маршрута: конфликты', () => {
   it('без конфликтов на облётах подсказки про облёт нет', async () => {
     const farm = lineFarm(4)
     const order = ['t4', 't3', 't2', 't1']
-    // Перелёт взлёт → дальняя турбина идёт над рядом: конфликты только на транзите
+    // перелёт взлёт -> дальняя турбина идёт над рядом, конфликты только на транзите
     const plan = planFor({ farm, takeoff: at(-300, 0), flightAltitudeM: 90, maxAltitudeM: 120 }, order, false)
     expect(plan.conflicts.length).toBeGreaterThan(0)
     await render(

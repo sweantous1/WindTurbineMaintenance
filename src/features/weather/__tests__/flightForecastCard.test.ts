@@ -81,12 +81,11 @@ afterEach(async () => {
 
 async function renderCard(m: Mission, now?: Date) {
   await render(createElement(FlightForecastCard, { mission: m, ...(now ? { now } : {}) }))
-  // Вердикт появляется, когда живой запрос профиля дрона ответит
+  // ждём, пока подгрузится профиль дрона
   await waitFor(() => expect(document.querySelector('[role="status"]')).toBeTruthy())
 }
 
 describe('карточка прогноза полёта', () => {
-  // Находка: на «Погоде» карточка жила по своим часам и отставала от полосы окна до минуты
   it('«час вылета прошёл» считается по часам экрана, если они переданы', async () => {
     await renderCard(mission(), new Date('2026-09-25T06:30:00Z'))
     expect(queryByText('p', PAST)).toBeUndefined()
@@ -96,7 +95,6 @@ describe('карточка прогноза полёта', () => {
     expect(queryByText('p', PAST)).toBeTruthy()
   })
 
-  // Находка: после импорта фермы в 400 км карточка давала «Можно лететь» по погоде прежнего места
   it('прогноз далеко от нынешней фермы — предупреждение и не «Можно лететь»', async () => {
     const now = new Date('2026-09-24T17:00:00Z')
     await renderCard(mission(), now)

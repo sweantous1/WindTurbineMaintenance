@@ -10,7 +10,7 @@ const takeoff = at(-300, 0)
 const route = makeRoute(['t3', 't1', 't2'], { returnToTakeoff: true })
 const plan = planFor({ farm, takeoff, flightAltitudeM: 90, maxAltitudeM: 120 }, route.order, true)
 
-// Одиночная половинка суррогатной пары — признак разрезанного посередине символа
+// одиночная половинка суррогатной пары значит, что символ разрезали
 const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
 
 describe('выгрузка в JSON', () => {
@@ -43,7 +43,7 @@ describe('выгрузка в KML', () => {
     const parsed = parseKmlText(kml)
     expect(parsed.name).toBe('Север')
     expect(parsed.turbines.map((t) => t.name)).toEqual(['1. T3', '2. T1', '3. T2'])
-    // Линия пути — не турбина
+    // линия пути не считается турбиной
     expect(parsed.skipped).toBe(1)
     expect(kml).toContain('<LineString>')
   })

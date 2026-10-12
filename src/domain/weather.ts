@@ -4,10 +4,10 @@ import type { GeoPoint, WeatherCurrent, WeatherHour, WeatherSnapshot, WindLevel 
 import { haversineM } from '@/lib/geo'
 import { fetchForecastRaw, OpenMeteoError, zodIssuePath } from '@/services/openMeteo'
 
-// Ответ пришёл не в тех единицах, в которых сравниваются лимиты: такой прогноз принимать нельзя
+// Единицы в ответе не те, в которых сравниваются лимиты - прогноз не принимаем
 export class WeatherUnitsError extends OpenMeteoError {
   readonly field: string
-  // Пустая строка — сервер не указал единицу вовсе
+  // Пустая строка - сервер не указал единицу
   readonly unit: string
 
   constructor(field: string, unit: string, expected: string) {
@@ -18,7 +18,7 @@ export class WeatherUnitsError extends OpenMeteoError {
   }
 }
 
-// Всё, что сравнивается с лимитами, обязано прийти в этих единицах
+// Всё, что сравнивается с лимитами, должно прийти в этих единицах
 const EXPECTED_UNITS: Record<string, string> = {
   wind_speed_10m: 'm/s',
   wind_speed_80m: 'm/s',
@@ -83,8 +83,8 @@ const forecastSchema = z.object({
   hourly: hourlySchema,
 })
 
-// Единица обязательна у каждого пришедшего ряда: без неё км/ч не отличить от м/с.
-// Ветер у земли проверяется всегда — по нему видно, выполнил ли сервер wind_speed_unit=ms
+// Единица обязательна у каждого ряда, иначе км/ч не отличить от м/с.
+// Ветер у земли проверяем всегда: по нему видно, учёл ли сервер wind_speed_unit=ms
 function checkUnits(given: Record<string, string> | undefined, data: object, always: readonly string[] = []): void {
   for (const [field, expected] of Object.entries(EXPECTED_UNITS)) {
     const present = always.includes(field) || (data as Record<string, unknown>)[field] !== undefined
@@ -146,7 +146,7 @@ export function normalizeForecast(
     precipitationMm: c.precipitation ?? null,
   }
 
-  // Точка прогноза — узел сетки модели, который вернул Open-Meteo, а не запрошенная точка
+  // Точка прогноза - узел сетки модели из ответа, а не запрошенная точка
   const location: WeatherSnapshot['location'] = {
     lat: d.latitude,
     lon: d.longitude,
@@ -180,7 +180,7 @@ const POWER_LAW_ALPHA = 0.14
 
 const levelKey = (level: number) => String(level) as WindLevel
 
-// Недостающие данные дают null, а не догадку: занижённый ветер на высоте опаснее, чем «нет данных»
+// Нет данных - null, а не догадка: заниженный ветер на высоте опаснее, чем "нет данных"
 export function windAtAltitude(h: WeatherHour, altM: number): { ms: number | null; extrapolated: boolean } {
   const none = { ms: null, extrapolated: false }
   if (!Number.isFinite(altM)) return none
@@ -192,7 +192,7 @@ export function windAtAltitude(h: WeatherHour, altM: number): { ms: number | nul
   }
 
   if (altM >= top) {
-    // Выше верхнего уровня модели данных нет: берём его значение и честно помечаем
+    // Выше верхнего уровня данных нет, берём его значение с пометкой
     const v = at(top)
     return v == null ? none : { ms: v, extrapolated: altM > top }
   }
@@ -201,7 +201,7 @@ export function windAtAltitude(h: WeatherHour, altM: number): { ms: number | nul
     return v == null ? none : { ms: v * (Math.max(altM, 0) / bottom) ** POWER_LAW_ALPHA, extrapolated: false }
   }
 
-  // Соседние уровни с данными; пропуск в середине (например, 80 м) не мешает интерполяции 10–120 м
+  // Ближайшие уровни с данными: при пропуске 80 м интерполируем между 10 и 120
   const known = WIND_LEVELS_M.filter((level) => at(level) != null)
   const lower = known.findLast((level) => level <= altM)
   const upper = known.find((level) => level >= altM)
@@ -218,9 +218,8 @@ export function gustAtAltitude(h: WeatherHour, altM: number): number | null {
   const wind = windAtAltitude(h, altM).ms
   if (gust10 == null || wind == null) return null
   const wind10 = h.windMs['10']
-  // Прибавка порыва к среднему ветру у земли переносится на высоту как есть.
-  // Умножение на отношение порыв/ветер при штиле у земли (1 м/с, порывы 2,3) раздувало
-  // порывы на высоте в разы и давало ложное «нельзя» тихими ночами.
+  // Прибавку порыва у земли переносим на высоту как есть: отношение порыв/ветер
+  // при штиле у земли раздуло бы порывы наверху в разы
   const excess = wind10 == null ? gust10 - wind : Math.max(0, gust10 - wind10)
   // Порыв не бывает слабее среднего ветра на той же высоте (штиль у земли при ветре на 120 м)
   return Math.max(wind + excess, wind)

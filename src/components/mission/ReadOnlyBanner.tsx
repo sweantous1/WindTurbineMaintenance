@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { isPreFlight } from '@/domain/missionStatus'
 import type { Mission } from '@/domain/types'
 
-// Облетанная миссия — запись о том, что было: погода, маршрут и ферма только читаются
+// После облёта погода, маршрут и ферма миссии только для чтения
 export default function ReadOnlyBanner({ mission }: { mission: Mission }) {
   const { t } = useTranslation()
   if (isPreFlight(mission.status)) return null

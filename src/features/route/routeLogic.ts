@@ -17,7 +17,7 @@ export interface RouteContext {
   maxAltitudeM: number
 }
 
-// Входные данные оптимизатора — то, что пользователь выбирает перед «Построить маршрут»
+// то, что выбирают перед "Построить маршрут"
 export interface OptimizerSettings {
   algorithm: RouteAlgorithm
   params: Record<string, number>
@@ -44,7 +44,7 @@ export function toSolvePoints(farm: Farm, takeoff: GeoPoint): LocalPoint[] {
   return [frame.toLocal(takeoff), ...farm.turbines.map((t) => frame.toLocal(t))]
 }
 
-// Индексы решателя 1..n → id турбин фермы, по которой строились точки
+// индексы решателя 1..n -> id турбин фермы, по которой строились точки
 export function orderFromVisit(farm: Farm, visit: readonly number[]): string[] {
   const seen = new Set<number>()
   return visit.map((i) => {
@@ -77,8 +77,8 @@ export function planFor(ctx: RouteContext, order: readonly string[], returnToTak
   })
 }
 
-// Нарушения угла для заданного порядка — той же моделью, что у решателя: после ручной
-// правки число должно совпадать с тем, что решатель насчитал бы для этого порядка
+// Считаем той же моделью, что и решатель, чтобы после ручной правки число совпадало
+// с тем, что он насчитал бы для этого порядка
 export function countOrderTurnViolations(
   ctx: Pick<RouteContext, 'farm' | 'takeoff'>,
   order: readonly string[],
@@ -92,7 +92,7 @@ export function countOrderTurnViolations(
     return t ? [t] : []
   })
   if (visited.length === 0) return 0
-  // Модель строится только по точкам маршрута: на больших фермах это заметно дешевле
+  // модель только по точкам маршрута, на больших фермах так заметно дешевле
   const frame = makeLocalFrame(ctx.farm.center)
   const points = [frame.toLocal(ctx.takeoff), ...visited.map((t) => frame.toLocal(t))]
   const model = createRouteModel(points, closed, thetaMaxDeg)
@@ -116,7 +116,7 @@ export function routeFromSolve(
     thetaMaxDeg: settings.thetaMaxDeg,
     returnToTakeoff: settings.returnToTakeoff,
     order,
-    // Длина — всего плана полёта (облёты, подъёмы), а не ломаной по центрам башен из решателя
+    // длина всего плана (с облётами и подъёмами), а не ломаной по центрам башен
     lengthM: plan.lengthM,
     turnViolations: result.turnViolations,
     source: 'auto',
@@ -125,8 +125,8 @@ export function routeFromSolve(
   return { route, plan }
 }
 
-// Пересчёт после правки: порядок сохраняется (без удалённых турбин), длина и нарушения — заново.
-// edited = false — поменялось только то, что на порядок не влияет (высота транзита)
+// Порядок сохраняем (без удалённых турбин), длину и нарушения считаем заново.
+// edited = false, если поменялось то, что на порядок не влияет (высота транзита)
 export function recomputeRoute(
   route: RoutePlan,
   ctx: RouteContext,
@@ -144,7 +144,7 @@ export function recomputeRoute(
   }
 }
 
-// Сдвиг турбины в порядке облёта на delta позиций; за краями списка — без изменений
+// сдвиг на delta позиций; за край списка не сдвигаем
 export function moveInOrder(order: readonly string[], index: number, delta: number): string[] {
   const target = index + delta
   if (index < 0 || index >= order.length || target < 0 || target >= order.length || delta === 0) return [...order]
@@ -154,32 +154,31 @@ export function moveInOrder(order: readonly string[], index: number, delta: numb
   return next
 }
 
-// Сдвиг по id, а не по индексу: индекс из отрисованного списка устаревает, если две
-// перестановки идут подряд быстрее, чем список перерисуется
+// по id, а не по индексу: индекс устаревает, если две перестановки идут быстрее перерисовки
 export function moveIdInOrder(order: readonly string[], id: string, delta: number): string[] {
   return moveInOrder(order, order.indexOf(id), delta)
 }
 
-// ---------- Патчи миссии ----------
+// патчи миссии
 
-// undefined в route означает «сбросить маршрут» (так его понимает missions.update)
+// route: undefined значит сбросить маршрут (так это понимает missions.update)
 function withRoute(patch: MissionPatch, m: MissionRouteFields, next: Pick<Mission, 'farm' | 'takeoff' | 'flightAltitudeM'>, maxAltitudeM: number, edited: boolean, order?: readonly string[]): MissionPatch {
   if (!m.route) return patch
   const ctx = routeContext(next, maxAltitudeM)
   return { ...patch, route: ctx ? recomputeRoute(m.route, ctx, { edited, order }) : undefined }
 }
 
-// Ферму правили руками: маршрут (если был) сохраняет порядок и помечается как изменённый
+// ручная правка фермы: маршрут сохраняет порядок и помечается изменённым
 export function farmEditPatch(m: MissionRouteFields, farm: Farm, maxAltitudeM: number): MissionPatch {
   return withRoute({ farm }, m, { ...m, farm }, maxAltitudeM, true)
 }
 
-// Порядок для этой точки взлёта не оптимизировался — маршрут тоже считается изменённым
+// под новую точку взлёта порядок не оптимизировался, так что маршрут тоже изменённый
 export function takeoffPatch(m: MissionRouteFields, takeoff: GeoPoint, maxAltitudeM: number): MissionPatch {
   return withRoute({ takeoff }, m, { ...m, takeoff }, maxAltitudeM, true)
 }
 
-// Высота транзита на порядок облёта не влияет: меняется только длина плана
+// высота транзита на порядок не влияет, меняется только длина
 export function altitudePatch(m: MissionRouteFields, flightAltitudeM: number, maxAltitudeM: number): MissionPatch {
   return withRoute({ flightAltitudeM }, m, { ...m, flightAltitudeM }, maxAltitudeM, false)
 }
@@ -188,12 +187,12 @@ export function orderPatch(m: MissionRouteFields, order: readonly string[], maxA
   return withRoute({}, m, m, maxAltitudeM, true, order)
 }
 
-// Сохранённая длина разошлась с планом (высоту или профиль дрона меняли на другом экране)
+// длина разошлась с планом (высоту или профиль дрона поменяли на другом экране)
 export function lengthDrifted(route: RoutePlan, plan: FlightPlan): boolean {
   return Math.abs(route.lengthM - plan.lengthM) > 0.01
 }
 
-// Отпечаток всего, от чего зависит расчёт: если за время расчёта он поменялся, результат устарел
+// отпечаток входных данных: если за время расчёта он поменялся, результат устарел
 export function solveSignature(farm: Farm, takeoff: GeoPoint): string {
   const turbines = farm.turbines.map((t: Turbine) => `${t.id}@${t.lat},${t.lon}`).join(';')
   return `${farm.center.lat},${farm.center.lon}|${takeoff.lat},${takeoff.lon}|${turbines}`

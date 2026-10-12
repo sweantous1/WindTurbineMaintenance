@@ -3,7 +3,7 @@ import type { GeoPoint } from '@/domain/types'
 import { makeId } from '@/utils/id'
 import { db, type WtmDatabase } from './db'
 
-// Фото, подготовленное к сохранению (размеры, миниатюра и EXIF — src/services/photoIngest.ts)
+// Фото, готовое к сохранению (готовит src/services/photoIngest.ts)
 export interface PreparedPhoto {
   fileName: string
   mimeType: string
@@ -20,7 +20,7 @@ export type NewDetection = Omit<Detection, 'id' | 'photoId' | 'missionId'>
 export function createPhotoRepository(database: WtmDatabase = db) {
   const now = () => new Date().toISOString()
 
-  // Фото можно добавлять и к облетанной миссии: разбор фото после полёта — основной сценарий
+  // Фото добавляются и к облетанной миссии, разбор после полёта - основной сценарий
   async function add(missionId: string, prepared: PreparedPhoto[]): Promise<PhotoRecord[]> {
     const records: PhotoRecord[] = prepared.map((p) => ({
       id: makeId(),
@@ -40,7 +40,7 @@ export function createPhotoRepository(database: WtmDatabase = db) {
       if (mission.status === 'archived') throw new Error('Миссия в архиве: добавлять фото нельзя')
       await database.photos.bulkAdd(records)
       await database.photoBlobs.bulkAdd(records.map((r, i) => ({ id: r.id, blob: prepared[i].blob, thumb: prepared[i].thumb })))
-      // Новое неразобранное фото возвращает миссию из «разобрано» в «облетана»
+      // Новое неразобранное фото возвращает миссию из analyzed во flown
       if (mission.status === 'analyzed') {
         await database.missions.put({ ...mission, status: 'flown', updatedAt: now() })
       }
@@ -70,7 +70,7 @@ export function createPhotoRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Результат анализа заменяет прежние находки фото целиком — одной транзакцией
+  // Анализ заменяет прежние находки фото целиком, одной транзакцией
   async function saveAnalysis(photoId: string, analysis: PhotoAnalysis, found: NewDetection[]): Promise<void> {
     await database.transaction('rw', [database.missions, database.photos, database.detections], async () => {
       const photo = await database.photos.get(photoId)
@@ -108,7 +108,7 @@ export function createPhotoRepository(database: WtmDatabase = db) {
     })
   }
 
-  // Облетанная миссия становится «разобранной», когда разобраны все её фото (и есть хотя бы одно)
+  // Миссия становится analyzed, когда разобраны все её фото (и есть хотя бы одно)
   async function refreshAnalyzedStatus(missionId: string): Promise<void> {
     const mission = await database.missions.get(missionId)
     if (!mission || (mission.status !== 'flown' && mission.status !== 'analyzed')) return

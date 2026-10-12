@@ -3,7 +3,7 @@ import { haversineM } from '@/lib/geo'
 import { MAX_FORECAST_HOURS, type GeocodeResult } from '@/services/openMeteo'
 
 export const DEFAULT_FORECAST_HOURS = 48
-// Дальше этого прогноз уже описывает другую погоду: показываем предупреждение
+// дальше этого прогноз уже про другое место, предупреждаем
 export const FAR_FROM_FARM_M = 30_000
 
 export interface ForecastPoint extends GeoPoint {
@@ -11,8 +11,7 @@ export interface ForecastPoint extends GeoPoint {
   source: WeatherSnapshot['source']
 }
 
-// Число из поля ввода: в русской раскладке дробная часть идёт через запятую,
-// а знак минуса при вставке из документов бывает типографским
+// принимаем и запятую, и типографский минус при вставке из документов
 export function parseDecimal(text: string): number | null {
   const s = text.trim().replace(/−/g, '-').replace(/\s+/g, '')
   if (s === '') return null
@@ -51,8 +50,7 @@ export function farmPoint(farm: Farm): ForecastPoint {
   return { lat: farm.center.lat, lon: farm.center.lon, source: 'farm', ...(farm.name ? { name: farm.name } : {}) }
 }
 
-// Точка по умолчанию: центр фермы; без фермы — место прошлого прогноза, чтобы
-// «Обновить» спрашивало то же самое; иначе точку выбирает пользователь
+// центр фермы, иначе место прошлого прогноза, чтобы "Обновить" спрашивало то же
 export function initialPoint(m: Pick<Mission, 'farm' | 'weather'>): ForecastPoint | null {
   if (m.farm) return farmPoint(m.farm)
   const w = m.weather
@@ -62,7 +60,7 @@ export function initialPoint(m: Pick<Mission, 'farm' | 'weather'>): ForecastPoin
   return null
 }
 
-// «Каменск-Шахтинский, Ростовская область, Россия» без повторов (город-регион Москва)
+// "Каменск-Шахтинский, Ростовская область, Россия" без повторов (Москва и т.п.)
 export function geocodeLabel(r: GeocodeResult): string {
   const parts: string[] = []
   for (const p of [r.name, r.admin1, r.country]) {
@@ -75,8 +73,7 @@ export function distanceToFarmM(p: GeoPoint | null, farm: Farm | undefined): num
   return p && farm ? haversineM(p, farm.center) : undefined
 }
 
-// От места прогноза до нынешнего центра фермы. Не distanceToFarmM из снимка: ферму могли
-// переимпортировать после запроса, и тогда прогноз описывает погоду совсем другого места
+// до текущего центра фермы, а не distanceToFarmM из снимка: ферму могли переимпортировать
 export function forecastDistanceM(m: Pick<Mission, 'farm' | 'weather'>): number | undefined {
   return m.weather ? distanceToFarmM(m.weather.location, m.farm) : undefined
 }
@@ -85,15 +82,13 @@ export function isFarFromFarm(distanceM: number | undefined): distanceM is numbe
   return distanceM !== undefined && distanceM > FAR_FROM_FARM_M
 }
 
-// Период по умолчанию — как у сохранённого снимка: «Обновить» спрашивает тот же горизонт,
-// иначе дальний час вылета из прошлого прогноза выпал бы из нового
+// тот же горизонт, что у сохранённого снимка, чтобы час вылета не выпал из нового прогноза
 export function initialForecastHours(m: Pick<Mission, 'weather'>): number {
   const n = m.weather?.hourly.length ?? 0
   return n > 0 ? Math.min(n, MAX_FORECAST_HOURS) : DEFAULT_FORECAST_HOURS
 }
 
-// Координаты всегда с точкой: так их можно вставить в карты и навигатор, а запятая
-// между числами не путается с десятичной
+// всегда с точкой, чтобы можно было вставить в карты
 export function formatCoords(p: GeoPoint): string {
   return `${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}`
 }

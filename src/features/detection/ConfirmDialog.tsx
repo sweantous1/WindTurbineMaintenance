@@ -13,7 +13,7 @@ interface ConfirmDialogProps {
   onCancel: () => void
 }
 
-// Подтверждение необратимого действия: фокус на отмене, пока идёт запись — окно не закрывается
+// Фокус на отмене; пока идёт запись, окно не закрыть
 export default function ConfirmDialog({ isOpen, title, body, confirmLabel, danger, busy, onConfirm, onCancel }: ConfirmDialogProps) {
   const { t } = useTranslation()
   return (

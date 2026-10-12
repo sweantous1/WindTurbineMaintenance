@@ -26,7 +26,7 @@ interface LocationPickerProps {
   disabled?: boolean
 }
 
-// Пауза перед поиском: запрос уходит, когда пользователь перестал печатать
+// debounce поиска города
 const SEARCH_DELAY_MS = 350
 
 const inputClass =
@@ -61,7 +61,7 @@ export default function LocationPicker({ farm, value, onChange, disabled = false
 
   return (
     <div className="space-y-3">
-      {/* Кнопки-переключатели, а не radio: у radio ожидают перехода стрелками, которого тут нет */}
+      {/* не radio, т.к. стрелками тут не переключаем */}
       <div role="group" aria-label={t('weatherScreen.location.modeLabel')} className="flex rounded-lg bg-gray-100 p-1">
         {modes.map((m) => (
           <button
@@ -211,7 +211,7 @@ function CitySearch({ lang, initialQuery, disabled, onPick }: CitySearchProps) {
   const [query, setQuery] = useState(initialQuery)
   const [open, setOpen] = useState(false)
   const [results, setResults] = useState<GeocodeResult[]>([])
-  // По какому запросу пришли results: «ничего не найдено» только для него, а не пока ждём ответа
+  // на какой запрос пришли results, чтобы не писать "ничего не найдено" до ответа
   const [answeredQuery, setAnsweredQuery] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<unknown>(null)

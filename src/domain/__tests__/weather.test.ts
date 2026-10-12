@@ -24,8 +24,8 @@ import {
 } from '@/services/openMeteo'
 import { WMO_CODES, wmoKey } from '@/lib/wmo'
 
-// Как в src/i18n/index.ts: React экранирует сам, i18next не должен.
-// Поднят на весь файл, чтобы каждая ошибка проверялась и на переведённый текст
+// Как в src/i18n/index.ts: экранирует React, не i18next.
+// На весь файл, чтобы каждая ошибка проверялась и на перевод
 beforeAll(async () => {
   await i18next.init({
     lng: 'ru',
@@ -42,7 +42,7 @@ function expectTranslated(e: unknown): void {
   expect(message).not.toContain('{{')
 }
 
-// Фикстура — реальный ответ Open-Meteo 2026-09-24 на ровно этот запрос (curl по buildForecastUrl)
+// Фикстура - реальный ответ Open-Meteo от 2026-09-24 на этот запрос (curl по buildForecastUrl)
 const FIXTURE_URL =
   'https://api.open-meteo.com/v1/forecast?latitude=48.215&longitude=40.284' +
   '&current=temperature_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,precipitation' +
@@ -114,9 +114,9 @@ describe('normalizeForecast на реальном ответе', () => {
     expect(s.utcOffsetSeconds).toBe(10800)
     expect(s.source).toBe('farm')
     expect(s.fetchedAt).toBe('2026-09-24T16:20:00.000Z')
-    // Точка прогноза — узел сетки модели
+    // Точка прогноза - узел сетки модели
     expect(s.location).toEqual({ lat: 48.1875, lon: 40.3125 })
-    // Посчитано независимо (сферический закон косинусов): 3716,5 м от узла сетки до фермы
+    // По сферическому закону косинусов: 3716,5 м от узла сетки до фермы
     expect(s.distanceToFarmM).toBeCloseTo(3716.5, 0)
 
     const first = s.hourly[0]
@@ -294,7 +294,7 @@ describe('ветер на высоте', () => {
 
   it('интерполяция идёт по логарифму высоты', () => {
     const h = hour({ '10': 4, '80': 8, '120': 9, '180': 10 })
-    // Середина 10..80 по ln(h) — среднее геометрическое высот
+    // Середина 10..80 по ln(h) - среднее геометрическое высот
     expect(windAtAltitude(h, Math.sqrt(10 * 80)).ms).toBeCloseTo(6, 9)
   })
 
@@ -337,15 +337,15 @@ describe('ветер на высоте', () => {
     const h = hour({ '10': 4, '80': 6, '120': 8, '180': 9 }, 6)
     expect(gustAtAltitude(h, 120)).toBeCloseTo(10, 9)
     expect(gustAtAltitude(h, 10)).toBeCloseTo(6, 9)
-    // Нет ветра на высоте — нет и порыва
+    // Нет ветра на высоте - нет и порыва
     expect(gustAtAltitude(hour({ '10': 3 }, 5), 90)).toBeNull()
   })
 
   it('штиль у земли не раздувает порывы на высоте (ложное «нельзя» ночью)', () => {
-    // Раньше: 7 × (2,3 / 1) = 16,1 м/с — запрет при лимите 15; теперь 7 + 1,3 = 8,3
+    // 7 + 1.3 = 8.3, а не 7 * 2.3 = 16.1 (запрет при лимите 15)
     expect(gustAtAltitude(hour({ '10': 1, '80': 5, '120': 7, '180': 8 }, 2.3), 120)).toBeCloseTo(8.3, 9)
     expect(gustAtAltitude(hour({ '10': 0.3, '80': 1, '120': 1.5, '180': 2 }, 1.8), 80)).toBeCloseTo(2.5, 9)
-    // Порыв у земли слабее ветра у земли (шум модели) — прибавки нет, но не слабее ветра на высоте
+    // Порыв у земли слабее ветра (шум модели): прибавки нет, но не ниже ветра на высоте
     expect(gustAtAltitude(hour({ '10': 4, '80': 5, '120': 7, '180': 8 }, 3), 120)).toBe(7)
     expect(gustAtAltitude(hour({ '10': 3, '80': 5, '120': 7, '180': 8 }, null), 120)).toBeNull()
   })
@@ -374,7 +374,7 @@ describe('сеть Open-Meteo', () => {
     vi.restoreAllMocks()
   })
 
-  // fetch, который отвечает только отменой своего signal — как настоящий при обрыве
+  // fetch, который завершается только отменой signal, как настоящий при обрыве
   const hangingFetch = (_url: string, init?: RequestInit) =>
     new Promise<Response>((_resolve, reject) => {
       const signal = init?.signal
@@ -454,8 +454,7 @@ describe('сеть Open-Meteo', () => {
   })
 
   it('зависший запрос — ошибка timeout, даже если передан свой signal', async () => {
-    // Таймер AbortSignal.timeout не управляется фейковыми таймерами: подменяем сам сигнал,
-    // на каждый запрос — свой
+    // AbortSignal.timeout не управляется фейковыми таймерами, поэтому подменяем сигнал, свой на каждый запрос
     let timer = new AbortController()
     const timeoutSpy = vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
       timer = new AbortController()

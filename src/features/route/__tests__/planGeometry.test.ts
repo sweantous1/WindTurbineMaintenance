@@ -78,7 +78,7 @@ describe('линии плана на карте', () => {
     expect(plan.conflicts.length).toBeGreaterThan(0)
     const lines = planLines(plan)
     expect(lines.conflict.length).toBeGreaterThan(0)
-    // Каждая точка конфликтной линии — точка плана
+    // каждая точка конфликтной линии есть в плане
     const keys = new Set(plan.waypoints.map((w) => `${w.lat},${w.lon}`))
     for (const line of lines.conflict) for (const [lat, lon] of line) expect(keys.has(`${lat},${lon}`)).toBe(true)
 
@@ -105,7 +105,7 @@ describe('линии плана на карте', () => {
         [1, 1],
       ],
     ])
-    // Остальные дуги облёта по-прежнему не попадают ни в транзит, ни в конфликт
+    // остальные дуги облёта не попадают ни в транзит, ни в конфликт
     expect(lines.transit).toHaveLength(2)
     expect(lines.conflictPoints).toEqual([])
   })

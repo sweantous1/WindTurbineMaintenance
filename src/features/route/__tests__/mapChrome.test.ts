@@ -25,7 +25,7 @@ describe('доступное имя маркера точки взлёта', () 
   it('ставится по событию add, когда элемент маркера уже создан', () => {
     const m = makeMap()
     const marker = L.marker([52, 18.5], { icon: L.divIcon({ html: 'H' }) })
-    // До добавления на карту элемента нет — эффект при открытии экрана ставить имя было некуда
+    // до добавления на карту элемента ещё нет, так что имя ставим по add
     expect(marker.getElement()).toBeUndefined()
     marker.on('add', (e) => labelElement((e.target as L.Marker).getElement(), 'Точка взлёта'))
     marker.addTo(m)

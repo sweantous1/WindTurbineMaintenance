@@ -5,7 +5,7 @@ import type { DetectBackend, DetectWorkerErrorCode, DetectWorkerRequest, DetectW
 export type { RawDetection } from '@/domain/detectionPipeline'
 export type { DetectBackend } from '@/workers/detect.worker'
 
-// Файлов модели нет (или вместо них заглушка) — интерфейс честно пишет «модель не установлена»
+// Файлов модели нет или вместо них заглушка
 export class ModelMissingError extends Error {
   constructor(detail?: string) {
     super(detail ?? 'Модель детекции не установлена')
@@ -13,7 +13,7 @@ export class ModelMissingError extends Error {
   }
 }
 
-// Отмена пользователем — не ошибка, показывать её не нужно
+// Отмена пользователем, как ошибку не показываем
 export class DetectCancelledError extends Error {
   constructor() {
     super('Детекция отменена')
@@ -21,7 +21,7 @@ export class DetectCancelledError extends Error {
   }
 }
 
-// Остальные сбои. code — для переведённого сообщения в интерфейсе, message — техническая подробность
+// code - для перевода в UI, message - техническая подробность
 export type DetectFailureCode = 'loadFailed' | 'decodeFailed' | 'inferenceFailed' | 'workerFailed'
 
 export class DetectFailedError extends Error {
@@ -61,7 +61,7 @@ export interface DetectionEngine {
   dispose(): void
 }
 
-// Та часть Worker, которой пользуется движок; в тестах её подменяет объект без настоящего потока
+// Часть Worker, нужная движку; в тестах подменяется заглушкой
 export interface DetectWorkerPort {
   postMessage(message: DetectWorkerRequest): void
   terminate(): void
@@ -73,20 +73,20 @@ export interface DetectWorkerPort {
 export interface DetectionEngineConfig {
   createWorker?: () => DetectWorkerPort
   modelUrls?: () => { modelUrl: string; manifestUrl: string }
-  // Сколько ждать подтверждения отмены, прежде чем остановить воркер принудительно
+  // Сколько ждать подтверждения отмены до terminate()
   cancelGraceMs?: number
 }
 
-// Один фрагмент на wasm считается секунды; дольше этого воркер считаем зависшим
+// Фрагмент на wasm считается секунды, дольше - воркер завис
 const CANCEL_GRACE_MS = 30_000
 
 function createModuleWorker(): DetectWorkerPort {
-  // Не inline: сборка ORT ищет свой .wasm рядом с файлом воркера через new URL(..., import.meta.url)
+  // Не inline: ORT ищет свой .wasm рядом с файлом воркера через import.meta.url
   return new Worker(new URL('../workers/detect.worker.ts', import.meta.url), { type: 'module' })
 }
 
 function defaultModelUrls() {
-  // Относительно документа: одинаково работает на dev-сервере, в веб-сборке и под app://bundle в Electron
+  // Относительно документа, чтобы работало и на dev-сервере, и под app://bundle в Electron
   const base = document.baseURI
   return {
     modelUrl: new URL('models/defects/model.onnx', base).href,
@@ -132,9 +132,9 @@ class WorkerDetectionEngine implements DetectionEngine {
   private readonly pending = new Map<number, PendingRequest>()
   private nextId = 1
   private loading: Promise<LoadResult> | null = null
-  // Запросы детекции идут строго по очереди: воркер один и держит в памяти один кадр
+  // Строго по очереди, воркер держит в памяти один кадр
   private tail: Promise<void> = Promise.resolve()
-  // Отмена всех незавершённых запросов — для dispose
+  // Отмена незавершённых запросов для dispose
   private readonly unsettled = new Set<() => void>()
 
   constructor(config: DetectionEngineConfig) {
@@ -169,8 +169,7 @@ class WorkerDetectionEngine implements DetectionEngine {
     return worker
   }
 
-  // Останавливает воркер; все, кто ждал от него ответа, получают reason.
-  // Следующий запрос поднимет новый воркер и заново загрузит модель
+  // Ожидающие получают reason, следующий запрос поднимет новый воркер
   private stop(reason: Error): void {
     const waiting = [...this.pending.values()]
     this.pending.clear()
@@ -208,8 +207,8 @@ class WorkerDetectionEngine implements DetectionEngine {
                 this.pending.delete(id)
                 const err = workerError(msg.code, msg.message)
                 reject(err)
-                // Модели в этом воркере нет, терять нечего. ONNX Runtime запоминает неудачную инициализацию
-                // бэкенда до конца жизни потока, поэтому повторная попытка идёт в новом воркере
+                // ORT запоминает неудачную инициализацию бэкенда до конца жизни потока,
+                // поэтому повторяем в новом воркере
                 this.stop(err)
               }
             },
@@ -221,7 +220,7 @@ class WorkerDetectionEngine implements DetectionEngine {
       }
     })
     this.loading = attempt
-    // Неудачу не запоминаем: после установки модели следующий вызов попробует снова
+    // Неудачу не кешируем, чтобы после установки модели попробовать снова
     attempt.catch(() => {
       if (this.loading === attempt) this.loading = null
     })
@@ -253,12 +252,12 @@ class WorkerDetectionEngine implements DetectionEngine {
       if (settled) return
       cancelRequested = true
       fail(new DetectCancelledError())
-      // Воркер уже считает: просим остановиться между фрагментами, а если не ответит — останавливаем сами
+      // Просим остановиться между фрагментами, не ответит - убьём по таймеру
       if (activeId !== null) {
         try {
           this.worker?.postMessage({ type: 'cancel', id: activeId })
         } catch {
-          // Воркер уже недоступен — сработает сторож ниже
+          // Воркер недоступен, сработает сторож
         }
         armWatchdog?.()
       }
@@ -268,14 +267,14 @@ class WorkerDetectionEngine implements DetectionEngine {
       if (cancelRequested) return
       try {
         await this.load()
-        // Воркер мог остановиться уже после загрузки (упал или отменён сторожем) — новому нужна своя модель
+        // Воркер мог умереть уже после загрузки, новому нужна своя модель
         if (!this.loading) await this.load()
       } catch (err) {
         fail(asEngineError(err))
         return
       }
       if (cancelRequested) return
-      // Следующий запрос ждёт, пока воркер закончит с этим: результатом, ошибкой, подтверждением отмены или остановкой
+      // Следующий запрос ждёт, пока воркер закончит с этим, чем бы ни закончилось
       await new Promise<void>((release) => {
         const id = this.nextId++
         let watchdog: ReturnType<typeof setTimeout> | undefined
@@ -346,13 +345,13 @@ export function createDetectionEngine(config: DetectionEngineConfig = {}): Detec
 
 let shared: DetectionEngine | null = null
 
-// Один воркер на приложение: модель (50 МБ) грузится один раз, запросы идут последовательно
+// Один воркер на приложение, модель (50 МБ) грузится один раз
 export function getDetectionEngine(): DetectionEngine {
   shared ??= createDetectionEngine()
   return shared
 }
 
-// При горячей замене модуля в dev старый воркер с моделью иначе остался бы висеть в памяти
+// HMR: чтобы старый воркер с моделью не висел в памяти
 import.meta.hot?.dispose(() => {
   shared?.dispose()
   shared = null

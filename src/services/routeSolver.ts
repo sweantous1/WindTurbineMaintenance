@@ -1,10 +1,9 @@
 import type { SolveInput, SolveProgress, SolveResult } from '@/domain/route'
 import type { RouteWorkerRequest, RouteWorkerResponse } from '@/workers/route.worker'
-// inline: воркер встраивается в бандл как blob и запускается и под app:// в Electron,
-// где отдельный файл воркера по относительному пути не всегда доступен
+// inline (blob), т.к. под app:// в Electron отдельный файл воркера не всегда находится
 import RouteWorker from '@/workers/route.worker?worker&inline'
 
-// Расчёт отменён пользователем — не ошибка, показывать её не нужно
+// Отмена пользователем, как ошибку не показываем
 export class SolveCancelledError extends Error {
   constructor() {
     super('Расчёт маршрута отменён')
@@ -12,8 +11,7 @@ export class SolveCancelledError extends Error {
   }
 }
 
-// Сбой самого воркера или ошибка во входных данных; message — техническая подробность,
-// интерфейс показывает своё переведённое сообщение и может добавить её в детали
+// Сбой воркера или плохие входные данные; message - техническая подробность
 export class SolveFailedError extends Error {
   constructor(message: string) {
     super(message)

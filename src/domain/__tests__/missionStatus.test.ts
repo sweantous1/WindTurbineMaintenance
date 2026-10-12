@@ -30,7 +30,7 @@ describe('статусы миссии', () => {
     expect(step('flown', 'simulation')).toEqual({ key: 'simulation', done: true, optional: true })
     expect(step('flown', 'detection')).toEqual({ key: 'detection', done: false })
     expect(step('analyzed', 'detection')).toEqual({ key: 'detection', done: true })
-    // Необязательный шаг один — остальные текущими становятся по порядку
+    // Необязательный шаг один, остальные становятся текущими по порядку
     expect(missionSteps(undefined).filter((s) => s.optional).map((s) => s.key)).toEqual(['simulation'])
   })
 })

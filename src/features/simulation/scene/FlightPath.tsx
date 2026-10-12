@@ -7,17 +7,15 @@ import { toScene, type SceneVec } from '../sceneMath'
 import { PATH_COLORS, pathKind } from '../simView'
 import { FRAME_PRIORITY, type DroneFrame } from './droneFrame'
 
-// Путь облёта отрезками траектории. Весь план — тонкой линией; пройденное — вторая линия
-// с теми же отрезками поверх, у которой рисуется только нужное число первых отрезков
-// (instanceCount): ничего не перестраивается, пока номер отрезка не сменится.
-// «Хвост» от начала текущего отрезка до дрона правится на месте каждый кадр
+// План тонкой линией, пройденное второй линией поверх: у неё рисуем первые instanceCount отрезков
+// без перестройки. Хвост от начала текущего отрезка до дрона правим на месте каждый кадр
 
 type LineObject = ComponentRef<typeof Line>
 type RGB = [number, number, number]
 
 const PLAN_WIDTH_PX = 2
 const PASSED_WIDTH_PX = 4.5
-// Точки хвоста до первого кадра: дальше они правятся прямо в буфере геометрии
+// Заглушка до первого кадра, дальше хвост правится прямо в буфере геометрии
 const EMPTY_TAIL: SceneVec[] = [
   [0, 0, 0],
   [0, 0, 0],
@@ -56,7 +54,7 @@ export default function FlightPath({ trajectory, conflictSegments, frame }: Flig
     const tail = tailRef.current
     if (!sample || !passed || !tail) return
     const { segments } = trajectory
-    // Полностью пройдены отрезки до текущего; в конце — все
+    // Пройдены отрезки до текущего, в конце все
     passed.geometry.instanceCount = sample.finished ? segments.length : Math.max(0, sample.segmentIndex)
 
     const seg = segments[sample.segmentIndex]
@@ -64,7 +62,7 @@ export default function FlightPath({ trajectory, conflictSegments, frame }: Flig
     if (!tail.visible || !seg) return
     const start = tail.geometry.getAttribute('instanceStart') as InterleavedBufferAttribute
     const arr = start.data.array as Float32Array
-    // Порядок как в toScene: x — восток, y — высота, z — юг
+    // Как в toScene: x восток, y высота, z юг
     arr[0] = seg.from.x
     arr[1] = seg.from.z
     arr[2] = -seg.from.y
@@ -79,7 +77,7 @@ export default function FlightPath({ trajectory, conflictSegments, frame }: Flig
 
   return (
     <group>
-      {/* Без записи глубины: пройденная линия с теми же точками ложится поверх без мерцания */}
+      {/* Без depthWrite, чтобы пройденная линия поверх не мерцала */}
       <Line
         points={points}
         vertexColors={planColors}
@@ -90,7 +88,7 @@ export default function FlightPath({ trajectory, conflictSegments, frame }: Flig
         toneMapped={false}
       />
       <Line ref={passedRef} points={points} vertexColors={passedColors} segments lineWidth={PASSED_WIDTH_PX} renderOrder={2} toneMapped={false} />
-      {/* Хвост двигается каждый кадр — ограничивающая сфера у него устаревшая, отсечение по ней выключено */}
+      {/* Хвост двигается каждый кадр и bounding sphere устаревает, поэтому отсечение выключено */}
       <Line ref={tailRef} points={EMPTY_TAIL} segments lineWidth={PASSED_WIDTH_PX} renderOrder={2} toneMapped={false} frustumCulled={false} />
     </group>
   )

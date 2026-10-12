@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import manifestText from '../../../public/models/defects/manifest.json?raw'
 
-// Настоящего ONNX Runtime в тестах нет: модуль подменяется, проверяется только наша обвязка вокруг него
+// ORT подменяем, проверяем только обвязку вокруг него
 const ortMock = vi.hoisted(() => ({
   env: { wasm: {} as Record<string, unknown>, webgpu: {} as Record<string, unknown> },
   create: vi.fn(),
@@ -201,7 +201,7 @@ describe('воркер детекции: обработчик сообщений
     if (result?.type !== 'result') throw new Error('нет результата')
     expect(result).toMatchObject({ id: 2, tiles: 8, backend: 'wasm' })
     expect(result.durationMs).toBeGreaterThan(0)
-    // Рамка 100..140 во входе каждого фрагмента: 8 разных мест кадра, все класса surface_eye
+    // Рамка 100..140 в каждом фрагменте = 8 мест кадра, все surface_eye
     expect(result.detections).toHaveLength(8)
     expect(new Set(result.detections.map((d) => d.modelClass))).toEqual(new Set(['surface_eye']))
     const first = result.detections.find((d) => d.x < 0.1 && d.y < 0.2)
@@ -426,7 +426,7 @@ describe('воркер детекции: фрагменты из изображ�
     vi.stubGlobal('createImageBitmap', decode)
     const blob = image()
     const source = await openBitmapSource(blob, 640)
-    // Поворот из EXIF — как в photoIngest, иначе доли рамок разойдутся с сохранёнными размерами фото
+    // Поворот из EXIF как в photoIngest, иначе рамки разойдутся с размерами фото
     expect(decode).toHaveBeenCalledWith(blob, { imageOrientation: 'from-image', colorSpaceConversion: 'none' })
     expect([source.width, source.height]).toEqual([8192, 5460])
     expect(canvases).toHaveLength(1)
@@ -442,11 +442,11 @@ describe('воркер детекции: фрагменты из изображ�
     expect(corner).toHaveLength(3 * 640 * 640)
     expect(corner[0]).toBeCloseTo(114 / 255, 6)
 
-    // Кадр целиком 1280×960: уменьшение вдвое в полосу 640×480 с полем 80 сверху
+    // Кадр 1280x960 целиком: вдвое меньше, 640x480 с полем 80 сверху
     ops.length = 0
     const whole = source.readTile({ x: 0, y: 0, w: 1280, h: 960 }, letterbox(1280, 960))
     expect(ops[1]).toEqual(['drawImage', 0, 0, 1280, 960, 0, 80, 640, 480])
-    // Буфер входа один на все фрагменты: 176 прогонов не выделяют по 5 МБ
+    // Один буфер входа на все фрагменты, без выделения по 5 МБ на прогон
     expect(whole).toBe(corner)
 
     source.close()
@@ -485,8 +485,8 @@ describe('воркер детекции: фрагменты из изображ�
   })
 })
 
-// Подмена Worker. С deps — внутри крутится настоящий обработчик воркера (асинхронно, как поток),
-// без deps — ответы шлёт сам тест через emit
+// С deps внутри крутится настоящий обработчик воркера (асинхронно),
+// без deps ответы шлёт сам тест через emit
 class FakeWorker implements DetectWorkerPort {
   static instances: FakeWorker[] = []
   onmessage: ((event: MessageEvent<DetectWorkerResponse>) => void) | null = null
@@ -537,7 +537,7 @@ function manualEngine(cancelGraceMs = 30_000) {
   return { engine, worker }
 }
 
-// Модель начинает грузиться в очереди запросов, то есть не синхронно с вызовом detect
+// load уходит через очередь, не синхронно с detect
 async function answerLoad(worker: () => FakeWorker): Promise<void> {
   await vi.waitFor(() => expect(worker().last()).toMatchObject({ type: 'load' }))
   const w = worker()
@@ -686,7 +686,7 @@ describe('сервис детекции', () => {
     a.cancel()
     await expect(a.promise).rejects.toBeInstanceOf(DetectCancelledError)
     expect(worker().last()).toEqual({ type: 'cancel', id: 2 })
-    // Прогресс отменённого запроса больше не доходит до интерфейса
+    // Прогресс отменённого запроса до UI не доходит
     worker().emit({ type: 'progress', id: 2, tile: 3, tiles: 176 })
     expect(progress).not.toHaveBeenCalled()
     expect(await settledState(b.promise)).toBe('pending')

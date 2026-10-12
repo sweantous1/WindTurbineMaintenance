@@ -1,7 +1,7 @@
 import { DEFECT_COLORS, type Detection } from '@/domain/detection'
 import { exportSize, exportUnitsPerPx, layoutOverlay, overlayStyle, type Size } from './overlayGeometry'
 
-// Снимок с нарисованными рамками — тем же расположением, что и на экране (геометрия в overlayGeometry)
+// Раскладка рамок та же, что на экране (overlayGeometry)
 export async function renderDetectionsPng(
   image: Blob,
   natural: Size,
@@ -9,7 +9,7 @@ export async function renderDetectionsPng(
   labelText: (d: Detection) => string,
 ): Promise<Blob> {
   const size = exportSize(natural)
-  // Декодируем сразу в размер выгрузки: полный кадр 45 Мп занял бы в памяти ещё ~180 МБ
+  // Декодируем сразу в размер выгрузки, полный кадр 45 Мп - это ещё ~180 МБ
   const bitmap = await createImageBitmap(image, {
     imageOrientation: 'from-image',
     resizeWidth: size.width,
@@ -55,6 +55,6 @@ export function downloadBlob(blob: Blob, fileName: string): void {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  // Сразу после click() скачивание ещё не началось — освобождаем ссылку позже
+  // Сразу после click() скачивание ещё не началось
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }

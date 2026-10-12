@@ -8,7 +8,7 @@ export interface SimKeyActions {
   nextCamera: () => void
 }
 
-// Клавиши по физическому положению: на русской раскладке R — это «К», а [ — «Х»
+// По e.code, чтобы работало и на русской раскладке (R там К, [ там Х)
 const KEY_ACTIONS: Readonly<Record<string, keyof SimKeyActions>> = {
   Space: 'toggle',
   KeyR: 'restart',
@@ -21,8 +21,8 @@ const KEY_ACTIONS: Readonly<Record<string, keyof SimKeyActions>> = {
 const TEXT_ENTRY =
   'textarea, select, [contenteditable]:not([contenteditable="false"]), ' +
   'input:not([type=button]):not([type=checkbox]):not([type=radio]):not([type=range]):not([type=submit]):not([type=reset])'
-// Пробел сам нажимает кнопку, флажок и ссылку: без этой проверки пуск переключился бы дважды.
-// Остальные клавиши экрана у кнопок своего смысла не имеют и работают после щелчка по ним
+// Пробел сам жмёт кнопку, флажок и ссылку, иначе пуск переключится дважды.
+// Остальные клавиши экрана на кнопках работают
 const SPACE_ACTIVATES =
   'button, a[href], summary, [role="button"], input[type=button], input[type=submit], input[type=reset], input[type=checkbox], input[type=radio]'
 
@@ -33,7 +33,7 @@ export function shouldIgnoreKey(e: KeyboardEvent): boolean {
     if (target.closest(TEXT_ENTRY)) return true
     if (e.code === 'Space' && target.closest(SPACE_ACTIVATES)) return true
   }
-  // Поверх экрана открыто окно — клавиши для него, а не для проигрывания
+  // Открыт диалог, клавиши его
   return document.querySelector('[role="dialog"]') !== null
 }
 

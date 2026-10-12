@@ -6,12 +6,11 @@ import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { DRONE_VISUAL_SPAN_M } from '../simView'
 import { AIRBORNE_M, FRAME_PRIORITY, type DroneFrame } from './droneFrame'
 
-// Дрон: модель liz3d (CC BY 4.0, public/models/drone) или, пока она грузится или если не загрузилась,
-// простой дрон из примитивов. Модель приводится к общему виду: центр по рамке, нос (сторона
-// камеры) на −Z, размах DRONE_VISUAL_SPAN_M
+// Модель liz3d (CC BY 4.0, public/models/drone), пока грузится или при ошибке рисуем дрон из примитивов.
+// Модель центрируем по рамке, нос (сторона камеры) на -Z, размах DRONE_VISUAL_SPAN_M
 
 const FULL_TURN = 2 * Math.PI
-// Видимая скорость винтов: настоящие 100 об/с на экране превратились бы в стробоскоп
+// Видимая скорость винтов, настоящие 100 об/с на экране дают стробоскоп
 const PROPELLER_RAD_S = 30
 const SHADOW_LIFT_M = 0.6
 const STALK_RADIUS_M = 0.12
@@ -80,17 +79,15 @@ export default function Drone({ frame }: { frame: DroneFrame }) {
 }
 
 function DroneModel({ onPropellers }: { onPropellers: (list: Propeller[]) => void }) {
-  // Без Draco и Meshopt: иначе drei тянул бы декодеры с CDN, а модель в них не нуждается
+  // Без Draco и Meshopt, иначе drei тянет декодеры с CDN, а модели они не нужны
   const gltf = useGLTF(droneModelUrl(), false, false)
   const prepared = useMemo(() => prepareDrone(gltf.scene), [gltf.scene])
   useLayoutEffect(() => {
     onPropellers(prepared.propellers)
     return () => onPropellers([])
   }, [prepared, onPropellers])
-  // Геометрии, материалы и текстуры модели живут в кэше загрузчика, и R3F их не освобождает:
-  // каждый рендерер вешает на них свой обработчик dispose, и без этого прошлые рендереры
-  // оставались бы в памяти после каждого захода на экран. После dispose three.js загрузит
-  // ресурсы на видеокарту заново при следующем показе, так что кэш остаётся годным
+  // R3F не освобождает ресурсы из кэша загрузчика, и старые рендереры держатся на них через dispose.
+  // Освобождаем сами, three.js заново загрузит их в GPU при следующем показе
   useEffect(() => () => disposeModel(gltf.scene), [gltf.scene])
   return <primitive object={prepared.root} />
 }
@@ -110,8 +107,7 @@ function disposeModel(root: Object3D): void {
   })
 }
 
-// Копия сцены из кэша загрузчика: её можно перестраивать, не ломая повторный заход на экран.
-// Геометрии и материалы у копии общие с кэшем и не меняются
+// Перестраиваем копию, а не сцену из кэша. Геометрии и материалы общие и не меняются
 function prepareDrone(source: Object3D): { root: Group; propellers: Propeller[] } {
   const model = source.clone(true)
   model.position.set(0, 0, 0)
@@ -123,9 +119,8 @@ function prepareDrone(source: Object3D): { root: Group; propellers: Propeller[] 
   const size = box.getSize(new Vector3())
   const center = box.getCenter(new Vector3())
 
-  // Нос — сторона, где камера. Берётся центр самой камеры, а не её узла: точка узла — ось подвеса,
-  // а он у этой модели позади объектива. Поворот округляется до четверти круга: модели выровнены
-  // по осям, а камера под брюхом чуть смещена вбок
+  // Нос там, где камера. Берём центр самой камеры: у её узла точка на оси подвеса позади объектива.
+  // Поворот округляем до 90°, камера под брюхом чуть смещена вбок
   let turn = 0
   const camera = model.getObjectByName('camera')
   if (camera) {
@@ -137,7 +132,7 @@ function prepareDrone(source: Object3D): { root: Group; propellers: Propeller[] 
 
   const propellers = extractPropellers(model, center)
 
-  // По горизонтали — центр рамки, по вертикали — низ на точке траектории: на земле дрон стоит, а не утоплен
+  // По горизонтали центр рамки, низ на точке траектории, чтобы на земле дрон не утопал
   model.position.set(-center.x, -box.min.y, -center.z)
   const root = new Group()
   root.rotation.y = turn
@@ -146,8 +141,8 @@ function prepareDrone(source: Object3D): { root: Group; propellers: Propeller[] 
   return { root, propellers }
 }
 
-// Меши винтов не несут своей точки вращения. Каждый вешается на новый узел в центре своей рамки,
-// и крутится этот узел: геометрию (квантованную, общую с кэшем) трогать не нужно
+// У мешей винтов нет своей оси, поэтому вешаем каждый на узел в центре его рамки и крутим узел.
+// Геометрию не трогаем, она квантованная и общая с кэшем
 function extractPropellers(model: Object3D, modelCenter: Vector3): Propeller[] {
   const nodes: Object3D[] = []
   model.traverse((o) => {
@@ -168,8 +163,7 @@ function extractPropellers(model: Object3D, modelCenter: Vector3): Propeller[] {
       node.add(pivot)
       pivot.add(mesh)
       mesh.position.sub(pivotAt)
-      // Модель дальше только поворачивается вокруг вертикали и равномерно масштабируется,
-      // поэтому вертикаль сцены в осях узла можно найти уже сейчас
+      // Дальше модель только вращается вокруг вертикали и масштабируется равномерно, так что ось берём сейчас
       const toLocal = node.getWorldQuaternion(new Quaternion()).invert()
       const axis = up.clone().applyQuaternion(toLocal).normalize()
       const world = node.localToWorld(pivotAt.clone())
@@ -180,7 +174,7 @@ function extractPropellers(model: Object3D, modelCenter: Vector3): Propeller[] {
   return result
 }
 
-// Запасной дрон тех же размеров: крестовина, корпус, четыре винта и красный нос на −Z
+// Запасной дрон тех же размеров: крестовина, корпус, четыре винта и красный нос на -Z
 function FallbackDrone() {
   const span = DRONE_VISUAL_SPAN_M
   const arm = span * 0.72

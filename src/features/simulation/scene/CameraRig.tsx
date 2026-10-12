@@ -6,14 +6,13 @@ import { boundsSize, type LocalBounds } from '../sceneMath'
 import { smoothAngle, topViewDistance, type CameraMode } from '../simView'
 import { FRAME_PRIORITY, type DroneFrame } from './droneFrame'
 
-// Три режима камеры. «За дроном» подстраивается плавно из любого положения, поэтому переход
-// в него из других режимов не прыгает; «Сверху» подлетает к виду на ферму за TOP_FLIGHT_S
+// "За дроном" догоняет плавно из любого положения, "сверху" подлетает к ферме за TOP_FLIGHT_S
 
 export const FOLLOW_BACK_M = 60
 export const FOLLOW_UP_M = 25
 const FOLLOW_RATE = 2.5
 const FOLLOW_YAW_RATE = 2
-// На ускорении камера разворачивается быстрее, но не резче этого: иначе углы маршрута дёргали бы кадр
+// Потолок скорости разворота на ускорении, иначе на углах маршрута кадр дёргается
 const MAX_FOLLOW_YAW_RATE = 10
 const LOOK_RATE = 5
 const TOP_TILT_RAD = (22 * Math.PI) / 180
@@ -35,14 +34,13 @@ export default function CameraRig({ mode, frame, bounds, farM }: CameraRigProps)
   return <FollowCamera frame={frame} />
 }
 
-// Положение камеры относительно дрона в цилиндрических координатах: угол вокруг вертикали,
-// расстояние по горизонтали и высота. Так при развороте дрона камера обходит его по дуге,
-// а не проходит сквозь него, как было бы при линейной интерполяции смещения
+// Камера относительно дрона в цилиндрических координатах, чтобы при развороте
+// обходить его по дуге, а не проходить насквозь
 interface FollowState {
   yaw: number
   dist: number
   height: number
-  // Куда смотрит камера относительно дрона; сходится к нулю
+  // Куда смотрит камера относительно дрона, сходится к нулю
   look: Vector3
 }
 
@@ -65,7 +63,7 @@ function FollowCamera({ frame }: { frame: DroneFrame }) {
       state.current = s
     }
     const k = 1 - Math.exp(-FOLLOW_RATE * dt)
-    // Позади дрона: нос смотрит на (−sin r, 0, −cos r)
+    // Позади дрона: нос смотрит на (-sin r, 0, -cos r)
     s.yaw = smoothAngle(s.yaw, frame.rotationY, dt, Math.min(MAX_FOLLOW_YAW_RATE, FOLLOW_YAW_RATE * frame.pace))
     s.dist += (FOLLOW_BACK_M - s.dist) * k
     s.height += (FOLLOW_UP_M - s.height) * k
@@ -78,7 +76,7 @@ function FollowCamera({ frame }: { frame: DroneFrame }) {
 }
 
 function FreeCamera({ frame, farM }: { frame: DroneFrame; farM: number }) {
-  // Цель — где был дрон в момент переключения; дальше её двигает только пользователь
+  // Цель там, где был дрон при переключении, дальше её двигает только пользователь
   const [target] = useState(() => frame.position.clone())
   return (
     <OrbitControls
@@ -105,17 +103,15 @@ function TopCamera({ frame, bounds, farM }: { frame: DroneFrame; bounds: LocalBo
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
   const controls = useRef<Controls>(null)
-  // Вид считается один раз при входе в режим: смена размера окна не сбрасывает то, что человек
-  // приблизил или сдвинул
+  // Вид считаем один раз при входе в режим, чтобы ресайз окна не сбрасывал зум и сдвиг
   const [flight] = useState<Flight>(() => {
     const { width, depth, center } = boundsSize(bounds)
     const fov = camera instanceof PerspectiveCamera ? camera.fov : 50
     const d = Math.min(topViewDistance(width, depth, fov, size.width / Math.max(1, size.height)), farM * 0.4)
     const toTarget = new Vector3(center.x, 0, -center.y)
-    // Лёгкий наклон: камера чуть южнее центра, север — вверху экрана
+    // Лёгкий наклон: камера чуть южнее центра, север вверху экрана
     const toPos = toTarget.clone().add(new Vector3(0, Math.cos(TOP_TILT_RAD) * d, Math.sin(TOP_TILT_RAD) * d))
-    // Подлёт начинается с той точки, куда камера уже смотрит: цель на луче взгляда не поворачивает
-    // вид на первом кадре. Раньше цель ставилась на дрон, и из свободной камеры вид дёргался к нему
+    // Цель берём на текущем луче взгляда, чтобы вид не дёрнулся на первом кадре подлёта
     const lookDistance = Math.min(farM * 0.45, Math.max(MIN_ORBIT_DISTANCE_M, camera.position.distanceTo(frame.position)))
     const fromTarget = camera.getWorldDirection(new Vector3()).multiplyScalar(lookDistance).add(camera.position)
     return { t: 0, fromPos: camera.position.clone(), fromTarget, toPos, toTarget }
@@ -142,7 +138,7 @@ function TopCamera({ frame, bounds, farM }: { frame: DroneFrame; bounds: LocalBo
       // Как на карте: левая кнопка сдвигает, колесо приближает, правая наклоняет и вращает
       mouseButtons={{ LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.ROTATE }}
       onStart={() => {
-        // Человек взялся за камеру — подлёт больше не мешает
+        // Пользователь взялся за камеру, подлёт прекращаем
         flight.t = 1
       }}
     />

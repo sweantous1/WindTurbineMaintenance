@@ -46,7 +46,7 @@ export default function SimPanel({ data, mission, drone, clock }: SimPanelProps)
   const level = batteryLevel(remainingPct, drone.reservePct)
   const km = (m: number) => formatNumber(m / 1000, lang, 1)
   const seekTo = useCallback((v: TurbineVisit) => clock.seek(v.transitStartS), [clock])
-  // После полёта маршрут и погода только для чтения: ссылок «поправить» не показываем
+  // После полёта маршрут и погоду не правим, ссылки не показываем
   const editable = isPreFlight(mission.status)
 
   return (
@@ -228,7 +228,7 @@ interface VisitListProps {
   onSelect: (visit: TurbineVisit) => void
 }
 
-// Отдельно и под memo: при сотне турбин список не перерисовывается на каждом уведомлении часов
+// В memo, чтобы при сотне турбин список не перерисовывался на каждый тик часов
 const VisitList = memo(function VisitList({ visits, names, current, inspected, onSelect }: VisitListProps) {
   const { t } = useTranslation()
   return (
@@ -244,7 +244,7 @@ const VisitList = memo(function VisitList({ visits, names, current, inspected, o
               type="button"
               onClick={() => onSelect(v)}
               aria-current={isCurrent ? 'step' : undefined}
-              // Содержимое кнопки в её имя не попадает, поэтому отметка «осмотрена» — в самом aria-label
+              // aria-label перекрывает текст кнопки, поэтому "осмотрена" дописываем сюда
               aria-label={done ? `${goTo}, ${t('sim.order.inspected')}` : goTo}
               className={`flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                 isCurrent ? 'bg-cyan-50 text-gray-900 ring-1 ring-cyan-400' : 'text-gray-800 hover:bg-gray-50'

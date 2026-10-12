@@ -26,15 +26,15 @@ export function assessHours(hours: WeatherHour[], ctx: AssessContext): WindowCel
   })
 }
 
-// Порядок в легенде: от «можно» к «нельзя», «нет данных» — отдельно в конце
+// порядок в легенде: от "можно" к "нельзя", "нет данных" в конце
 export const STATUS_ORDER: readonly HourStatus[] = ['ok', 'marginal', 'no', 'insufficient']
 
 export interface StatusLook {
-  // Значок дублирует цвет: статус читается и без различения красного и зелёного
+  // значок дублирует цвет для дальтоников
   icon: string
-  // Клетка полосы окна вылета
+  // клетка полосы окна вылета
   cell: string
-  // Плашка вердикта и легенды
+  // плашка вердикта и легенды
   chip: string
   labelKey: string
 }
@@ -88,13 +88,12 @@ export function countByStatus(cells: WindowCell[]): Record<HourStatus, number> {
 
 export interface FlightWindow {
   start: string
-  // Час, с которого лететь уже нельзя: окно 08:00–12:00 — это часы 08, 09, 10 и 11
+  // не включительно: окно 08:00-12:00 это часы 08..11
   endExclusive: string
   hours: number
 }
 
-// Подряд идущие часы «можно». Ряды Open-Meteo идут без пропусков, но разрыв во времени
-// (или переход на летнее время) всё равно рвёт окно: сплошным оно быть не обязано
+// подряд идущие часы "можно"; разрыв во времени (или переход на летнее время) рвёт окно
 export function okWindows(cells: WindowCell[], opts: { minHours?: number; skip?: (c: WindowCell) => boolean } = {}): FlightWindow[] {
   const minHours = opts.minHours ?? 1
   const result: FlightWindow[] = []
@@ -119,8 +118,7 @@ export function okWindows(cells: WindowCell[], opts: { minHours?: number; skip?:
   return result
 }
 
-// «пт, 25 сент. 08:00–13:00»; окно через полночь — с днём конца, иначе «22:00–16:00» читается
-// как окно назад во времени. Конец ровно в полночь следующих суток — это ещё те же сутки
+// "пт, 25 сент. 08:00-13:00"; через полночь пишем и день конца, но конец ровно в 00:00 - те же сутки
 export function formatWindowRange(w: FlightWindow, lang: string): string {
   const start = `${formatDay(w.start, lang)} ${formatClock(w.start)}`
   const sameDay = dayKey(w.start) === dayKey(w.endExclusive)

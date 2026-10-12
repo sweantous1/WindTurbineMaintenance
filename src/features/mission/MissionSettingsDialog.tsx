@@ -54,31 +54,28 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
   const [altitudeDraft, setAltitude] = useState(() => formatInputNumber(mission.flightAltitudeM, lang))
   const [limitsDraft, setLimitsForm] = useState<LimitsForm>(() => limitsToForm(mission.limits, lang))
   const [submitted, setSubmitted] = useState(false)
-  // Номер неудачной отправки: после перерисовки с ошибками фокус переходит на первое неверное поле
+  // Счётчик неудачных отправок, по нему после перерисовки фокус уходит на первое неверное поле
   const [failedAttempt, setFailedAttempt] = useState(0)
   const formRef = useRef<HTMLFormElement>(null)
   const [saving, setSaving] = useState(false)
   const savingRef = useRef(false)
-  // Запрещённое поле показывает записанное значение, а не черновик: миссию могли завершить,
-  // пока окно открыто, и тогда в отключённом поле осталась бы несохранённая правка
+  // В заблокированных полях сохранённое значение, а не черновик: миссию могли завершить, пока окно открыто
   const name = editable('name') ? nameDraft : mission.name
   const type = editable('type') ? typeDraft : mission.type
   const droneId = editable('droneProfileId') ? droneDraft : mission.droneProfileId
   const altitude = editable('flightAltitudeM') ? altitudeDraft : formatInputNumber(mission.flightAltitudeM, lang)
   const limitsForm = editable('limits') ? limitsDraft : limitsToForm(mission.limits, lang)
-  // У облетанной миссии — снимок дрона на момент полёта, как в карточке и вердикте:
-  // профиль в настройках с тех пор могли переименовать, поменять или удалить
+  // У облетанной миссии берём снимок дрона на момент полёта: профиль с тех пор могли поменять или удалить
   const liveDrone = useDroneProfile(mission.droneSnapshot ? undefined : droneId)
   const drone = mission.droneSnapshot ?? liveDrone
 
-  // Окно выше экрана ноутбука: ошибка в поле над «Сохранить» уезжает из вида, и без переноса
-  // фокуса нажатие выглядело бы так, будто ничего не произошло. Диктор прочтёт ошибку через aria-describedby
+  // Окно выше экрана ноутбука и ошибку над кнопкой не видно, поэтому переводим фокус на поле
   useEffect(() => {
     if (failedAttempt === 0) return
     formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus()
   }, [failedAttempt])
 
-  // Запрещённые поля не проверяем: в них то, что записано, и в патч они не попадут
+  // Заблокированные поля не проверяем, в патч они всё равно не попадут
   const nameError = editable('name') ? validateName(name) : null
   const alt = editable('flightAltitudeM')
     ? parseInRange(altitude, FLIGHT_ALTITUDE_MIN_M, FLIGHT_ALTITUDE_MAX_M)
@@ -90,7 +87,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
 
   const ceilingLimit = limits.limits?.maxAltitudeM ?? mission.limits.maxAltitudeM
   const ceilingM = drone ? Math.min(ceilingLimit, drone.maxAltitudeM) : ceilingLimit
-  // Облетанную миссию поправить уже нельзя — предупреждать не о чем
+  // После полёта править нельзя, предупреждать не о чем
   const aboveCeiling = isPreFlight(mission.status) && alt.ok && alt.value > ceilingM
 
   const setLimit = (k: LimitKey, v: string) => setLimitsForm((f) => ({ ...f, [k]: v }))
@@ -103,8 +100,8 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
       setFailedAttempt((n) => n + 1)
       return
     }
-    // Патч — от той миссии, что видел человек: если её тем временем завершили,
-    // репозиторий откажет с MissionLockedError, и правка не пропадёт молча
+    // Патч от миссии, открытой в окне: если её успели завершить,
+    // репозиторий бросит MissionLockedError и правка не потеряется молча
     const patch = buildSettingsPatch(mission, {
       name,
       type,
@@ -119,7 +116,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
     savingRef.current = true
     setSaving(true)
     try {
-      // Маршрут берётся из базы: его могли пересчитать на другом экране
+      // Маршрут берём из базы, его могли пересчитать на другом экране
       const fresh = (await missions.get(mission.id)) ?? mission
       await missions.update(mission.id, drone ? withRouteLength(fresh, patch, ceilingM) : patch)
       toast.success(t('mission.toast.saved'))
@@ -140,8 +137,7 @@ function SettingsForm({ mission, onClose }: { mission: Mission; onClose: () => v
   const limitLocked = !editable('limits')
   const showError = (k: LimitKey) => (submitted ? limitErrors[k] : null)
 
-  // Escape обрабатываем здесь: пока идёт запись, окно не закрывается.
-  // preventDefault сообщает Modal, что Escape уже обработан
+  // Свой Escape: пока идёт запись, окно не закрываем. preventDefault - чтобы Modal его не трогал
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return
     e.preventDefault()

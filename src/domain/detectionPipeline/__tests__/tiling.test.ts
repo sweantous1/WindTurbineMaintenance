@@ -3,7 +3,7 @@ import { planTiles, type TileRect } from '../tiling'
 
 const starts = (tiles: TileRect[], axis: 'x' | 'y') => [...new Set(tiles.map((t) => t[axis]))].sort((a, b) => a - b)
 
-// Покрытие без дыр: каждая точка сетки с шагом step лежит хотя бы в одном фрагменте
+// Без дыр: каждая точка сетки с шагом step попадает хотя бы в один фрагмент
 function uncovered(tiles: TileRect[], width: number, height: number, step: number): number {
   let misses = 0
   for (let y = 0; y < height; y += step) {
@@ -11,7 +11,7 @@ function uncovered(tiles: TileRect[], width: number, height: number, step: numbe
       if (!tiles.some((t) => x >= t.x && x < t.x + t.w && y >= t.y && y < t.y + t.h)) misses++
     }
   }
-  // Последняя строка и столбец пикселей — отдельно: сетка с шагом их не задевает
+  // Последние строку и столбец проверяем отдельно, сетка их не задевает
   for (let x = 0; x < width; x += step) if (!tiles.some((t) => x >= t.x && x < t.x + t.w && t.y + t.h === height)) misses++
   for (let y = 0; y < height; y += step) if (!tiles.some((t) => y >= t.y && y < t.y + t.h && t.x + t.w === width)) misses++
   return misses
@@ -33,7 +33,7 @@ describe('planTiles', () => {
       expect(t.x + t.w).toBeLessThanOrEqual(8192)
       expect(t.y + t.h).toBeLessThanOrEqual(5460)
     }
-    // Шаг 512 (перекрытие 20 %), последний ряд и столбец прижаты к краю
+    // Шаг 512 (перекрытие 20%), последние ряд и столбец прижаты к краю
     expect(xs.slice(0, 3)).toEqual([0, 512, 1024])
     expect(xs.at(-1)).toBe(8192 - 640)
     expect(ys.at(-1)).toBe(5460 - 640)

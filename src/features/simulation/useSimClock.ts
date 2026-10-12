@@ -8,7 +8,7 @@ export function useSimSnapshot(clock: SimClock): SimSnapshot {
   return useSyncExternalStore(clock.subscribe, clock.getSnapshot)
 }
 
-// Номер турбины, которую облетаем сейчас: число, поэтому подписчик перерисуется, только когда оно сменится
+// Номер текущей турбины: число, поэтому перерисовка только при его смене
 export function useCurrentVisit(clock: SimClock, trajectory: Trajectory): number | null {
   const read = useCallback(() => currentVisitIndex(sampleAt(trajectory, clock.getSnapshot().timeS)), [clock, trajectory])
   return useSyncExternalStore(clock.subscribe, read)

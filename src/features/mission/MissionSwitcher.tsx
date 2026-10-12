@@ -8,12 +8,12 @@ import { missions } from '@/storage/missions'
 import NewMissionDialog from './NewMissionDialog'
 import { STATUS_DOT } from './missionView'
 
-// Облетанных миссий со временем много — в шапке только последние, остальные в истории.
-// Шапка есть на всех экранах: читаем только эти миссии, а не всю историю после каждой записи
+// В шапке только последние облетанные, остальные в истории. Шапка на всех экранах,
+// так что не перечитываем всю историю после каждой записи
 const MAX_FLOWN_IN_MENU = 8
 
-// Кольцо фокуса внутри пункта: у меню overflow-hidden, внешнее кольцо обрезалось бы.
-// Фон при фокусе не меняем — иначе выбранная миссия теряла бы подсветку, а пункт с фокусом не выделялся
+// Кольцо фокуса внутри пункта (у меню overflow-hidden, внешнее обрежется).
+// Фон при фокусе не меняем, чтобы не пропадала подсветка выбранной миссии
 const ITEM_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500'
 
 export default function MissionSwitcher() {
@@ -51,7 +51,7 @@ export default function MissionSwitcher() {
 
   const choose = async (m: Mission) => {
     setOpen(false)
-    // Пункт меню исчезает вместе с меню — фокус возвращаем на кнопку, а не в никуда
+    // Пункт исчезает вместе с меню, поэтому фокус возвращаем на кнопку
     buttonRef.current?.focus()
     if (m.id === active?.id) return
     try {
@@ -63,7 +63,7 @@ export default function MissionSwitcher() {
   }
 
   const onMenuKey = (e: ReactKeyboardEvent) => {
-    // Tab уводит фокус из меню — открытым оно остаться не должно, иначе висит над страницей
+    // Tab уводит фокус из меню - закрываем, чтобы не висело над страницей
     if (e.key === 'Tab') {
       setOpen(false)
       return
@@ -83,7 +83,7 @@ export default function MissionSwitcher() {
 
   const startCreate = () => {
     setOpen(false)
-    // Пункт «Новая миссия» исчезнет вместе с меню — окно должно вернуть фокус на кнопку миссии
+    // Пункт исчезнет вместе с меню - ставим фокус на кнопку, чтобы окно вернуло его туда
     buttonRef.current?.focus()
     setCreating(true)
   }
@@ -100,7 +100,7 @@ export default function MissionSwitcher() {
         className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
       >
         <PlusIcon />
-        {/* На ширине около 1024 px шапка тесная: полная подпись только на широком окне */}
+        {/* Около 1024 px шапка тесная, полная подпись только на широком окне */}
         <span className="hidden xl:inline">{t('mission.switcher.create')}</span>
         <span className="xl:hidden">{t('mission.switcher.createShort')}</span>
       </button>
@@ -110,7 +110,7 @@ export default function MissionSwitcher() {
     const statusLabel = active ? t(`common.statuses.${active.status}`) : ''
     content = (
       <>
-        {/* При 1024 px навигация занимает почти всю шапку: до xl кнопка узкая, полное имя — в подсказке */}
+        {/* При 1024 px навигация занимает почти всю шапку: до xl кнопка узкая, полное имя в подсказке */}
         <button
           ref={buttonRef}
           type="button"
@@ -128,7 +128,7 @@ export default function MissionSwitcher() {
             {active ? (
               active.name
             ) : (
-              // Полная подсказка «Выберите миссию» до xl не помещается и обрезалась бы на полуслове
+              // До xl полная подпись не влезает и обрезается на полуслове
               <>
                 <span className="hidden xl:inline">{t('mission.switcher.choose')}</span>
                 <span className="xl:hidden">{t('mission.switcher.chooseShort')}</span>
@@ -193,8 +193,8 @@ export default function MissionSwitcher() {
     )
   }
 
-  // Диалог стоит на одном месте дерева во всех ветках: иначе после создания первой миссии
-  // он бы пересоздался и мигнул пустой формой
+  // Диалог на одном месте дерева во всех ветках, иначе после создания первой миссии
+  // он пересоздастся и мигнёт пустой формой
   return (
     <div ref={rootRef} className="relative min-w-0">
       {content}
@@ -209,7 +209,7 @@ const menuItems = (menu: HTMLElement | null): HTMLElement[] =>
 function MenuGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="py-1" role="group" aria-label={title}>
-      {/* Название группы уже в aria-label — диктору второй раз его читать незачем */}
+      {/* Название группы уже в aria-label, второй раз диктору не нужно */}
       <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-gray-500" aria-hidden="true">
         {title}
       </p>

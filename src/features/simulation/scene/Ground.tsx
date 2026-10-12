@@ -4,15 +4,14 @@ import { Group, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, TextureL
 import type { LocalFrame } from '@/lib/geo'
 import { boundsSize, groundTiles, type LocalBounds } from '../sceneMath'
 
-// Земля: поле цвета травы по рамке сцены и, по желанию, тайлы OpenStreetMap поверх.
-// Высоты разнесены на доли метра: при логарифмическом буфере глубины этого хватает, чтобы
-// плоскости не мерцали друг сквозь друга
+// Поле цвета травы по рамке сцены и, если включено, тайлы OSM поверх.
+// С логарифмическим буфером глубины долей метра между слоями хватает, чтобы не мерцало
 
 export const GRASS_COLOR = '#7f9f5b'
 const FAR_GROUND_COLOR = '#8aa36c'
 const TILE_LIFT_M = 0.15
 const FAR_GROUND_DROP_M = 0.5
-// Не больше 64 тайлов на ферму — ещё и вежливость к серверам OSM
+// Не больше 64 тайлов на ферму, чтобы не нагружать серверы OSM
 const MAX_TILES = 64
 const MAX_ZOOM = 16
 
@@ -20,7 +19,7 @@ interface GroundProps {
   bounds: LocalBounds
   frame: LocalFrame
   showMap: boolean
-  // Дальняя плоскость отсечения камеры: до неё тянется «даль»
+  // Дальняя плоскость камеры, до неё тянется дальняя земля
   farM: number
 }
 
@@ -28,7 +27,7 @@ export default function Ground({ bounds, frame, showMap, farM }: GroundProps) {
   const { width, depth, center } = boundsSize(bounds)
   return (
     <group>
-      {/* Даль за рамкой: иначе за крайними башнями земля обрывалась бы в небо */}
+      {/* Земля за рамкой, чтобы за крайними башнями не было обрыва в небо */}
       <mesh rotation-x={-Math.PI / 2} position={[center.x, -FAR_GROUND_DROP_M, -center.y]}>
         <planeGeometry args={[farM * 2, farM * 2]} />
         <meshLambertMaterial color={FAR_GROUND_COLOR} />
@@ -54,12 +53,12 @@ function MapTiles({ bounds, frame }: { bounds: LocalBounds; frame: LocalFrame })
     const textures: Texture[] = []
     const anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
     const loader = new TextureLoader()
-    // OSM отдаёт Access-Control-Allow-Origin: *, без crossOrigin текстура «испортила» бы холст WebGL
+    // OSM отдаёт Access-Control-Allow-Origin: *, без crossOrigin WebGL текстуру не примет
     loader.setCrossOrigin('anonymous')
     let disposed = false
 
     for (const tile of tiles) {
-      // Пока тайл грузится (или не загрузился) — плоскость цвета травы; toneMapped: false — цвета карты как есть
+      // Пока тайла нет, плоскость цвета травы. toneMapped: false, чтобы цвета карты были как есть
       const material = new MeshBasicMaterial({ color: GRASS_COLOR, toneMapped: false })
       materials.push(material)
       const mesh = new Mesh(geometry, material)
@@ -85,7 +84,7 @@ function MapTiles({ bounds, frame }: { bounds: LocalBounds; frame: LocalFrame })
         },
         undefined,
         () => {
-          // Тайл не загрузился (нет сети, сервер отказал) — остаётся плоскость без текстуры
+          // Нет сети или сервер отказал, остаётся плоскость без текстуры
         },
       )
     }

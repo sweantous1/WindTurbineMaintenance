@@ -2,7 +2,7 @@ import { act, createElement, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 
-// Минимальная обвязка для проверки компонентов в happy-dom без сторонних библиотек
+// Простая обвязка для рендера компонентов в happy-dom без сторонних библиотек
 
 const reactEnv = globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
 reactEnv.IS_REACT_ACT_ENVIRONMENT = true
@@ -31,7 +31,7 @@ export async function cleanup(): Promise<void> {
   document.body.innerHTML = ''
 }
 
-// Живые запросы Dexie отвечают асинхронно — ждём, пока проверка не пройдёт
+// Живые запросы Dexie асинхронные, ждём пока проверка не пройдёт
 export async function waitFor(check: () => void | Promise<void>, timeoutMs = 3000): Promise<void> {
   const start = Date.now()
   for (;;) {
@@ -69,7 +69,7 @@ export async function click(el: HTMLElement): Promise<void> {
   })
 }
 
-// Значение через сеттер прототипа: иначе React не заметит изменения управляемого поля
+// Через сеттер прототипа, иначе React не заметит изменения управляемого поля
 export async function typeInto(input: HTMLInputElement, value: string): Promise<void> {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
   await act(async () => {

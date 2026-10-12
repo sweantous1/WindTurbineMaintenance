@@ -1,8 +1,7 @@
 import type { RouteModel } from './matrix'
 
-// Жадный «ближайший сосед» от точки взлёта. firstTurbine задаёт первую турбину —
-// так получается мультистарт. Штраф за поворот учитывается уже здесь: иначе жадный
-// выбор охотно строит зигзаги, которые локальному поиску потом трудно распутать
+// Ближайший сосед от взлёта, firstTurbine для мультистарта.
+// Штраф за поворот учитываем сразу, иначе получаются зигзаги, которые потом плохо распутываются
 export function nearestNeighborVisit(model: RouteModel, firstTurbine?: number): Int32Array {
   const { n, size, dist } = model
   const visit = new Int32Array(n)

@@ -1,7 +1,6 @@
 import { solveRoute, type SolveInput, type SolveProgress, type SolveResult } from '@/domain/route'
 
-// Расчёт маршрута в отдельном потоке: на сотне турбин ACO и GA считают секунды,
-// интерфейс в это время не должен замирать
+// Отдельный поток: на сотне турбин ACO и GA считают секунды
 
 export interface RouteWorkerRequest {
   type: 'solve'
@@ -13,7 +12,7 @@ export type RouteWorkerResponse =
   | { type: 'result'; result: SolveResult }
   | { type: 'error'; message: string }
 
-// Обработчик отделён от глобального self, чтобы его можно было проверить в тестах без воркера
+// Отдельно от self, чтобы тестировать без воркера
 export function handleRouteMessage(data: unknown, post: (msg: RouteWorkerResponse) => void): void {
   const request = data as Partial<RouteWorkerRequest> | null
   if (request?.type !== 'solve' || !request.input) {
@@ -28,14 +27,13 @@ export function handleRouteMessage(data: unknown, post: (msg: RouteWorkerRespons
   }
 }
 
-// В сборке tsconfig нет библиотеки WebWorker, поэтому описываем нужную часть области воркера сами
+// В tsconfig нет lib WebWorker, описываем нужное сами
 interface RouteWorkerScope {
   onmessage: ((event: MessageEvent) => void) | null
   postMessage(message: RouteWorkerResponse): void
 }
 
-// Подписываемся, только если это действительно воркер: в Node (тесты) нет self,
-// в основном потоке есть document
+// Только внутри воркера: в Node (тесты) нет self, в основном потоке есть document
 if (typeof self !== 'undefined' && typeof document === 'undefined') {
   const scope = self as unknown as RouteWorkerScope
   scope.onmessage = (event) => handleRouteMessage(event.data, (msg) => scope.postMessage(msg))

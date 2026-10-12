@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Оболочка Electron: главный процесс проверяем с подменённым модулем electron.
-// Путь — переменной, чтобы tsc приложения не разбирал main.ts (у него свой tsconfig с типами node)
+// main.ts с замоканным electron. Путь в переменной, чтобы tsc приложения не разбирал main.ts
+// (у него свой tsconfig с типами node)
 const MAIN = '../../../../electron/main.ts'
 
 const state = vi.hoisted(() => ({
@@ -58,7 +58,7 @@ beforeEach(() => {
 
 describe('главный процесс Electron: один экземпляр', () => {
   it('второй запуск с тем же профилем сразу выходит и не создаёт окно', async () => {
-    // Иначе второе окно не открыло бы IndexedDB и навсегда осталось в «Загрузка…»
+    // Иначе второе окно не откроет IndexedDB и зависнет на загрузке
     state.lock = false
     await startMain()
     expect(state.calls).toEqual(['quit'])

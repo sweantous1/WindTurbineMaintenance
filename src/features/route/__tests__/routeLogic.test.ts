@@ -41,7 +41,7 @@ describe('точки для решателя', () => {
     expect(pts).toHaveLength(4)
     expect(pts[0].x).toBeCloseTo(0, 6)
     expect(pts[0].y).toBeCloseTo(0, 6)
-    // Ряд 0, 400, 800 м — центр на 400 м
+    // ряд 0, 400, 800 м, центр на 400 м
     expect(pts[1].x).toBeCloseTo(-400, 0)
     expect(pts[2].x).toBeCloseTo(0, 0)
     expect(pts[3].x).toBeCloseTo(400, 0)
@@ -83,7 +83,7 @@ describe('порядок облёта', () => {
     const once = moveIdInOrder(['a', 'b', 'c'], 'a', 1)
     expect(once).toEqual(['b', 'a', 'c'])
     expect(moveIdInOrder(once, 'a', 1)).toEqual(['b', 'c', 'a'])
-    // Неизвестный id и край списка — без изменений
+    // неизвестный id и край списка ничего не меняют
     expect(moveIdInOrder(['a', 'b'], 'x', 1)).toEqual(['a', 'b'])
     expect(moveIdInOrder(['a', 'b'], 'b', 1)).toEqual(['a', 'b'])
   })
@@ -115,7 +115,7 @@ describe('сборка RoutePlan из результата решателя', ()
     expect(route.returnToTakeoff).toBe(false)
     expect(route.computedAt).toBe('2026-09-24T12:00:00.000Z')
     expect(route.turnViolations).toBe(result.turnViolations)
-    // Длина — всего плана с облётами и подъёмами, она больше ломаной решателя
+    // длина всего плана с облётами и подъёмами, она больше ломаной решателя
     expect(route.lengthM).toBe(plan.lengthM)
     expect(route.lengthM).toBeGreaterThan(result.lengthM)
     const direct = buildFlightPlan({
@@ -184,7 +184,7 @@ describe('нарушения угла для ручного порядка', () 
     expect(countOrderTurnViolations({ farm, takeoff }, zigzag, false, 180)).toBe(0)
     // Разворот на 180° в t4, t1 и t3
     expect(countOrderTurnViolations({ farm, takeoff }, zigzag, false, 45)).toBe(3)
-    // По ряду — прямо, ни одного поворота
+    // по ряду прямо, поворотов нет
     expect(countOrderTurnViolations({ farm, takeoff }, ['t1', 't2', 't3', 't4'], false, 45)).toBe(0)
     expect(countOrderTurnViolations({ farm, takeoff }, [], false, 45)).toBe(0)
   })
@@ -203,7 +203,7 @@ describe('пересчёт после правки', () => {
     expect(next?.lengthM).toBeGreaterThan(planFor(ctx, route.order, false).lengthM)
     // Время расчёта остаётся временем автоматического расчёта
     expect(next?.computedAt).toBe(route.computedAt)
-    // Турбина ушла в сторону — на ней появились повороты круче 90°
+    // турбину сдвинули в сторону, на ней появились повороты круче 90°
     expect(next?.turnViolations).toBeGreaterThan(0)
   })
 
@@ -241,7 +241,7 @@ describe('патчи миссии', () => {
 
     const onlyT1 = makeRoute(['t1'])
     const cleared = farmEditPatch({ ...base, route: onlyT1 }, removeTurbine(farm, 't1'), CEILING_M)
-    // Ключ есть и равен undefined — missions.update поймёт это как «очистить маршрут»
+    // ключ есть и равен undefined, missions.update поймёт это как очистку маршрута
     expect('route' in cleared).toBe(true)
     expect(cleared.route).toBeUndefined()
   })

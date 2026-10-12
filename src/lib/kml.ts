@@ -16,7 +16,7 @@ export interface FarmImport {
 
 export type KmlImportErrorCode = 'noTurbines' | 'notKml' | 'invalidXml' | 'kmzBroken' | 'kmzNoKml' | 'tooLarge' | 'readFailed'
 
-// code — для перевода в интерфейсе, message — русский текст на случай, если перевода нет
+// code для перевода в UI, message - русский текст, если перевода нет
 export class KmlImportError extends Error {
   readonly code: KmlImportErrorCode
   constructor(code: KmlImportErrorCode, message: string) {
@@ -28,7 +28,7 @@ export class KmlImportError extends Error {
 
 const MERGE_DISTANCE_M = 5
 const MOVED_THRESHOLD_M = 1
-// Та же турбина при повторном импорте: поправка координат бывает, перенос на километр — уже другая ферма
+// Повторный импорт: поправка координат бывает, а перенос на километр - уже другая ферма
 const SAME_TURBINE_M = 1000
 const MAX_FILE_BYTES = 50 * 1024 * 1024
 const MAX_KML_BYTES = 100 * 1024 * 1024
@@ -53,7 +53,7 @@ function noTurbinesError(): KmlImportError {
   return new KmlImportError('noTurbines', 'В файле нет точек-турбин')
 }
 
-// Тот же разбор, что у togeojson (coord1), — чтобы сопоставить точку GeoJSON с её элементом <Point>
+// Разбор как у togeojson (coord1), чтобы сопоставить точку GeoJSON с её <Point>
 function parseCoordTuple(text: string): number[] {
   return text
     .replace(/\s*/g, '')
@@ -67,14 +67,13 @@ function childElement(parent: Element, tagName: string): Element | undefined {
   return Array.from(parent.children).find((el) => el.tagName === tagName)
 }
 
-// Только собственный дочерний элемент: togeojson берёт первый <name> где угодно внутри метки
-// и перекрывает его полем name из ExtendedData, а это уже не имя метки
+// Только свой дочерний элемент: togeojson берёт первый <name> где угодно в метке
+// и перекрывает его полем name из ExtendedData
 function childText(parent: Element, tagName: string): string {
   return childElement(parent, tagName)?.textContent?.trim() ?? ''
 }
 
-// togeojson не отдаёт altitudeMode, поэтому режим высоты читается из DOM самой точки
-// (altitudeMode у LookAt рядом с точкой к ней не относится)
+// togeojson не отдаёт altitudeMode, читаем его из DOM самой точки (altitudeMode у LookAt не в счёт)
 function domPoints(placemark: Element): DomPoint[] {
   return Array.from(placemark.getElementsByTagName('Point')).map((el) => ({
     coords: parseCoordTuple(el.getElementsByTagName('coordinates')[0]?.textContent ?? ''),
@@ -104,11 +103,11 @@ function documentName(doc: Document): string | undefined {
   return name || undefined
 }
 
-// Широтная полоса ~11 м шире радиуса слияния, поэтому близкая точка всегда в своей или соседней полосе.
-// Без индекса каждая точка сравнивалась бы со всеми принятыми: на файле в десятки тысяч точек — секунды
+// Полоса по широте ~11 м, шире радиуса слияния, так что близкая точка в своей или соседней полосе.
+// Без индекса сравнение всех со всеми на десятках тысяч точек занимает секунды
 const MERGE_BAND_DEG = 1e-4
 
-// Дубли одной турбины (например, метка скопирована в две папки) сливаются в первую принятую
+// Дубли одной турбины (метка скопирована в две папки) сливаются в первую принятую
 function mergeClosePoints(candidates: Candidate[]): { accepted: Candidate[]; merged: number } {
   const accepted: Candidate[] = []
   const bands = new Map<number, number[]>()
@@ -140,8 +139,8 @@ export function parseKmlText(text: string): { name?: string; turbines: Turbine[]
     throw new KmlImportError('invalidXml', 'Файл не читается как KML: XML в нём повреждён или это другой формат. Нужен KML или KMZ из Google Earth')
   }
 
-  // togeojson сначала выдаёт по одному объекту на каждый Placemark в порядке документа,
-  // затем GroundOverlay и NetworkLink — у них пары в placemarks нет, они идут в skipped
+  // togeojson сначала отдаёт по объекту на каждый Placemark в порядке документа, потом
+  // GroundOverlay и NetworkLink - им пары в placemarks нет, они уходят в skipped
   const placemarks = Array.from(doc.getElementsByTagName('Placemark'))
   const features = kmlToGeoJson(doc).features
   const candidates: Candidate[] = []
@@ -161,7 +160,7 @@ export function parseKmlText(text: string): { name?: string; turbines: Turbine[]
         continue
       }
       const [lon, lat, alt] = geometry.coordinates
-      // Точка без своего <Point> — это короткий gx:Track, турбиной он не считается
+      // Точка без своего <Point> - короткий gx:Track, это не турбина
       const source = takeDomPoint(points, geometry.coordinates)
       if (!source || !isValidLatLon(lat, lon)) {
         skipped++
@@ -176,7 +175,7 @@ export function parseKmlText(text: string): { name?: string; turbines: Turbine[]
   const { accepted, merged } = mergeClosePoints(candidates)
   if (accepted.length === 0) throw noTurbinesError()
 
-  // id из имени — только если имена однозначны, иначе повторный импорт перепутал бы турбины
+  // id из имени только при уникальных именах, иначе повторный импорт перепутает турбины
   const names = accepted.map((c) => c.name)
   const namesAreIds = names.every((n) => n !== '') && new Set(names).size === names.length
   const turbines = accepted.map((c, i): Turbine => {
@@ -196,26 +195,26 @@ export function parseKmlText(text: string): { name?: string; turbines: Turbine[]
 
 // ---------- Файл: KML или KMZ ----------
 
-// PK\x03\x04 — первая запись архива, PK\x05\x06 — пустой архив (одно оглавление)
+// PK\x03\x04 - первая запись архива, PK\x05\x06 - пустой архив
 function isZip(bytes: Uint8Array): boolean {
   if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) return false
   return (bytes[2] === 0x03 && bytes[3] === 0x04) || (bytes[2] === 0x05 && bytes[3] === 0x06)
 }
 
-// DOMParser получает строку, поэтому кодировку из XML-декларации (часто windows-1251) применяем сами
+// DOMParser принимает строку, так что кодировку из XML-декларации (часто windows-1251) применяем сами
 function decodeXml(bytes: Uint8Array): string {
-  // Метка порядка байтов главнее объявленной кодировки
+  // BOM главнее объявленной кодировки
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder('utf-16le').decode(bytes)
   if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder('utf-16be').decode(bytes)
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return new TextDecoder('utf-8').decode(bytes)
   const head = new TextDecoder('windows-1252').decode(bytes.subarray(0, 256))
   const label = /^\s*<\?xml[^>]*?encoding\s*=\s*["']([A-Za-z0-9._:-]+)["']/.exec(head)?.[1]
-  // Декларация прочиталась однобайтово, значит, файл не UTF-16, что бы в ней ни было написано
+  // Декларация прочиталась однобайтово, значит файл не UTF-16, что бы там ни было написано
   if (label && !/^utf-?16/i.test(label)) {
     try {
       return new TextDecoder(label).decode(bytes)
     } catch {
-      // Неизвестная кодировка — читаем как UTF-8
+      // Неизвестная кодировка, читаем как UTF-8
     }
   }
   return new TextDecoder('utf-8').decode(bytes)
@@ -230,9 +229,8 @@ function kmzBrokenError(): KmlImportError {
   return new KmlImportError('kmzBroken', 'Архив KMZ повреждён или не является ZIP')
 }
 
-// По соглашению KMZ основной документ — doc.kml в корне, иначе первый .kml в корне архива.
-// Первый проход читает только оглавление, второй распаковывает один выбранный .kml:
-// лишние и битые .kml в архиве не мешают, а слишком большой doc.kml не подменяется другим файлом
+// Основной документ KMZ - doc.kml, иначе первый .kml в корне. Сначала читаем только оглавление,
+// потом распаковываем один .kml, чтобы лишние и битые файлы в архиве не мешали
 async function extractKml(zip: Uint8Array): Promise<Uint8Array> {
   const { unzipSync } = await import('fflate')
   const entries: { name: string; bytes: number }[] = []
@@ -271,8 +269,7 @@ const SHA256_K = new Uint32Array([
 
 const rotr = (x: number, n: number) => (x >>> n) | (x << (32 - n))
 
-// crypto.subtle есть только в защищённом контексте; веб-версия по http из локальной сети
-// его не получит, а отпечаток файла нужен и там
+// crypto.subtle есть только в защищённом контексте, а отпечаток нужен и в веб-версии по http
 function sha256Js(data: Uint8Array): Uint8Array {
   const padded = new Uint8Array(((data.length + 9 + 63) >> 6) << 6)
   padded.set(data)
@@ -331,10 +328,10 @@ export async function readFarmFile(file: File): Promise<FarmImport> {
   } catch {
     throw new KmlImportError('readFailed', 'Не удалось прочитать файл')
   }
-  // Тип определяется по содержимому: KMZ с расширением .kml (и наоборот) встречается
+  // Тип по содержимому: бывает KMZ с расширением .kml и наоборот
   const zip = isZip(bytes)
   const text = decodeXml(zip ? await extractKml(bytes) : bytes)
-  // Перетащить можно что угодно; фото или PDF — не «ошибка в XML», а просто не тот файл
+  // Перетащить могут что угодно, фото или PDF - не ошибка XML, а просто не тот файл
   if (!zip && !text.trimStart().startsWith('<')) {
     throw new KmlImportError('notKml', 'Это не KML и не KMZ. Нужен файл из Google Earth с метками турбин')
   }
@@ -344,9 +341,8 @@ export async function readFarmFile(file: File): Promise<FarmImport> {
 
 // ---------- Ферма ----------
 
-// Имя фермы после импорта. Без имени в файле прежнее переносится, только если это та же ферма
-// (есть общая турбина на прежнем месте): иначе другая ферма получила бы чужое название.
-// Одних id мало: у меток без уникальных имён они t1…tN у любой фермы
+// Если в файле нет имени, прежнее переносим только на ту же ферму (общая турбина на прежнем месте).
+// Одних id мало: у меток без уникальных имён они t1...tN у любой фермы
 export function importedFarmName(imp: Pick<FarmImport, 'name' | 'turbines'>, previous?: Farm): string | undefined {
   if (imp.name) return imp.name
   if (!previous?.name) return undefined
@@ -386,7 +382,7 @@ export function diffTurbines(prev: Turbine[], next: Turbine[]): { added: number;
 
 // ---------- Выгрузка в KML ----------
 
-// \r — ссылкой на символ: как есть парсер XML превратил бы его в \n, и имя не вернулось бы при импорте
+// \r ссылкой на символ, иначе парсер XML сделает из него \n и имя не вернётся при импорте
 const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;', '\r': '&#13;' }
 
 function isXmlChar(ch: string): boolean {
@@ -396,7 +392,7 @@ function isXmlChar(ch: string): boolean {
   return (c < 0xd800 || c > 0xdfff) && c !== 0xfffe && c !== 0xffff
 }
 
-// Недопустимые в XML символы выбрасываются: иначе файл не откроется ни в одном просмотрщике
+// Недопустимые в XML символы выкидываем, иначе файл не откроется
 function escapeXml(value: string): string {
   return Array.from(value)
     .filter(isXmlChar)
@@ -404,13 +400,13 @@ function escapeXml(value: string): string {
     .replace(/[&<>"'\r]/g, (ch) => XML_ESCAPES[ch])
 }
 
-// Фиксированная точка без экспоненты: 1e-7 не все просмотрщики KML понимают
+// Без экспоненты: 1e-7 понимают не все просмотрщики KML
 function formatNumber(value: number, digits: number): string {
   const s = value.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '')
   return s === '-0' ? '0' : s
 }
 
-// 8 знаков после запятой — около 1 мм
+// 8 знаков после запятой - около 1 мм
 function formatCoord(p: GeoPoint, altM?: number): string {
   const lonLat = `${formatNumber(p.lon, 8)},${formatNumber(p.lat, 8)}`
   return altM === undefined ? lonLat : `${lonLat},${formatNumber(altM, 2)}`
@@ -421,7 +417,7 @@ export function farmToKml(farm: Farm, opts: { name?: string; order?: string[]; p
   opts.order?.forEach((id, i) => {
     if (!orderIndex.has(id)) orderIndex.set(id, i)
   })
-  // Сначала турбины в порядке облёта, затем остальные — так список в Google Earth читается по маршруту
+  // Сначала турбины по порядку облёта, потом остальные, чтобы в Google Earth список шёл по маршруту
   const turbines = farm.turbines
     .map((t, i) => ({ t, i, n: orderIndex.get(t.id) }))
     .sort((a, b) => (a.n ?? Infinity) - (b.n ?? Infinity) || a.i - b.i)
@@ -437,10 +433,10 @@ export function farmToKml(farm: Farm, opts: { name?: string; order?: string[]; p
       '  </Style>',
     )
   }
-  // Номер — место среди турбин фермы, попавших в маршрут: id, которых в ферме уже нет, дыр в нумерации не дают
+  // Номер - место среди турбин фермы в маршруте, лишние id дыр в нумерации не дают
   turbines.forEach(({ t, n }, position) => {
     const label = n === undefined ? t.name : `${position + 1}. ${t.name}`
-    // NaN в координатах сделал бы файл нечитаемым; без высоты точка остаётся на рельефе
+    // NaN сломал бы файл, без высоты точка лежит на рельефе
     const altM = Number.isFinite(t.groundAltM) ? t.groundAltM : undefined
     lines.push('  <Placemark>', `    <name>${escapeXml(label)}</name>`, '    <Point>')
     if (altM !== undefined) lines.push('      <altitudeMode>absolute</altitudeMode>')

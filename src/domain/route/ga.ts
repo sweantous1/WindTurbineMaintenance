@@ -3,9 +3,7 @@ import { visitCost, type RouteModel } from './matrix'
 import { nearestNeighborVisit } from './nearestNeighbor'
 import { mulberry32, randInt, shuffleInPlace, type Rng } from './random'
 
-// Генетический алгоритм на перестановках турбин: отбор турниром (или рулеткой),
-// упорядоченный кроссовер OX, мутация обменом или инверсией, лучшие особи переходят
-// в следующее поколение без изменений
+// ГА на перестановках: турнир или рулетка, кроссовер OX, мутация обменом/инверсией, элитизм
 
 export type GaParams = {
   generations: number
@@ -34,7 +32,7 @@ export function runGa(model: RouteModel, params: GaParams, selection: GaSelectio
   const size = params.population
   const rng = mulberry32(params.seed)
 
-  // Одна особь — маршрут «ближайшего соседа»: с ним популяция не начинает с чистого листа
+  // Одна особь - ближайший сосед, остальные случайные
   let pop: Int32Array[] = [nearestNeighborVisit(model)]
   while (pop.length < size) {
     const perm = new Int32Array(n)
@@ -77,8 +75,7 @@ export function runGa(model: RouteModel, params: GaParams, selection: GaSelectio
       const b = select()
       const child = rng() < params.crossoverRate ? orderCrossover(pop[a], pop[b], rng) : pop[a].slice()
       if (rng() < params.mutationRate) mutate(child, rng)
-      // Копии уже взятых особей мутируют принудительно: без этого популяция быстро
-      // вырождается в клоны одного маршрута и поиск останавливается
+      // Дубликаты мутируем принудительно, иначе популяция вырождается в клоны
       let key = child.join(',')
       for (let attempt = 0; attempt < DUPLICATE_RETRIES && seenKeys.has(key); attempt++) {
         mutate(child, rng)
@@ -107,7 +104,7 @@ function argMin(values: number[]): number {
   return idx
 }
 
-// Рулетка: шанс особи обратно пропорционален стоимости маршрута
+// Шанс обратно пропорционален стоимости
 function rouletteSelect(costs: number[], rng: Rng): number {
   let total = 0
   for (const c of costs) total += 1 / Math.max(c, 1e-9)
@@ -119,8 +116,7 @@ function rouletteSelect(costs: number[], rng: Rng): number {
   return costs.length - 1
 }
 
-// OX: отрезок [a..b] берётся у первого родителя, остальные позиции по кругу после b
-// заполняются генами второго в его порядке
+// OX: [a..b] от первого родителя, остальное по кругу после b генами второго в его порядке
 export function orderCrossover(p1: Int32Array, p2: Int32Array, rng: Rng): Int32Array {
   const n = p1.length
   const child = new Int32Array(n)

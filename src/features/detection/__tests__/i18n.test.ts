@@ -9,7 +9,7 @@ import { SEVERITIES } from '../detectionView'
 
 type Dict = { [key: string]: string | Dict }
 
-// Исходники экрана: ключи ищутся прямо в коде, чтобы опечатка в ключе не дошла до интерфейса
+// Ключи ищем прямо в исходниках экрана, чтобы ловить опечатки
 const sources = import.meta.glob<string>(['/src/features/detection/*.{ts,tsx}', '/src/pages/{Detection,History}.tsx'], {
   query: '?raw',
   import: 'default',

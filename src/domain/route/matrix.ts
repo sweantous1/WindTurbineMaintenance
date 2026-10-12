@@ -1,22 +1,21 @@
 import type { LocalPoint } from '@/lib/geo'
 import { makeTurnEvaluator, makeTurnRule, type TurnRule } from './turns'
 
-// Модель задачи: точка 0 — взлёт, 1..n — турбины. Маршрут хранится двумя способами:
-// visit — только турбины по порядку; path — полный путь с взлётом в начале
-// (и в конце, если нужно вернуться): длина n + 1 или n + 2
+// Точка 0 - взлёт, 1..n - турбины. visit - только турбины по порядку,
+// path - с взлётом в начале (и в конце для closed), длина n + 1 или n + 2
 
 export interface RouteModel {
   // Число турбин
   n: number
-  // Число точек вместе со взлётом, сторона матрицы расстояний
+  // n + 1 (со взлётом), сторона матрицы
   size: number
   closed: boolean
   pathSize: number
   points: LocalPoint[]
-  // Расстояния в плоскости, м: dist[i * size + j]
+  // Метры, dist[i * size + j]
   dist: Float64Array
   rule: TurnRule
-  // Штраф за поворот в вершине b на пути a → b → c (индексы точек) и нарушение ли это
+  // Штраф за поворот в b на пути a -> b -> c и нарушение ли это
   turnPenalty(a: number, b: number, c: number): number
   turnViolates(a: number, b: number, c: number): boolean
 }
@@ -58,7 +57,7 @@ export function createRouteModel(points: LocalPoint[], closed: boolean, thetaMax
 export function pathFromVisit(model: RouteModel, visit: ArrayLike<number>): Int32Array {
   const path = new Int32Array(model.pathSize)
   for (let k = 0; k < visit.length; k++) path[k + 1] = visit[k]
-  // Взлёт в начале и в конце — нули, их даёт сам Int32Array
+  // Взлёт по краям = 0, Int32Array и так в нулях
   return path
 }
 
@@ -66,7 +65,7 @@ export function visitFromPath(model: RouteModel, path: Int32Array): number[] {
   return Array.from(path.subarray(1, model.n + 1))
 }
 
-// Длина в плоскости: взлёт → турбины → (взлёт)
+// Длина взлёт -> турбины -> (взлёт)
 export function visitLengthM(model: RouteModel, visit: ArrayLike<number>): number {
   const { dist, size } = model
   let total = 0
@@ -79,7 +78,7 @@ export function visitLengthM(model: RouteModel, visit: ArrayLike<number>): numbe
   return total
 }
 
-// Целевая функция: длина плюс штрафы за крутые повороты
+// Длина + штрафы за крутые повороты
 export function visitCost(model: RouteModel, visit: ArrayLike<number>): number {
   if (!model.rule.limited) return visitLengthM(model, visit)
   const { dist, size } = model

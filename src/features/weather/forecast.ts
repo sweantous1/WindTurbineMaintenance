@@ -4,8 +4,7 @@ import type { DroneProfile, FlightPlan, Mission, WeatherHour } from '@/domain/ty
 import { findHour } from '@/domain/weather'
 import { forecastDistanceM, isFarFromFarm } from './location'
 
-// План полёта для проверки погоды: нужны ферма, точка взлёта и порядок облёта.
-// Потолок — общий для миссии и дрона: выше своего потолка дрон всё равно не поднимется
+// план полёта для проверки погоды, потолок общий для миссии и дрона
 export function missionFlightPlan(m: Mission, drone: DroneProfile): FlightPlan | undefined {
   const { farm, takeoff, route } = m
   if (!farm || !takeoff || !route || route.order.length === 0) return undefined
@@ -17,14 +16,14 @@ export function missionFlightPlan(m: Mission, drone: DroneProfile): FlightPlan |
     maxAltitudeM: effectiveLimits(m.limits, drone).maxAltitudeM,
     returnToTakeoff: route.returnToTakeoff,
   })
-  // Порядок ссылается только на удалённые турбины — такой «план» из взлёта и посадки ничего не оценит
+  // в порядке остались только удалённые турбины, оценивать нечего
   return plan.turbineOrder.length > 0 ? plan : undefined
 }
 
-// Чего не хватает для вердикта — в том порядке, в каком это делают на экранах
+// чего не хватает для вердикта, в порядке шагов на экранах
 export type ForecastGap = 'route' | 'weather' | 'departure' | 'departureMissing'
 
-// Маршрут есть, но план полёта не построить: без него нет оценки заряда
+// маршрут есть, но план не строится, значит без оценки заряда
 export type PlanIssue = 'takeoff' | 'staleRoute'
 
 export type MissionForecast =
@@ -35,7 +34,7 @@ export type MissionForecast =
       plan?: FlightPlan
       planIssue?: PlanIssue
       assessment: HourAssessment
-      // Прогноз снят далеко от нынешнего центра фермы, метры
+      // м от точки прогноза до центра фермы, если это далеко
       farFromFarmM?: number
     }
 
@@ -56,7 +55,7 @@ export function missionForecast(m: Mission, drone: DroneProfile): MissionForecas
   let assessment = assessHour(hour, { limits: m.limits, drone, plan, flightAltitudeM: m.flightAltitudeM })
   const distanceM = forecastDistanceM(m)
   const far = isFarFromFarm(distanceM)
-  // Погода чужого места ничего не говорит о ферме: «Можно лететь» по ней было бы неправдой
+  // по погоде в другом месте "можно" не ставим
   if (far && assessment.status === 'ok') assessment = { ...assessment, status: 'marginal' }
   return {
     gap: null,
@@ -68,7 +67,7 @@ export function missionForecast(m: Mission, drone: DroneProfile): MissionForecas
   }
 }
 
-// Экран, на котором закрывается пробел
+// экран, где это исправить
 export function gapScreen(gap: ForecastGap | PlanIssue): '/router' | '/weather' {
   return gap === 'route' || gap === 'takeoff' || gap === 'staleRoute' ? '/router' : '/weather'
 }

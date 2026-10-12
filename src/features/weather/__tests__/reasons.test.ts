@@ -54,7 +54,6 @@ describe('причины вердикта', () => {
     expect(formatReason(impossible, ru, 'ru')).not.toContain('∞')
   })
 
-  // Находка: «видимость 3 км при минимуме 3 км» при вердикте «нельзя» — значение округлялось до лимита
   it('значение не выглядит равным лимиту, если на деле отличается', () => {
     expect(formatReason(r({ code: 'visibility', value: 2.96, limit: 3 }), ru, 'ru')).toBe('видимость 2,96 км при минимуме 3 км')
     expect(formatReason(r({ code: 'wind', value: 11.9568, limit: 12, altM: 100, severity: 'marginal' }), ru, 'ru')).toBe(

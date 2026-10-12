@@ -5,9 +5,8 @@ import { gustAtAltitude, windAtAltitude } from './weather'
 export type HourStatus = 'ok' | 'marginal' | 'no' | 'insufficient'
 export type ReasonCode = 'wind' | 'gust' | 'precip' | 'temp' | 'visibility' | 'battery' | 'altitude' | 'conflict'
 
-// value и limit — в единицах проверки: м/с, мм/ч, °C, км, м; для battery — % заряда
-// (худший случай против доступного без резерва; при невозможности долететь value = Infinity);
-// для conflict — число конфликтов плана (как в сводке экрана маршрута) при допустимом нуле
+// value и limit в единицах проверки (м/с, мм/ч, °C, км, м); battery - % заряда, Infinity если не долететь;
+// conflict - число конфликтов плана при лимите 0
 export interface Reason {
   code: ReasonCode
   severity: 'marginal' | 'no'
@@ -39,9 +38,8 @@ export function effectiveLimits(limits: MissionLimits, drone: DroneProfile): Eff
   }
 }
 
-// Высота транзита без плана полёта. Миссия выше потолка — не запрет: план прижимает транзит
-// к потолку (buildFlightPlan), и до построения маршрута вердикт и график ветра обязаны считать
-// так же, иначе вердикт менялся бы с «нельзя» на «можно» от одного нажатия «Построить маршрут»
+// Высота транзита без плана: прижимаем к потолку, как buildFlightPlan,
+// чтобы вердикт не менялся после построения маршрута
 export function transitAltitudeM(flightAltitudeM: number, lim: Pick<EffectiveLimits, 'maxAltitudeM'>): number {
   return Math.min(flightAltitudeM, lim.maxAltitudeM)
 }
@@ -56,12 +54,11 @@ export interface MissionEstimate {
   sorties: number
 }
 
-// Путевая скорость ниже этой — дрон против ветра фактически висит на месте
+// Ниже этой путевой скорости дрон против ветра по сути висит на месте
 const MIN_GROUND_SPEED_MS = 0.5
 // Чтобы 80,0000001% из 80% не превращались во второй вылет
 const SORTIE_EPSILON = 1e-9
-// Порог «на грани» — произведение: 0,8 × 12 = 9,600000000000001, и без допуска
-// ветер ровно 9,6 м/с (Open-Meteo даёт две цифры после запятой) считался бы «можно»
+// 0.8 * 12 = 9.600000000000001, без допуска ветер ровно 9.6 м/с не попадёт в "на грани"
 const COMPARE_EPSILON = 1e-9
 
 const atLeast = (value: number, threshold: number) => value >= threshold - COMPARE_EPSILON
@@ -71,9 +68,8 @@ export function estimateMission(lengthM: number, drone: DroneProfile, windMs?: n
   if (lengthM <= 0) {
     return { lengthM, timeMin: 0, timeWorstMin: 0, batteryPct: 0, batteryWorstPct: 0, usablePct, sorties: 1 }
   }
-  // Худший случай: встречный ветер на всём маршруте. Сравнения записаны «от хорошего»,
-  // чтобы NaN и неположительные значения из профиля, который правят руками, давали
-  // «не долететь», а не «заряда хватит»
+  // Худший случай - встречный ветер на всём маршруте. Сравнения "от хорошего",
+  // чтобы NaN и <= 0 из профиля давали "не долететь"
   const groundMs = drone.cruiseSpeedMs - Math.max(0, windMs ?? 0)
   const timeMin = drone.cruiseSpeedMs > 0 ? lengthM / drone.cruiseSpeedMs / 60 : Infinity
   const timeWorstMin = groundMs > MIN_GROUND_SPEED_MS ? lengthM / groundMs / 60 : Infinity
@@ -91,13 +87,13 @@ export interface HourAssessment {
   estimate?: MissionEstimate
 }
 
-// Без плана — высота транзита, уже прижатая к потолку (transitAltM)
+// Без плана только высота транзита, уже прижатая к потолку
 function checkAltitudes(plan: FlightPlan | undefined, transitAltM: number): number[] {
   const alts = plan ? [...plan.altitudeLevelsM, plan.maxAltM] : [transitAltM]
   return [...new Set(alts.filter(Number.isFinite))].sort((a, b) => a - b)
 }
 
-// Ветер и порывы: «нет» с лимита, «на грани» с доли MARGINAL_FRACTION лимита
+// Ветер и порывы: "нет" от лимита, "на грани" от MARGINAL_FRACTION лимита
 function upperLimitReason(code: ReasonCode, value: number, limit: number, altM?: number): Reason | null {
   let severity: Reason['severity']
   if (atLeast(value, limit)) severity = 'no'
@@ -116,9 +112,8 @@ function worstAt<T extends { altM: number }>(items: T[], pick: (x: T) => number 
   return worst
 }
 
-// Худший средний ветер на высотах плана — тот же, по которому assessHour оценивает заряд
-// (встречный на всём пути). Экраны, показывающие число вылетов, берут ветер отсюда,
-// чтобы не расходиться с вердиктом часа
+// Худший средний ветер на высотах плана, тот же, что в assessHour для заряда.
+// Экраны с числом вылетов берут его отсюда, чтобы совпадать с вердиктом
 export function planWorstWindMs(h: WeatherHour, plan: FlightPlan): number | undefined {
   const byAlt = checkAltitudes(plan, plan.transitAltM).map((altM) => ({ altM, ms: windAtAltitude(h, altM).ms }))
   return worstAt(byAlt, (w) => w.ms)?.value
@@ -146,7 +141,7 @@ export function assessHour(
   const worstGust = worstAt(windByAlt, (w) => w.gustMs)
   if (worstGust) add(upperLimitReason('gust', worstGust.value, lim.maxGustMs, worstGust.altM))
 
-  // Осадки — мм/ч, а не вероятность в процентах: эталон их путал
+  // Осадки в мм/ч, не вероятность в %
   const precip = h.precipitationMm
   if (precip != null) {
     if (precip > lim.maxPrecipMmH) add({ code: 'precip', severity: 'no', value: precip, limit: lim.maxPrecipMmH })
@@ -164,7 +159,7 @@ export function assessHour(
     add({ code: 'visibility', severity: 'no', value: vis, limit: lim.minVisibilityKm })
   }
 
-  // Выше потолка может оказаться только облёт ступицы, а её высоту знает лишь план
+  // Выше потолка может быть только облёт ступицы, а её высоту знает только план
   const topAltM = ctx.plan ? ctx.plan.maxAltM : transitAltM
   if (topAltM > lim.maxAltitudeM) {
     add({ code: 'altitude', severity: 'no', value: topAltM, limit: lim.maxAltitudeM, altM: topAltM })
@@ -177,8 +172,7 @@ export function assessHour(
     const altM = worstWind ? { altM: worstWind.altM } : {}
     if (!Number.isFinite(estimate.sorties)) add({ ...battery, severity: 'no', ...altM })
     else if (estimate.sorties > 1) add({ ...battery, severity: 'marginal', ...altM })
-    // Маршрут заходит в безопасную зону башен. Погода тут ни при чём, но «можно лететь,
-    // всё в пределах» с таким планом писать нельзя: пусть человек посмотрит на маршрут
+    // Маршрут заходит в зону башен: к погоде не относится, но "можно" с таким планом не пишем
     if (ctx.plan.conflicts.length > 0) {
       add({ code: 'conflict', severity: 'marginal', value: ctx.plan.conflicts.length, limit: 0 })
     }

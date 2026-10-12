@@ -127,7 +127,7 @@ describe('высота полёта', () => {
     expect(FLIGHT_ALTITUDE_RANGE).toEqual({ min: FLIGHT_ALTITUDE_MIN_M, max: FLIGHT_ALTITUDE_MAX_M })
     expect(FLIGHT_ALTITUDE_RANGE).toEqual({ min: 10, max: 500 })
     expect(parseNumberInput('500', FLIGHT_ALTITUDE_RANGE)).toBe(500)
-    // Раньше экран маршрута принимал до 1000 м, и параметры миссии потом не сохранялись
+    // выше границы окна параметров миссии нельзя, иначе миссия там не сохранится
     expect(parseNumberInput('600', FLIGHT_ALTITUDE_RANGE)).toBeNull()
     expect(parseNumberInput('9', FLIGHT_ALTITUDE_RANGE)).toBeNull()
   })

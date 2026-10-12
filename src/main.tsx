@@ -6,8 +6,7 @@ import './index.css'
 import App from './App.tsx'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 
-// HashRouter, а не BrowserRouter: собранное Electron-приложение открывается через file://,
-// и BrowserRouter видит путь вида /C:/.../dist/index.html, не совпадающий ни с одним маршрутом
+// HashRouter: в собранном Electron BrowserRouter видит путь к index.html, а не маршрут
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>

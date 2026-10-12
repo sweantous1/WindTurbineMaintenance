@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => {
         },
         preload: {
           input: 'electron/preload.ts',
-          // Пресет собирает preload в CommonJS, но при "type": "module" даёт ему расширение .mjs,
-          // и Electron грузит файл как ES-модуль. Расширение .cjs однозначно означает CommonJS.
+          // Пресет собирает preload в CommonJS, но при "type": "module" называет его .mjs,
+          // и Electron грузит его как ESM. С .cjs такого нет
           vite: {
             build: {
               rolldownOptions: {
@@ -34,11 +34,9 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    // Собранное приложение открывается через file://, поэтому пути к ассетам относительные
     base: isElectron ? './' : '/',
     plugins,
-    // onnxruntime-web находит свой .wasm через new URL(..., import.meta.url);
-    // предварительная сборка зависимостей в dev ломает этот путь
+    // onnxruntime-web ищет свой .wasm через new URL(..., import.meta.url), пребандл в dev ломает этот путь
     optimizeDeps: {
       exclude: ['onnxruntime-web'],
     },
@@ -46,7 +44,7 @@ export default defineConfig(({ mode }) => {
       format: 'es',
     },
     build: {
-      // three.js с R3F — около 1 МБ в ленивом чанке экрана 3D; стартовый бандл намного меньше
+      // three.js с R3F около 1 МБ в ленивом чанке 3D, стартовый бандл намного меньше
       chunkSizeWarningLimit: 1200,
     },
     resolve: {

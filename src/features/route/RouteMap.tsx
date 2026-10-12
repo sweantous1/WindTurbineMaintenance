@@ -30,7 +30,7 @@ interface RouteMapProps {
   addMode: boolean
   onAddModeChange: (enabled: boolean) => void
   onAddTurbine: (p: GeoPoint) => void
-  // false — правка не сохранилась, маркер возвращается на место
+  // false - не сохранилось, маркер возвращается на место
   onMoveTurbine: (id: string, p: GeoPoint) => Promise<boolean>
   onDeleteTurbine: (id: string) => void
   onMoveTakeoff: (p: GeoPoint) => Promise<boolean>
@@ -38,7 +38,7 @@ interface RouteMapProps {
 }
 
 const FIT_OPTIONS: L.FitBoundsOptions = { padding: [48, 48], maxZoom: 16 }
-// Без фермы и без подсказки, куда смотреть, — весь мир: зашитого «центра» нет
+// если нет ни фермы, ни подсказки, куда смотреть, показываем весь мир
 const WORLD_VIEW = { center: [20, 0] as LatLngTuple, zoom: 2 }
 const FALLBACK_ZOOM = 12
 const FOCUS_ZOOM = 15
@@ -52,7 +52,7 @@ const COLORS = {
 
 type TurbineState = 'route' | 'free' | 'conflict'
 
-// Иконки кэшируются: новая иконка на каждый рендер заставила бы Leaflet пересоздавать маркер
+// кэш иконок, иначе Leaflet пересоздаёт маркер на каждый рендер
 const iconCache = new Map<string, L.DivIcon>()
 
 function turbineIcon(label: string, state: TurbineState): L.DivIcon {
@@ -98,9 +98,8 @@ const CONFLICT_POINT_STYLE: L.PathOptions = { color: COLORS.conflict, weight: 3,
 
 const toGeo = (ll: L.LatLng): GeoPoint => ({ lat: ll.lat, lon: L.Util.wrapNum(ll.lng, [-180, 180], true) })
 
-// Перетащенный маркер Leaflet уже стоит на новом месте; если правка не сохранилась (миссию
-// облетали в другом окне, ошибка базы), позиция из данных не меняется и react-leaflet
-// маркер назад не вернёт — возвращаем сами, чтобы карта не показывала несохранённое
+// если сохранить не вышло (миссию облетали в другом окне, ошибка БД), react-leaflet
+// сам маркер назад не вернёт, поэтому возвращаем вручную
 function dragEndHandler(save: (p: GeoPoint) => Promise<boolean>, position: RefObject<LatLngTuple>): L.LeafletEventHandlerFn {
   return (e) => {
     const marker = e.target as L.Marker
@@ -128,7 +127,7 @@ function ClickToAdd({ enabled, onAdd }: { enabled: boolean; onAdd: (p: GeoPoint)
     if (!enabled) return
     const el = map.getContainer()
     el.style.cursor = 'crosshair'
-    // Двойной щелчок в этом режиме поставил бы две турбины и ещё приблизил бы карту
+    // даблклик в этом режиме ставил бы две турбины и ещё зумил карту
     map.doubleClickZoom.disable()
     return () => {
       el.style.cursor = ''
@@ -138,7 +137,7 @@ function ClickToAdd({ enabled, onAdd }: { enabled: boolean; onAdd: (p: GeoPoint)
   return null
 }
 
-// Кнопки масштаба, ссылка на Leaflet и закрытие всплывающих окон — на языке интерфейса
+// подписи контролов Leaflet на языке интерфейса
 function MapLabels() {
   const map = useMap()
   const { t } = useTranslation()
@@ -331,10 +330,8 @@ function RouteMap({
   const conflictTurbines = useMemo(() => new Set(plan?.conflicts.map((c) => c.turbineId)), [plan])
   const takeoffPosition = usePositionRef(takeoff)
   const takeoffLabel = t('routePlan.map.takeoff')
-  // Маркер с клавиатуры доступен как кнопка, но у divIcon Leaflet ставит только title,
-  // а он продублировал бы всплывающую подсказку; имя для экранного диктора — отдельно.
-  // Ставится по 'add': MapContainer рисует маркеры со второго рендера, и эффект при открытии
-  // экрана маркера ещё не застаёт
+  // aria-имя для скринридера ставим сами (title у divIcon дублировал бы тултип).
+  // По 'add', потому что MapContainer рисует маркеры только со второго рендера
   const takeoffHandlers = useMemo<L.LeafletEventHandlerFnMap>(
     () => ({
       dragend: dragEndHandler(onMoveTakeoff, takeoffPosition),
@@ -343,7 +340,7 @@ function RouteMap({
     [onMoveTakeoff, takeoffPosition, takeoffLabel],
   )
   const takeoffMarker = useRef<L.Marker>(null)
-  // Смена языка на открытой карте: маркер уже на месте, 'add' не повторится
+  // смена языка на открытой карте: 'add' уже не придёт
   useEffect(() => {
     labelElement(takeoffMarker.current?.getElement(), takeoffLabel)
   }, [takeoffLabel])
@@ -351,7 +348,7 @@ function RouteMap({
   const [tilesFailed, setTilesFailed] = useState(false)
   const tileHandlers = useMemo<L.LeafletEventHandlerFnMap>(() => tileStatusHandlers(setTilesFailed), [])
   const tileLayer = useRef<L.TileLayer>(null)
-  // Упавшие тайлы Leaflet сам не запрашивает: без этого после возврата сети вид остался бы серым
+  // упавшие тайлы Leaflet сам не перезапрашивает, перерисовываем при появлении сети
   useEffect(() => {
     const retry = () => tileLayer.current?.redraw()
     window.addEventListener('online', retry)
@@ -387,17 +384,17 @@ function RouteMap({
       {addMode && editable && (
         <div className="px-4 py-1.5 text-xs text-blue-800 bg-blue-50 border-b border-blue-100">{t('routePlan.map.addModeHint')}</div>
       )}
-      {/* Область объявлений есть всегда: вставленную вместе с текстом диктор может не прочесть */}
+      {/* role=status держим в DOM всегда, иначе скринридер может не прочитать новый текст */}
       <div role="status">
         {tilesFailed && (
           <div className="px-4 py-1.5 text-xs text-amber-800 bg-amber-50 border-b border-amber-100">{t('routePlan.map.tilesUnavailable')}</div>
         )}
       </div>
       <div className="h-[540px]">
-        {/* Кнопки масштаба ставит MapLabels: у стандартных подписи только английские */}
+        {/* зум-кнопки ставит MapLabels, у стандартных подписи только на английском */}
         <MapContainer {...initialView} className="h-full w-full" worldCopyJump zoomControl={false}>
           <MapLabels />
-          {/* Условия OpenStreetMap требуют видимой атрибуции */}
+          {/* OSM требует видимую атрибуцию */}
           <TileLayer
             ref={tileLayer}
             eventHandlers={tileHandlers}
@@ -406,7 +403,7 @@ function RouteMap({
             maxZoom={19}
           />
           <ClickToAdd enabled={addMode && editable} onAdd={onAddTurbine} />
-          {/* Ферму вписываем заново после импорта (новое время импорта) и по кнопке */}
+          {/* перевписываем ферму после импорта и по кнопке */}
           <FitView bounds={bounds} nonce={`${farm?.source?.importedAt ?? ''}|${localFit}`} />
           <FocusTurbine focus={focus} markers={markers} />
 

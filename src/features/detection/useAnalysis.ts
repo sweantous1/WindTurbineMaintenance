@@ -4,8 +4,7 @@ import { DetectCancelledError, ModelMissingError, getDetectionEngine, type Detec
 import { photos } from '@/storage/photos'
 import { createAnalysisRunner, errorCode, type AnalysisErrorCode, type RunnerSnapshot } from './analysisRunner'
 
-// Одна очередь анализа на приложение — как и движок, который она использует.
-// Экран поиска дефектов останавливает её при уходе с экрана (useCancelAnalysisOnLeave)
+// Одна очередь на приложение, как и движок; при уходе с экрана её гасит useCancelAnalysisOnLeave
 export const analysisRunner = createAnalysisRunner({
   engine: getDetectionEngine,
   getImage: async (photoId) => (await photos.getBlob(photoId))?.blob,
@@ -13,15 +12,14 @@ export const analysisRunner = createAnalysisRunner({
   now: () => new Date().toISOString(),
 })
 
-// При горячей замене модуля в dev старая очередь иначе продолжала бы писать в базу
+// HMR: чтобы старая очередь не продолжала писать в базу
 import.meta.hot?.dispose(() => analysisRunner.cancel())
 
 export function useAnalysisRunner(): RunnerSnapshot {
   return useSyncExternalStore(analysisRunner.subscribe, analysisRunner.getSnapshot)
 }
 
-// Анализ фото миссии идёт, пока открыт её экран: иначе очередь писала бы в базу незаметно для оператора
-// (в том числе в миссию, которую тем временем отправили в архив)
+// Анализ идёт, только пока открыт экран миссии, чтобы не писать в базу втихую (в т.ч. в архивную)
 export function useCancelAnalysisOnLeave(missionId: string): void {
   useEffect(
     () => () => {
@@ -39,17 +37,16 @@ export type EngineStatus =
 
 export function engineStatusFromError(error: unknown): EngineStatus {
   if (error instanceof ModelMissingError) return { kind: 'missing' }
-  // Загрузку оборвали (горячая замена модуля) — это сбой потока, а не модели
+  // Загрузку оборвал HMR - это сбой воркера, а не модели
   if (error instanceof DetectCancelledError) return { kind: 'failed', code: 'workerFailed' }
   return { kind: 'failed', code: errorCode(error) }
 }
 
-// Последнее известное состояние: вернувшийся на экран пользователь не видит мигания «загрузка»
+// Помним последнее состояние, чтобы при возврате на экран не мигала загрузка
 let lastStatus: EngineStatus = { kind: 'loading' }
 
-// Модель грузится при открытии экрана: без неё неизвестно, можно ли анализировать и на чём считать.
-// Движок держит загруженную модель, повторный вызов load() отвечает сразу.
-// recheck — по кнопке, с индикатором загрузки; refresh — тихо, после анализа
+// Грузим модель при открытии экрана; движок её держит, повторный load() отвечает сразу.
+// recheck - по кнопке, с индикатором; refresh - тихо, после анализа
 export function useEngineStatus(): { status: EngineStatus; recheck: () => void; refresh: () => void } {
   const [status, setStatus] = useState<EngineStatus>(lastStatus)
   const [attempt, setAttempt] = useState(0)

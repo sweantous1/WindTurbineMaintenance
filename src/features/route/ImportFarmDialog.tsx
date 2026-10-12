@@ -10,9 +10,9 @@ import { formatNumber } from './format'
 interface ImportFarmDialogProps {
   imp: FarmImport
   currentFarm?: Farm
-  // Сохранённая точка взлёта миссии; undefined — не задана, станет центром новой фермы
+  // точка взлёта миссии; undefined - не задана, станет центром новой фермы
   takeoff?: GeoPoint
-  // Сохранённый прогноз миссии и выбран ли по нему час вылета: далёкий прогноз импорт сбросит
+  // прогноз миссии и выбран ли по нему час вылета: если ферма далеко, импорт его сбросит
   weather?: WeatherSnapshot
   hasDepartureTime: boolean
   hasRoute: boolean
@@ -32,7 +32,7 @@ function Stat({ label, value, hint, tone = 'normal' }: { label: string; value: s
   )
 }
 
-// Что нашлось в файле и чем новая ферма отличается от текущей — до того, как что-то заменится
+// Показывает, что нашлось в файле и чем новая ферма отличается от текущей, до замены
 export default function ImportFarmDialog({
   imp,
   currentFarm,
@@ -54,15 +54,15 @@ export default function ImportFarmDialog({
   const [moveTakeoff, setMoveTakeoff] = useState(takeoffFar)
   const weatherDistanceM = importWeatherDistanceM(weather, imp)
   const dropsWeather = importDropsWeather(weather, imp)
-  // Имя — то, что реально сохранится: прежнее переходит только к той же ферме
+  // имя, которое реально сохранится: старое переносится только на ту же ферму
   const farmName = importedFarmName(imp, currentFarm)
   const n = (v: number) => formatNumber(v, lang)
   const actions = useRef<HTMLDivElement>(null)
-  // Только на момент открытия: ферму могли поменять в другом окне, фокус от этого не прыгает
+  // фиксируем на момент открытия, чтобы фокус не прыгал, если ферму поменяли в другом окне
   const focusCancel = useRef(replacing)
 
-  // Фокус — в окно: при замене фермы на «Отмену», чтобы Enter случайно не сбросил маршрут.
-  // После закрытия он возвращается туда, где был (кнопка импорта)
+  // при замене фермы фокус на "Отмене", чтобы Enter случайно не сбросил маршрут;
+  // после закрытия возвращаем фокус на кнопку импорта
   useEffect(() => {
     const previous = document.activeElement
     const buttons = actions.current?.querySelectorAll('button')

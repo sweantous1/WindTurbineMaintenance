@@ -1,6 +1,5 @@
-// Часы проигрывания облёта. Кадр 3D читает точное время через timeS() каждый кадр,
-// а интерфейс подписывается через useSyncExternalStore и перерисовывается не чаще
-// notifyIntervalS: панели незачем обновляться 60 раз в секунду
+// Часы облёта. Сцена читает timeS() каждый кадр, а UI подписан через useSyncExternalStore
+// и обновляется не чаще notifyIntervalS
 
 export interface SimSnapshot {
   timeS: number
@@ -64,7 +63,7 @@ export function createSimClock(durationS: number, opts: { speed?: number; notify
 
   function play() {
     if (duration <= 0) return
-    // Повтор после конца — с начала
+    // Повтор после конца идёт с начала
     if (time >= duration) time = 0
     playing = true
     notify()

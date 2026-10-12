@@ -11,8 +11,7 @@ export interface SnapshotExport {
   snapshot: WeatherSnapshot
 }
 
-// Снимок как есть плюс, к какой миссии и часу вылета он относится: без этого файл
-// через месяц ни с чем не сопоставить
+// снимок + миссия и час вылета, чтобы файл потом было с чем сопоставить
 export function buildSnapshotExport(
   m: Pick<Mission, 'id' | 'name' | 'departureTime'>,
   snapshot: WeatherSnapshot,
@@ -28,7 +27,7 @@ export function buildSnapshotExport(
   }
 }
 
-// Запрещённые в Windows символы и пробелы — в подчёркивания; имя миссии бывает любым
+// запрещённые в Windows символы и пробелы заменяем на _
 export function snapshotFileName(missionName: string, fetchedAt: string): string {
   const printable = Array.from(missionName, (ch) => (ch.charCodeAt(0) < 32 ? '_' : ch)).join('')
   const name =
@@ -50,7 +49,6 @@ export function downloadJson(fileName: string, data: unknown): void {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  // Сразу отзывать нельзя: загрузка стартует асинхронно, а в Electron сперва открывается
-  // окно сохранения. Запас как у экспорта маршрута
+  // не сразу: загрузка асинхронная, а в Electron сначала открывается окно сохранения
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }

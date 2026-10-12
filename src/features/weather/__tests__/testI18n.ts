@@ -15,8 +15,7 @@ export const dictionaries: Record<'ru' | 'en', Dict[]> = {
 
 const merge = (parts: Dict[]): Dict => Object.assign({}, ...parts)
 
-// Отдельный экземпляр i18next с настоящими словарями экрана: как в src/i18n/index.ts,
-// но без детектора языка и без общих словарей приложения
+// свой экземпляр i18next со словарями экрана, без детектора языка и общих словарей
 export async function makeT(lng: 'ru' | 'en'): Promise<TFunction> {
   const inst = i18next.createInstance()
   await inst.init({

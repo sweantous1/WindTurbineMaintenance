@@ -10,7 +10,7 @@ function numberFormat(lang: string, min: number, max: number): Intl.NumberFormat
   return f
 }
 
-// Уверенность и порог — всегда две цифры после запятой: «0,87», «0,10»
+// Всегда два знака: 0,87 / 0,10
 export function formatConfidence(value: number, lang: string): string {
   return numberFormat(lang, 2, 2).format(value)
 }
@@ -23,7 +23,7 @@ export function formatMegabytes(bytes: number, lang: string): string {
   return numberFormat(lang, 1, 1).format(bytes / (1024 * 1024))
 }
 
-// Длительность анализа: до минуты — секунды (до 10 с с десятыми), дальше минуты и секунды
+// До 10 с - секунды с десятыми, дальше минуты и целые секунды
 export function durationParts(ms: number): { minutes: number; seconds: number } {
   const safe = Number.isFinite(ms) && ms > 0 ? ms : 0
   if (safe < 10_000) return { minutes: 0, seconds: Math.round(safe / 100) / 10 }

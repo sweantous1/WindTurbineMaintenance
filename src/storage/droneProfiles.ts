@@ -8,7 +8,7 @@ export function createDroneProfileRepository(database: WtmDatabase = db) {
     return database.droneProfiles.toArray()
   }
 
-  // Профиль по id; если его удалили — профиль по умолчанию, чтобы расчёты не ломались
+  // Если профиль удалили, отдаём профиль по умолчанию, чтобы расчёты не ломались
   async function getOrDefault(id: string | undefined): Promise<DroneProfile> {
     if (id) {
       const found = await database.droneProfiles.get(id)

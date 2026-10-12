@@ -1,4 +1,4 @@
-// Рамка x1, y1 — левый верхний угол, x2, y2 — правый нижний, в пикселях
+// x1,y1 - левый верхний угол, x2,y2 - правый нижний, в пикселях
 export interface Box {
   x1: number
   y1: number
@@ -6,20 +6,20 @@ export interface Box {
   y2: number
 }
 
-// Серый фон полей, как в LetterBox ultralytics: на нём модель и обучалась
+// Серый фон полей как в LetterBox ultralytics, на нём модель обучалась
 export const LETTERBOX_FILL_BYTE = 114
 export const LETTERBOX_FILL = LETTERBOX_FILL_BYTE / 255
 
-// Как фрагмент srcW×srcH вписан в квадратный вход size×size
+// Как фрагмент srcW x srcH вписан в квадрат size x size
 export interface Letterbox {
   size: number
   srcW: number
   srcH: number
   scale: number
-  // Размер уменьшенного (увеличенного) фрагмента внутри входа
+  // Размер отмасштабированного фрагмента внутри входа
   newW: number
   newH: number
-  // Отступ слева и сверху; остаток поля — справа и снизу
+  // Отступ слева и сверху, остаток поля справа и снизу
   padX: number
   padY: number
 }
@@ -29,18 +29,18 @@ export function letterbox(srcW: number, srcH: number, size = 640): Letterbox {
   const scale = Math.min(size / srcW, size / srcH)
   const newW = Math.min(size, Math.max(1, Math.round(srcW * scale)))
   const newH = Math.min(size, Math.max(1, Math.round(srcH * scale)))
-  // −0.1 повторяет ultralytics: при нечётном поле лишний пиксель уходит вправо и вниз
+  // -0.1 как в ultralytics: при нечётном поле лишний пиксель уходит вправо/вниз
   const padX = Math.max(0, Math.round((size - newW) / 2 - 0.1))
   const padY = Math.max(0, Math.round((size - newH) / 2 - 0.1))
   return { size, srcW, srcH, scale, newW, newH, padX, padY }
 }
 
-// Масштаб по каждой оси берётся от фактического размера после округления: фрагмент рисуется ровно в newW×newH
+// Масштаб от размера после округления, фрагмент рисуется ровно в newW x newH
 function axisScale(lb: Letterbox): { sx: number; sy: number } {
   return { sx: lb.newW / lb.srcW, sy: lb.newH / lb.srcH }
 }
 
-// Координаты фрагмента → координаты входа модели
+// Фрагмент -> вход модели
 export function toLetterbox(lb: Letterbox, box: Box): Box {
   const { sx, sy } = axisScale(lb)
   return {
@@ -51,7 +51,7 @@ export function toLetterbox(lb: Letterbox, box: Box): Box {
   }
 }
 
-// Координаты входа модели → координаты фрагмента (без обрезки по краям)
+// Вход модели -> фрагмент, без обрезки
 export function fromLetterbox(lb: Letterbox, box: Box): Box {
   const { sx, sy } = axisScale(lb)
   return {
@@ -62,8 +62,8 @@ export function fromLetterbox(lb: Letterbox, box: Box): Box {
   }
 }
 
-// RGBA size×size (как из getImageData) → плоский CHW float32 RGB 0..1 для входа [1, 3, size, size].
-// out можно передать повторно, чтобы не выделять 5 МБ на каждый фрагмент
+// RGBA из getImageData -> CHW float32 0..1 для входа [1, 3, size, size].
+// out можно переиспользовать, чтобы не выделять 5 МБ на каждый фрагмент
 export function rgbaToChw(rgba: ArrayLike<number>, size: number, out?: Float32Array): Float32Array {
   const plane = size * size
   if (rgba.length < plane * 4) throw new RangeError(`Ожидалось ${plane * 4} байт RGBA, получено ${rgba.length}`)

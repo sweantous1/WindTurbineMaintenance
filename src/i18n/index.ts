@@ -6,8 +6,8 @@ import ru from './ru.json'
 
 type Dict = { [key: string]: string | Dict }
 
-// Переводы новых функций лежат по файлам src/i18n/features/<функция>.<язык>.json
-// и сливаются с общими словарями — так разные экраны не правят один и тот же файл
+// Переводы функций лежат в features/<функция>.<язык>.json и сливаются с общими словарями,
+// чтобы экраны не правили один файл
 const featureFiles = import.meta.glob<{ default: Dict }>('./features/*.json', { eager: true })
 
 function deepMerge(target: Dict, source: Dict): Dict {
@@ -39,7 +39,7 @@ i18n
       en: { translation: withFeatures(en as Dict, 'en') },
       ru: { translation: withFeatures(ru as Dict, 'ru') },
     },
-    // Системный 'ru-RU' сводится к 'ru', иначе переключатель языка срабатывает не с первого раза
+    // 'ru-RU' -> 'ru', иначе переключатель языка срабатывает не с первого раза
     supportedLngs: ['ru', 'en'],
     nonExplicitSupportedLngs: true,
     load: 'languageOnly',

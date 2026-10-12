@@ -1,7 +1,7 @@
 import type { GeoPoint } from '@/domain/types'
 
-// Одна система координат для карты, маршрута, прогноза и 3D: WGS84 хранится,
-// а считается всё в локальных метрах (ENU) от центра фермы. Зашитой зоны UTM и меркатора нет.
+// Храним WGS84, считаем в локальных метрах (ENU) от центра фермы. Одна система для карты,
+// маршрута, прогноза и 3D, без зашитой зоны UTM и меркатора
 
 export interface LocalPoint {
   // Метры на восток от начала координат
@@ -21,8 +21,8 @@ const WGS84_E2 = 6.69437999014e-3
 const EARTH_R = 6371008.8
 const RAD = Math.PI / 180
 
-// Касательная плоскость в origin с радиусами кривизны эллипсоида. Сверка с Винсенти:
-// до 10 км от центра расхождение меньше 0,05%, до 30 км — около 0,1%. Для фермы этого хватает.
+// Касательная плоскость в origin с радиусами кривизны эллипсоида. Против Винсенти до 10 км
+// ошибка меньше 0,05%, до 30 км около 0,1%, для фермы хватает
 export function makeLocalFrame(origin: GeoPoint): LocalFrame {
   const phi = origin.lat * RAD
   const sin = Math.sin(phi)
@@ -85,7 +85,7 @@ export function distPointToSegment(p: LocalPoint, a: LocalPoint, b: LocalPoint):
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy))
 }
 
-// Азимут: 0° — север, по часовой стрелке
+// Азимут: 0° север, по часовой
 export function bearingDeg(a: GeoPoint, b: GeoPoint): number {
   const phi1 = a.lat * RAD
   const phi2 = b.lat * RAD

@@ -2,8 +2,7 @@ import type { PhotoRecord } from '@/domain/detection'
 import type { Farm, GeoPoint, Turbine } from '@/domain/types'
 import { haversineM } from '@/lib/geo'
 
-// Дальше этого снимок вряд ли относится к турбине: радиус ротора до ~85 м плюс дистанция облёта
-// и погрешность GPS дрона. Между соседними турбинами обычно 300 м и больше
+// Ротор до ~85 м + дистанция облёта + погрешность GPS; соседние турбины обычно от 300 м
 export const GPS_MATCH_RADIUS_M = 300
 
 export interface TurbineSuggestion {
@@ -35,7 +34,7 @@ export interface GpsAssignment {
   distanceM: number
 }
 
-// Фото без турбины, для которых GPS подсказывает турбину; выбор оператора не перезаписывается
+// Только фото без турбины, выбор оператора не трогаем
 export function gpsAssignments(photos: readonly Pick<PhotoRecord, 'id' | 'gps' | 'turbineId'>[], farm: Pick<Farm, 'turbines'> | undefined): GpsAssignment[] {
   if (!farm) return []
   const out: GpsAssignment[] = []
@@ -47,14 +46,14 @@ export function gpsAssignments(photos: readonly Pick<PhotoRecord, 'id' | 'gps' |
   return out
 }
 
-// Турбины для выбора по имени, с учётом чисел: T2 раньше T10
+// По имени с учётом чисел: T2 раньше T10
 export function sortedTurbines(turbines: readonly Turbine[]): Turbine[] {
   return [...turbines].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
 }
 
 export type TurbineRef =
   | { kind: 'assigned'; turbine: Turbine }
-  // Турбину удалили из фермы после того, как её выбрали для фото
+  // Турбину удалили из фермы уже после привязки
   | { kind: 'missing'; turbineId: string }
   | { kind: 'suggested'; suggestion: TurbineSuggestion }
   | { kind: 'none' }

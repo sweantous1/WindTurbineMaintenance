@@ -78,7 +78,7 @@ export default function AboutSection() {
   else if (storage.kind === 'error') storageText = t('settings.about.storageFailed', { message: storage.message })
   else if (storage.quota > 0) {
     const pct = (storage.usage / storage.quota) * 100
-    // Доли меньше десятой процента округлились бы до «0%», будто база пуста
+    // меньше 0.1% отдельным текстом, иначе округлится до 0%, будто база пуста
     storageText = t(pct < 0.1 ? 'settings.about.storageUsageTiny' : 'settings.about.storageUsage', {
       usage: bytes(storage.usage),
       quota: bytes(storage.quota),

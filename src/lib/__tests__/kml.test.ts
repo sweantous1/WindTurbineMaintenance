@@ -22,7 +22,7 @@ import altitudeModesKml from './fixtures/altitude-modes.kml?raw'
 const BASE = { lat: 52.02, lon: 18.5 }
 const RAD = Math.PI / 180
 
-// coords — как в KML: «долгота,широта[,высота]»
+// coords как в KML: долгота,широта[,высота]
 function placemark(name: string | null, coords: string, altitudeMode?: string): string {
   const nameTag = name === null ? '' : `<name>${name}</name>`
   const modeTag = altitudeMode ? `<altitudeMode>${altitudeMode}</altitudeMode>` : ''
@@ -62,7 +62,7 @@ async function expectImportRejection(promise: Promise<unknown>, code: KmlImportE
   expect((error as KmlImportError).code).toBe(code)
 }
 
-// Кириллица А–я и Ёё в windows-1251; остальное — ASCII
+// Кириллица А-я и Ёё в windows-1251, остальное ASCII
 function toCp1251(text: string): Uint8Array<ArrayBuffer> {
   return new Uint8Array(
     Array.from(text, (ch) => {
@@ -153,7 +153,7 @@ describe('parseKmlText', () => {
         '<Point><coordinates>18.5,52.02</coordinates></Point></Placemark>' +
         '<Placemark><name>WTG-02</name><ExtendedData><SchemaData schemaUrl="#s"><SimpleData name="name">7</SimpleData></SchemaData></ExtendedData>' +
         '<Point><coordinates>18.51,52.02</coordinates></Point></Placemark>' +
-        // Без своего <name> — T{n}, даже если имя есть в ExtendedData
+        // Без своего <name> будет T{n}, даже если имя есть в ExtendedData
         '<Placemark><ExtendedData><Data name="name"><value>из данных</value></Data></ExtendedData>' +
         '<Point><coordinates>18.52,52.02</coordinates></Point></Placemark>',
     )
@@ -208,7 +208,7 @@ describe('parseKmlText', () => {
   })
 
   it('дубль у границы широтных полос тоже уходит в первую принятую точку', () => {
-    // C в 2 м южнее границы полос (шаг 1e-4°), B — по другую сторону границы; обе в 4 м от C
+    // C в 2 м южнее границы полос (шаг 1e-4°), B по другую сторону, A и B в 4 м от C
     const c = offsetGeo({ lat: 52.0201, lon: 18.5 }, 0, -2)
     const text = kmlDoc(
       placemark('A', lonLat(offsetGeo(c, 0, -4))) + placemark('B', lonLat(offsetGeo(c, 0, 4))) + placemark('C', `${lonLat(c)},150`, 'absolute'),
@@ -222,7 +222,7 @@ describe('parseKmlText', () => {
   })
 
   it('слияние находит дубли на любой широте и через границу широтных полос', () => {
-    // Сетка 20 м, у каждой второй турбины дубль в 2–3 м в разную сторону; ложных слияний быть не должно
+    // Сетка 20 м, у каждой второй турбины дубль в 2-3 м в разные стороны, ложных слияний быть не должно
     const bodies: string[] = []
     let duplicates = 0
     const origins = [
@@ -346,15 +346,15 @@ describe('readFarmFile', () => {
     const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01])
     await expectImportRejection(readFarmFile(new File([jpeg], 'real.jpg')), 'notKml')
     await expectImportRejection(readFarmFile(new File(['%PDF-1.7\n%âãÏÓ\n'], 'report.pdf')), 'notKml')
-    // .docx — ZIP без .kml: код «нет .kml», а текст уже не называет его архивом KMZ
+    // .docx - ZIP без .kml: код kmzNoKml, но текст не называет его архивом KMZ
     const docx = zipSync({ '[Content_Types].xml': strToU8('<Types/>'), 'word/document.xml': strToU8('<w:document/>') })
     const error = await readFarmFile(fileOf(docx, 'report.docx')).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(KmlImportError)
     expect((error as KmlImportError).code).toBe('kmzNoKml')
     expect((error as KmlImportError).message).not.toMatch(/^В архиве KMZ/)
-    // Текст, начинающийся с «<», по-прежнему разбирается как XML
+    // Текст, начинающийся с <, разбирается как XML
     await expectImportRejection(readFarmFile(new File(['<kml><Document><Placemark></Docu'], 'broken.kml')), 'invalidXml')
-    // Пробелы и перевод строки в начале не делают KML «не KML» (без декларации: перед ней пробелы запрещены)
+    // Пробелы и перевод строки в начале не мешают (без декларации, перед ней пробелы запрещены)
     const body = kmlDoc(placemark('A', '18.5,52.02')).replace(/^<\?xml[^>]*\?>/, '')
     const padded = await readFarmFile(new File([`\n  ${body}`], 'padded.kml'))
     expect(padded.turbines).toHaveLength(1)
@@ -366,11 +366,11 @@ describe('readFarmFile', () => {
 
   it('распаковывает только основной .kml: битый второстепенный .kml не мешает', async () => {
     const zip = zipSync({ 'layers/broken.kml': strToU8(kmlDoc(placemark('X', '10,10'))), 'doc.kml': strToU8(nestedFoldersKml) })
-    // Первая запись архива — broken.kml; портим начало её сжатых данных (недопустимый тип блока deflate)
+    // Первая запись архива broken.kml, портим начало её сжатых данных (недопустимый тип блока deflate)
     const view = new DataView(zip.buffer, zip.byteOffset)
     expect(view.getUint32(0, true)).toBe(0x04034b50)
     zip[30 + view.getUint16(26, true) + view.getUint16(28, true)] = 0xff
-    // Порча настоящая: распаковать архив целиком уже нельзя
+    // Целиком архив действительно не распаковывается
     expect(() => unzipSync(zip)).toThrow()
     const imp = await readFarmFile(fileOf(zip, 'farm.kmz'))
     expect(imp.turbines.map((t) => t.id)).toEqual(['WTG-01', 'WTG-02', 'WTG-03', 'WTG-04'])
@@ -447,7 +447,7 @@ describe('farmFromImport', () => {
     expect(farm.defaults).not.toBe(DEFAULT_FARM_DEFAULTS)
     expect(farm.name).toBe('Ряды')
     expect(farm.turbines).toEqual(imp.turbines)
-    // Ферма не делит объекты с результатом импорта: правка турбины не меняет импорт задним числом
+    // Ферма не делит объекты с импортом, правка турбины его не меняет
     expect(farm.turbines[0]).not.toBe(imp.turbines[0])
     expect(farm.source?.fileName).toBe('rows.kml')
     expect(farm.source?.sha256).toBe('f'.repeat(64))
@@ -459,7 +459,7 @@ describe('farmFromImport', () => {
       name: 'Старая',
       center: { lat: 0, lon: 0 },
       defaults: { hubHeightM: 80, rotorDiameterM: 90, safeDistanceM: 40 },
-      // Общая турбина a, поправленная на пару метров, — повторный импорт той же фермы
+      // Общая турбина a сдвинута на пару метров, это повторный импорт той же фермы
       turbines: [{ id: 'a', name: 'A', ...offsetGeo({ lat: 52, lon: 18.5 }, 2, 0) }],
     }
     const farm = farmFromImport({ ...imp, name: undefined }, previous)
@@ -477,10 +477,10 @@ describe('farmFromImport', () => {
     expect('name' in farmFromImport(unnamed, other)).toBe(false)
     // Настройки переходят всегда
     expect(farmFromImport(unnamed, other).defaults).toEqual(defaults)
-    // Те же id (у меток без уникальных имён это t1…tN у любой фермы), но за сотню километров
+    // Те же id (у меток без уникальных имён это t1...tN у любой фермы), но за сотню километров
     const far: Farm = { name: 'Ферма А', center: BASE, defaults, turbines: [{ id: 'a', name: 'A', ...offsetGeo({ lat: 52, lon: 18.5 }, 0, 100_000) }] }
     expect(importedFarmName(unnamed, far)).toBeUndefined()
-    // Все турбины удалены вручную — сравнивать не с чем
+    // Все турбины удалены вручную, сравнивать не с чем
     expect(importedFarmName(unnamed, { ...other, turbines: [] })).toBeUndefined()
     // Имя из файла главнее, без прежней фермы имени нет
     expect(importedFarmName(imp, other)).toBe('Ряды')
@@ -557,8 +557,8 @@ describe('farmToKml', () => {
     const names = ['WTG  1', 'Ряд\r\nА', 'Ряд\rБ', 'Ряд\nВ', 'Ветряк 😀']
     const turbines = names.map((name, i) => ({ id: name, name, ...offsetGeo(BASE, i * 100, 0) }))
     const text = farmToKml({ ...farm, turbines })
-    // Парсер XML по стандарту превращает сырой \r в \n (happy-dom этого не делает, браузер — делает),
-    // поэтому \r обязан уйти в файл ссылкой на символ
+    // По стандарту парсер XML превращает сырой \r в \n (браузер так делает, happy-dom нет),
+    // поэтому \r пишем ссылкой на символ
     expect(text).not.toContain('\r')
     const parsed = parseKmlText(text)
     expect(parsed.turbines.map((t) => t.id)).toEqual(names)

@@ -39,13 +39,13 @@ describe('документация', () => {
     expect(document.querySelectorAll('ul > li h3')).toHaveLength(0)
 
     const text = document.body.textContent ?? ''
-    // Старые тексты описывали точки маршрута по щелчку, «раздел в разработке» и демо-записи
+    // Такого в приложении нет: точек по щелчку, раздела в разработке, демо-записей
     expect(text).not.toContain('добавить точку маршрута')
     expect(text).not.toContain('Раздел в разработке')
     expect(text).not.toContain('примеры записей')
     expect(text).toContain('Импорт KML/KMZ')
     expect(text).toContain('Получить прогноз')
-    // «скоро» отдельным словом: «скорость» в описании 3D законна
+    // Только отдельное слово, "скорость" в описании 3D не считается
     expect(text).not.toMatch(/(^|[^а-яё])скоро([^а-яё]|$)|следующ(ей|их) верси/i)
     expect(text).toContain('WebGPU')
     expect(text).toContain('Открыть в 3D')
@@ -70,7 +70,7 @@ describe('документация', () => {
     expect(en.nav.router).toBe('Routes')
   })
   it('«Печать или PDF» открывает печать этой же страницы', async () => {
-    // В happy-dom печати нет — подставляем свою
+    // В happy-dom нет печати, подставляем мок
     const original = window.print
     const print = vi.fn()
     window.print = print

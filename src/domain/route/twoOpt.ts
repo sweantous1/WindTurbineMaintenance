@@ -1,14 +1,11 @@
 import type { RouteModel } from './matrix'
 import { fillPathTurnPenalties } from './turns'
 
-// Ход принимается, только если выигрыш больше этого порога: иначе ошибки округления
-// могут зациклить поиск на равноценных ходах
+// Минимальный выигрыш хода, чтобы округление не зацикливало поиск на равноценных ходах
 export const IMPROVE_EPS_M = 1e-7
 
-// 2-opt по полному пути (см. matrix.ts): разворот участка path[i..j].
-// Взлёт в начале (и в конце для замкнутого маршрута) не двигается; у открытого
-// маршрута разрешён разворот «хвоста» — так меняется последняя турбина.
-// Углы внутри развёрнутого участка не меняются, пересчитываются только стыки
+// 2-opt по path: разворот path[i..j], взлёт не двигается, у открытого маршрута можно развернуть хвост.
+// Углы внутри участка не меняются, пересчитываем только стыки
 export function twoOptPass(model: RouteModel, path: Int32Array, shouldStop?: () => boolean): boolean {
   const m = path.length
   const last = model.closed ? m - 2 : m - 1
@@ -17,7 +14,7 @@ export function twoOptPass(model: RouteModel, path: Int32Array, shouldStop?: () 
   const pen = model.rule.limited ? new Float64Array(m) : null
   if (pen) fillPathTurnPenalties(model, path, pen)
 
-  // Узел на позиции k после разворота [i..j]
+  // Узел на позиции k после разворота
   let ri = 0
   let rj = 0
   const at = (k: number) => (k >= ri && k <= rj ? path[ri + rj - k] : path[k])
@@ -38,11 +35,11 @@ export function twoOptPass(model: RouteModel, path: Int32Array, shouldStop?: () 
       }
       if (pen) {
         const oldPen = pen[i - 1] + pen[i] + pen[j] + (hasNext ? pen[j + 1] : 0)
-        // Новые штрафы неотрицательны: если даже их обнуление не окупает ход, углы не считаем
+        // Новые штрафы >= 0: если ход не окупается даже без них, углы не считаем
         if (delta - oldPen >= -IMPROVE_EPS_M) continue
         ri = i
         rj = j
-        // Новые штрафы только добавляются: как только ход перестал окупаться, дальше не считаем
+        // Добавляем по одному, пока ход ещё окупается
         delta -= oldPen
         if (delta < -IMPROVE_EPS_M) delta += turnAt(i - 1)
         if (delta < -IMPROVE_EPS_M) delta += turnAt(i)

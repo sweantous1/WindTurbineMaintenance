@@ -9,8 +9,7 @@ import { missions } from '@/storage/missions'
 import { completionGaps, completionGapsKey, type CompletionGap } from './missionView'
 
 interface CompleteMissionDialogProps {
-  // Снимок миссии на момент открытия. После завершения активная миссия сбрасывается,
-  // поэтому диалог не должен зависеть от «живой» активной миссии — иначе он исчезнет на последнем шаге.
+  // Снимок на момент открытия: после завершения активная миссия сбрасывается, а окно должно остаться
   mission: Mission | null
   onClose: () => void
 }
@@ -39,8 +38,8 @@ function CompleteFlow({ mission, onClose }: { mission: Mission; onClose: () => v
     setBusy(true)
     try {
       if (!force) {
-        // Репозиторий считает маршрутом любой RoutePlan, даже с пустым порядком, и не спрашивает
-        // про час вылета. Предупреждаем по правилам шагов главной, по свежей записи из базы
+        // Репозиторию хватает любого RoutePlan, даже пустого, и час вылета он не проверяет,
+        // поэтому проверяем сами по свежей записи из базы
         const current = await missions.get(mission.id)
         const gaps = current ? completionGaps(current) : []
         if (gaps.length > 0) {
@@ -48,7 +47,7 @@ function CompleteFlow({ mission, onClose }: { mission: Mission; onClose: () => v
           return
         }
       }
-      // Без force репозиторий сам сообщает, чего не хватает, и ничего не меняет
+      // Без force репозиторий только вернёт, чего не хватает, и ничего не запишет
       const res = await missions.complete(mission.id, { force })
       if (res.ok) {
         toast.success(t('mission.toast.completed'))
@@ -65,16 +64,14 @@ function CompleteFlow({ mission, onClose }: { mission: Mission; onClose: () => v
     }
   }
 
-  // Escape обрабатываем здесь: во время записи окно не закрывается.
-  // preventDefault сообщает Modal, что Escape уже обработан
+  // Escape ловим сами, чтобы окно не закрылось во время записи; preventDefault - сигнал для Modal
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key !== 'Escape') return
     e.preventDefault()
     if (!busyRef.current) onClose()
   }
 
-  // key у каждого шага: кнопки создаются заново, и autoFocus ставит фокус внутрь окна,
-  // а не оставляет его на исчезнувшей кнопке прошлого шага
+  // key на каждом шаге, чтобы кнопки пересоздавались и autoFocus не терялся на кнопке прошлого шага
   if (step.kind === 'done') {
     return (
       <div key="done" className="space-y-4" onKeyDown={onKeyDown}>
@@ -115,7 +112,7 @@ function CompleteFlow({ mission, onClose }: { mission: Mission; onClose: () => v
           <p className="mt-1 text-amber-800">{t('mission.complete.missingBody')}</p>
         </div>
         <div className="flex justify-end gap-2">
-          {/* Фокус на отмене: запись о полёте без данных — осознанный выбор, а не лишний Enter */}
+          {/* Фокус на отмене, чтобы запись без данных не ушла случайным Enter */}
           <Button type="button" variant="secondary" onClick={onClose} disabled={busy} autoFocus>
             {t('common.cancel')}
           </Button>

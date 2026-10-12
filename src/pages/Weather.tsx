@@ -39,7 +39,7 @@ export default function Weather() {
         <h1 className="text-2xl font-bold text-gray-900">{t('weatherScreen.title')}</h1>
         <p className="mt-1 text-gray-500">{t('weatherScreen.desc')}</p>
       </div>
-      {/* key: при смене активной миссии незавершённый запрос отменяется, а точка берётся заново */}
+      {/* key: при смене миссии незавершённый запрос отменяется и точка берётся заново */}
       <RequireMission>{(mission) => <WeatherScreen key={mission.id} mission={mission} />}</RequireMission>
     </div>
   )
@@ -55,13 +55,13 @@ function WeatherScreen({ mission }: { mission: Mission }) {
   const snapshot = mission.weather
 
   const [chosenPoint, setPoint] = useState<ForecastPoint | null>(() => initialPoint(mission))
-  // Центр фермы берём из миссии на каждой отрисовке: ферму могли переимпортировать, пока экран
-  // открыт (другое окно), а запрос по старому центру дал бы прогноз не для той фермы
+  // Центр фермы берём из миссии на каждом рендере: ферму могли переимпортировать в другом окне,
+  // и прогноз по старому центру был бы не для той фермы
   let point = chosenPoint
   if (chosenPoint?.source === 'farm') point = mission.farm ? farmPoint(mission.farm) : null
   const [hoursText, setHoursText] = useState(() => String(initialForecastHours(mission)))
   const [loading, setLoading] = useState(false)
-  // Храним саму ошибку, а не текст: после смены языка она переведётся заново
+  // Храним саму ошибку, а не текст, чтобы она переводилась при смене языка
   const [error, setError] = useState<unknown>(null)
   const [confirmClear, setConfirmClear] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
@@ -73,8 +73,8 @@ function WeatherScreen({ mission }: { mission: Mission }) {
 
   const plan = useMemo(() => (drone ? missionFlightPlan(mission, drone) : undefined), [mission, drone])
   const limits = useMemo(() => (drone ? effectiveLimits(mission.limits, drone) : undefined), [mission.limits, drone])
-  // Без плана — высота транзита, прижатая к потолку, как в вердикте: иначе график показывал бы
-  // ветер на 150 м, а вердикт считал бы его на потолке 120 м
+  // Без плана берём высоту транзита, прижатую к потолку, как в вердикте,
+  // иначе график покажет ветер на 150 м, а вердикт посчитает на 120 м
   const noPlanAltM = limits ? transitAltitudeM(mission.flightAltitudeM, limits) : mission.flightAltitudeM
   const altitudes = useMemo(() => chartAltitudes(plan, noPlanAltM), [plan, noPlanAltM])
   const cells = useMemo(
@@ -84,7 +84,7 @@ function WeatherScreen({ mission }: { mission: Mission }) {
         : [],
     [drone, snapshot, mission.limits, mission.flightAltitudeM, plan],
   )
-  // У облетанной миссии «прошло» всё: это запись, а не выбор вылета
+  // У облетанной миссии прошедшие часы не отмечаем: это запись, а не выбор вылета
   const isPast = useCallback(
     (time: string) => (editable && snapshot ? isPastHour(time, snapshot, now) : false),
     [editable, snapshot, now],
@@ -108,9 +108,9 @@ function WeatherScreen({ mission }: { mission: Mission }) {
         },
         ctrl.signal,
       )
-      // «Отмена» или уход с экрана уже после ответа сервера: отменённый запрос в миссию не пишем
+      // Отмена или уход с экрана уже после ответа сервера - в миссию не пишем
       if (ctrl.signal.aborted) return
-      // Час вылета читаем из базы заново: пока шёл запрос, его могли поменять
+      // Час вылета перечитываем из базы, пока шёл запрос его могли поменять
       const departure = (await missions.get(mission.id))?.departureTime
       const dropDeparture = departure !== undefined && findHour(next, departure) === undefined
       await missions.update(mission.id, { weather: next, ...(dropDeparture ? { departureTime: undefined } : {}) })

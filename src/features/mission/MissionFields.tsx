@@ -5,7 +5,7 @@ import { droneDisplayName } from '@/features/settings/droneName'
 import { useDroneProfiles } from '@/hooks/useMissions'
 import { formatValue, MISSION_TYPES, type FieldError } from './missionView'
 
-// Поля форм миссии: общие для диалогов создания и параметров
+// Поля миссии, общие для диалогов создания и параметров
 
 const controlClass =
   'w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed'
@@ -13,11 +13,11 @@ const controlClass =
 interface TextInputProps extends InputHTMLAttributes<HTMLInputElement> {
   id: string
   error?: FieldError | null
-  // У поля есть подсказка в Field — экранный диктор прочитает её вместе с подписью
+  // Есть подсказка в Field, диктор прочитает её вместе с подписью
   hasHint?: boolean
 }
 
-// Field показывает либо ошибку, либо подсказку — описание поля ссылается на то, что видно
+// Field показывает либо ошибку, либо подсказку, describedby ссылается на видимую
 const describedBy = (id: string, error: FieldError | null | undefined, hasHint: boolean | undefined) =>
   error ? `${id}-error` : hasHint ? `${id}-hint` : undefined
 
@@ -110,14 +110,14 @@ interface DroneSelectProps {
   disabled?: boolean
   title?: string
   hasHint?: boolean
-  // Имя из снимка дрона облетанной миссии: вместо текущих профилей показываем тот, с которым летали
+  // Имя дрона из снимка облетанной миссии - показываем тот, с которым летали
   fixedName?: string
 }
 
 export function DroneSelect({ id, value, onChange, disabled, title, hasHint, fixedName }: DroneSelectProps) {
   const { t } = useTranslation()
   const profiles = useDroneProfiles()
-  // Профиль могли удалить в настройках — тогда расчёты берут профиль по умолчанию
+  // Профиль могли удалить в настройках, тогда расчёты идут по профилю по умолчанию
   const known = profiles?.some((p) => p.id === value) ?? true
 
   if (fixedName !== undefined) {
@@ -157,7 +157,7 @@ export function DroneSelect({ id, value, onChange, disabled, title, hasHint, fix
   )
 }
 
-// Краткая сводка профиля под списком: сразу видно, что даёт выбранный дрон
+// Сводка выбранного профиля под списком
 export function DroneSummary({ drone }: { drone: DroneProfile | undefined }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'

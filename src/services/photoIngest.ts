@@ -1,7 +1,7 @@
 import type { PreparedPhoto } from '@/storage/photos'
 
 const THUMB_MAX_SIDE = 320
-// Фото с дрона бывают по 20–45 Мп; больше 100 МБ на снимок — почти наверняка не фото
+// Фото с дрона 20-45 Мп, больше 100 МБ - почти наверняка не фото
 const MAX_PHOTO_BYTES = 100 * 1024 * 1024
 
 export class PhotoIngestError extends Error {
@@ -15,14 +15,14 @@ export class PhotoIngestError extends Error {
   }
 }
 
-// Размеры, миниатюра и EXIF (время съёмки и GPS) — только в браузере
+// Размеры, миниатюра и EXIF (время и GPS), только в браузере
 export async function preparePhoto(file: File): Promise<PreparedPhoto> {
   if (!file.type.startsWith('image/')) throw new PhotoIngestError('notImage', file.name)
   if (file.size > MAX_PHOTO_BYTES) throw new PhotoIngestError('tooLarge', file.name)
 
   let bitmap: ImageBitmap
   try {
-    // imageOrientation учитывает поворот из EXIF — рамки потом рисуются по тому же изображению
+    // С поворотом из EXIF, рамки потом рисуются по тому же изображению
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch (error) {
     throw new PhotoIngestError('decodeFailed', file.name, error)
@@ -52,10 +52,9 @@ export async function preparePhoto(file: File): Promise<PreparedPhoto> {
 
 async function readExif(file: File): Promise<Pick<PreparedPhoto, 'takenAt' | 'gps'>> {
   try {
-    // exifr подгружается только при импорте фото
+    // exifr грузим лениво
     const exifr = (await import('exifr')).default
-    // Координаты — отдельным вызовом gps(): latitude/longitude вычисляются из тегов GPSLatitude/Ref,
-    // а фильтр pick по вычисленным именам эти исходные теги отбрасывал, и GPS не читался никогда
+    // GPS отдельно через gps(): pick отбрасывает теги GPSLatitude/Ref, из которых считаются координаты
     const [data, coords] = await Promise.all([
       exifr.parse(file, { pick: ['DateTimeOriginal'] }).catch(() => undefined),
       exifr.gps(file).catch(() => undefined),
@@ -69,7 +68,7 @@ async function readExif(file: File): Promise<Pick<PreparedPhoto, 'takenAt' | 'gp
     }
     return out
   } catch {
-    // Нет EXIF или он битый — фото всё равно годится для анализа
+    // Нет EXIF или он битый - фото всё равно годится
     return {}
   }
 }

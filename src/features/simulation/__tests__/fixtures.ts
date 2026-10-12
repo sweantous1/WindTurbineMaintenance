@@ -2,8 +2,8 @@ import { DEFAULT_DRONE_PROFILE, DEFAULT_LIMITS } from '@/domain/defaults'
 import type { DroneProfile, Farm, Mission, RoutePlan, Turbine, WeatherHour, WeatherSnapshot } from '@/domain/types'
 import { offsetGeo } from '@/lib/geo'
 
-// Ферма из трёх турбин в ряд с запада на восток: A — в центре, C — посередине, B — в 600 м.
-// Маршрут A → B проходит прямо над C ниже её лопастей — это конфликт
+// Три турбины в ряд с запада на восток: A в центре, C посередине, B в 600 м.
+// Маршрут A -> B идёт над C ниже её лопастей, это конфликт
 
 export const CENTER = { lat: 47.5, lon: 40.1 }
 

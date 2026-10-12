@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import MissionSwitcher from '@/features/mission/MissionSwitcher'
 
-// Порядок — по сценарию работы с миссией: маршрут, погода, облёт в 3D, затем дефекты по фото
+// Порядок по сценарию: маршрут, погода, 3D, потом дефекты по фото
 const navItems = [
   { path: '/', labelKey: 'nav.home' },
   { path: '/router', labelKey: 'nav.router' },
@@ -16,7 +16,7 @@ const navItems = [
 
 export default function Header() {
   const { t, i18n } = useTranslation()
-  // resolvedLanguage — уже сведённый к 'ru' или 'en' язык; language может быть 'ru-RU'
+  // resolvedLanguage уже 'ru' или 'en', а language может быть 'ru-RU'
   const isRu = i18n.resolvedLanguage === 'ru'
 
   const toggleLang = () => {
@@ -25,8 +25,8 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-[1500] print:hidden">
-      {/* При узком окне (у Electron минимум 1024 px) ужимаются отступы меню, а если его всё равно не хватает —
-          меню прокручивается. Правый блок не сжимается: иначе выбор миссии наползал на кнопку языка */}
+      {/* В узком окне (минимум 1024 px) ужимаются отступы меню, дальше оно прокручивается.
+          Правый блок не сжимается, чтобы выбор миссии не наезжал на кнопку языка */}
       <div className="flex min-w-0 flex-1 items-center gap-4 xl:gap-8">
         <div className="flex shrink-0 items-center gap-2">
           <img src={`${import.meta.env.BASE_URL}favicon.svg`} alt="" className="h-8 w-8" />

@@ -14,7 +14,7 @@ function randomPath(model: RouteModel, rng: Rng): Int32Array {
   return pathFromVisit(model, shuffleInPlace(Int32Array.from({ length: model.n }, (_, k) => k + 1), rng))
 }
 
-// Все ходы 2-opt, посчитанные «в лоб» полным пересчётом стоимости
+// Все ходы 2-opt в лоб, полным пересчётом стоимости
 function bestTwoOptGain(model: RouteModel, path: Int32Array): number {
   const m = path.length
   const last = model.closed ? m - 2 : m - 1
@@ -62,8 +62,7 @@ describe('локальный поиск', () => {
     expect(Array.from(backward)).toEqual([0, 1, 6, 5, 2, 3, 4, 7])
   })
 
-  // Приращения в 2-opt и Or-opt считаются по стыкам; если в них ошибка, после поиска
-  // останется улучшающий ход, который виден полным пересчётом
+  // Дельты считаются по стыкам; если там ошибка, после поиска останется улучшающий ход
   it.each([
     [false, 180],
     [true, 180],
@@ -87,7 +86,7 @@ describe('локальный поиск', () => {
       expect(pathCost(model, path)).toBeLessThanOrEqual(afterTwoOpt + 1e-9)
       expect(bestOrOptGain(model, path)).toBeLessThan(1e-6)
 
-      // Путь остаётся перестановкой турбин со взлётом на концах
+      // Путь остаётся перестановкой со взлётом на концах
       expect(path[0]).toBe(0)
       if (closed) expect(path[path.length - 1]).toBe(0)
       expect(Array.from(path.subarray(1, model.n + 1)).sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])

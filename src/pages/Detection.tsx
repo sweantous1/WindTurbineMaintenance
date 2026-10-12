@@ -42,8 +42,7 @@ import { downloadBlob, renderDetectionsPng } from '@/features/detection/pngExpor
 import { gpsAssignments, turbineRef } from '@/features/detection/turbineMatch'
 import { analysisRunner, useAnalysisRunner, useCancelAnalysisOnLeave, useEngineStatus } from '@/features/detection/useAnalysis'
 
-// Раньше здесь хранились фото в base64 — одно фото с дрона переполняло localStorage.
-// Теперь фото и находки живут в IndexedDB; старый ключ освобождаем
+// Чистим устаревший ключ с фото в base64, фото и находки хранятся в IndexedDB
 try {
   localStorage.removeItem('wtm_detection_data')
 } catch (error) {
@@ -62,7 +61,7 @@ export default function Detection() {
 function DefectScreen({ mission }: { mission: Mission }) {
   const { t, i18n } = useTranslation()
   const lang = i18n.resolvedLanguage ?? 'ru'
-  // Фото можно добавлять и разбирать и после полёта; у архивной миссии — только просмотр
+  // Фото можно добавлять и разбирать и после полёта, у архивной миссии только просмотр
   const readOnly = mission.status === 'archived'
   const photoRows = usePhotos(mission.id)
   const detectionRows = useDetections(mission.id)
@@ -73,7 +72,7 @@ function DefectScreen({ mission }: { mission: Mission }) {
 
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null)
   const [selectedDetectionId, setSelectedDetectionId] = useState<string | null>(null)
-  // null — порог модели по умолчанию (manifest.defaults.confidence)
+  // null - порог модели по умолчанию (manifest.defaults.confidence)
   const [threshold, setThreshold] = useState<number | null>(null)
   const [hidden, setHidden] = useState<ReadonlySet<AppDefectClass>>(() => new Set())
   const [ingest, setIngest] = useState<{ done: number; total: number } | null>(null)
@@ -152,7 +151,7 @@ function DefectScreen({ mission }: { mission: Mission }) {
           added++
         } catch (error) {
           const code: IngestCode = error instanceof PhotoIngestError ? error.code : 'saveFailed'
-          // Нечитаемый снимок — проблема файла, а не приложения; сбой записи в базу — наша ошибка
+          // Нечитаемый снимок - проблема файла (warn), сбой записи в базу - наша ошибка (error)
           if (code === 'saveFailed') console.error(`Не удалось сохранить фото ${file.name}:`, error)
           else if (code === 'decodeFailed') console.warn(`Не удалось прочитать фото ${file.name}:`, error)
           failures.set(code, [...(failures.get(code) ?? []), file.name])
@@ -182,7 +181,7 @@ function DefectScreen({ mission }: { mission: Mission }) {
         if (outcome.failed > 0) toast.warn(t('defects.result.withFailures', { done: outcome.done, failed: outcome.failed }))
         else if (outcome.done > 0) toast.success(t('defects.result.finished', { done: outcome.done }))
         if (outcome.skipped > 0) toast.warn(t('defects.result.skipped', { count: outcome.skipped }))
-        // Модель могла загрузиться только сейчас (раньше был сбой) — обновляем строку состояния
+        // Модель могла загрузиться только сейчас после сбоя, обновляем строку состояния
         refresh()
         return
       case 'cancelled':
@@ -313,7 +312,7 @@ function DefectScreen({ mission }: { mission: Mission }) {
   // ---------- Разметка ----------
 
   const photoCount = list.length
-  // Пока находки не прочитаны из базы, разобранное фото выглядело бы как «модель ничего не нашла»
+  // Пока находки грузятся из базы, не показываем фото как "ничего не найдено"
   const loading = photoRows === undefined || detectionRows === undefined
   const subtitle =
     photoCount > 0

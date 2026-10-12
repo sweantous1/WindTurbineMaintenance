@@ -5,7 +5,7 @@ import type { EngineStatus } from './useAnalysis'
 
 interface EngineStatusBarProps {
   status: EngineStatus
-  // Где считался последний кадр: после сбоя WebGPU движок переходит на процессор
+  // Где считался последний кадр, после сбоя WebGPU движок уходит на CPU
   lastBackend: DetectBackend | null
   onRecheck: () => void
 }

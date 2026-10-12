@@ -149,7 +149,7 @@ export default function History() {
             </Button>
           </div>
         ) : (
-          // relative: иначе скрытая подпись sr-only в шапке таблицы растягивает всю страницу по ширине
+          // relative, иначе sr-only подпись в шапке таблицы растягивает страницу по ширине
           <div className="relative -mx-5 overflow-x-auto px-5">
             <table className="w-full text-sm">
               <thead>
@@ -175,9 +175,9 @@ export default function History() {
                   const weatherParts = hour ? hourWeatherParts(hour, t, lang) : null
                   const isActive = m.id === active?.id
                   const canArchive = !isPreFlight(m.status) && m.status !== 'archived'
-                  // 3D проигрывает маршрут: без порядка облёта показывать нечего
+                  // Без порядка облёта в 3D показывать нечего
                   const has3d = !!m.route && m.route.order.length > 0
-                  // Кнопки-значки в каждой строке одинаковые — диктору нужно и название миссии
+                  // Кнопки-значки во всех строках одинаковые, поэтому в aria-label ещё и название миссии
                   const aria = (action: string) => t('missionHistory.actionLabel', { action, name: m.name })
                   return (
                     <tr key={m.id} className={`border-b border-gray-50 align-top ${isActive ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
@@ -272,7 +272,7 @@ export default function History() {
                               />
                             </IconButton>
                           ) : (
-                            // Пустое место держит колонку ровной
+                            // Заглушка, чтобы колонка не съезжала
                             <span className="h-7 w-7" aria-hidden="true" />
                           )}
                           <IconButton
@@ -321,7 +321,7 @@ export default function History() {
         onClose={() => !busy && setPending(null)}
         title={pending?.kind === 'archive' ? t('missionHistory.confirm.archiveTitle') : t('missionHistory.confirm.deleteTitle')}
       >
-        {/* Escape закрывает окно через Modal (onClose не срабатывает во время записи); фокус на отмене — удаление необратимо */}
+        {/* Escape закрывает через Modal (во время записи onClose не срабатывает), фокус на отмене - удаление необратимо */}
         <div className="space-y-4">
           <p className="break-words text-sm text-gray-700">
             {pending?.kind === 'archive'
@@ -349,7 +349,7 @@ function Dash() {
 }
 
 interface IconButtonProps {
-  // Видимая подсказка; для диктора — ariaLabel с названием миссии
+  // Видимая подсказка, для диктора ariaLabel с названием миссии
   label: string
   ariaLabel: string
   onClick: () => void

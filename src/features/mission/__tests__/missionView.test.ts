@@ -174,7 +174,7 @@ describe('длина маршрута после смены высоты', () =>
     const patch = withRouteLength(m, { flightAltitudeM: 60 }, 120)
     expect(patch.flightAltitudeM).toBe(60)
     expect(patch.route).toEqual({ ...m.route, lengthM: lengthAt(60, 120) })
-    // Потолок ниже высоты перелёта — дрон летит на потолке
+    // Потолок ниже высоты перелёта, дрон летит на потолке
     expect(withRouteLength(m, {}, 50).route?.lengthM).toBeCloseTo(lengthAt(90, 50), 6)
   })
 
@@ -251,7 +251,7 @@ describe('форматирование', () => {
       ] },
     })
     const r = missionRow(m, tRu, 'ru')
-    // Статус говорит только о данных — не обещает допуск к полёту, это делает вердикт прогноза
+    // Статус только про данные, допуск к полёту даёт вердикт прогноза
     expect(r.status).toBe('Час вылета выбран')
     expect(missionRow(m, tEn, 'en').status).toBe('Departure set')
     expect(r.type).toBe('Плановая')
@@ -260,7 +260,7 @@ describe('форматирование', () => {
     expect(r.departure).toBe('24.09.2026, 14:00')
     expect(r.weather).toBe('15 °C · 4,2 м/с · Преимущественно ясно')
     expect(r.completedAt).toBeNull()
-    // Часа вылета нет в прогнозе — погоды на него нет, но сам час показывается
+    // Часа вылета нет в прогнозе: погоды нет, но сам час показывается
     const r2 = missionRow({ ...m, departureTime: '2026-09-25T09:00' }, tRu, 'ru')
     expect(r2.departure).toBe('25.09.2026, 09:00')
     expect(r2.weather).toBeNull()
@@ -314,7 +314,7 @@ describe('имя файла миссии', () => {
   })
 
   it('дата в имени — по часам компьютера, как в истории, а не UTC', () => {
-    // Полчаса после местной полуночи: в поясах восточнее UTC дата UTC была бы вчерашней
+    // 00:30 по местному времени, восточнее UTC дата по UTC ещё вчерашняя
     const createdAt = new Date(2026, 8, 24, 0, 30).toISOString()
     expect(missionFileName({ id: 'a', name: 'Юг', createdAt }, 'json')).toBe('mission-Юг-2026-09-24.json')
     expect(missionFileName({ id: 'a', name: 'Юг', createdAt: '2026-13-45T00:00:00Z' }, 'json')).toBe('mission-Юг.json')

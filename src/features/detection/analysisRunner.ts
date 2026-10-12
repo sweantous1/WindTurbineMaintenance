@@ -10,7 +10,7 @@ import {
 import type { NewDetection } from '@/storage/photos'
 import { STORED_MIN_CONFIDENCE } from './detectionView'
 
-// Очередь анализа фото — одна на приложение, как и движок. Экран останавливает её, когда его покидают
+// Очередь анализа одна на приложение, как и движок; экран останавливает её при уходе
 
 export type AnalysisErrorCode = 'loadFailed' | 'decodeFailed' | 'inferenceFailed' | 'workerFailed' | 'imageMissing' | 'unknown'
 
@@ -29,8 +29,7 @@ export function errorCode(err: unknown): AnalysisErrorCode {
 
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
-// В PhotoAnalysis.error одна строка, поэтому код идёт первым: «decodeFailed: подробность».
-// Интерфейс переводит по коду, а подробность показывает как техническую
+// PhotoAnalysis.error - одна строка "код: подробность", UI переводит по коду
 export function formatAnalysisError(code: AnalysisErrorCode, detail: string): string {
   return detail ? `${code}: ${detail}` : code
 }
@@ -92,7 +91,7 @@ export interface RunProgress {
   photoIds: readonly string[]
   // Номер текущего фото в очереди, с нуля
   index: number
-  // Фрагменты текущего фото; 0 из 0 — модель ещё грузится или кадр декодируется
+  // Фрагменты текущего фото, 0 из 0 пока грузится модель или декодируется кадр
   tile: number
   tiles: number
   done: number
@@ -100,7 +99,7 @@ export interface RunProgress {
   cancelling: boolean
 }
 
-// Воркер сообщает, сколько фрагментов готово; человеку понятнее номер фрагмента, который считается сейчас
+// Воркер шлёт число готовых фрагментов, а показываем номер текущего
 export function currentTile(tile: number, tiles: number): number {
   return tiles > 0 ? Math.min(tiles, Math.max(1, tile + 1)) : 0
 }
@@ -115,7 +114,7 @@ export function runFraction(run: Pick<RunProgress, 'photoIds' | 'index' | 'tile'
 
 export interface RunnerSnapshot {
   run: RunProgress | null
-  // Где реально считался последний кадр: после сбоя WebGPU движок переходит на процессор
+  // Где считался последний кадр, после сбоя WebGPU уходим на CPU
   lastBackend: DetectBackend | null
 }
 
@@ -124,7 +123,7 @@ export type RunOutcome =
   | { kind: 'cancelled'; done: number; failed: number }
   | { kind: 'modelMissing' }
   | { kind: 'loadFailed'; code: AnalysisErrorCode }
-  // Уже идёт другой анализ: движок один, запросы всё равно шли бы по очереди
+  // Уже идёт другой анализ, а движок один
   | { kind: 'busy' }
 
 export interface AnalysisRunnerDeps {
@@ -146,7 +145,7 @@ export function createAnalysisRunner(deps: AnalysisRunnerDeps): AnalysisRunner {
   const listeners = new Set<() => void>()
   let cancelled = false
   let cancelCurrent: (() => void) | null = null
-  // Загрузку модели в движке не прервать, но ждать её конца после отмены незачем
+  // Загрузку модели не прервать, но после отмены её не ждём
   let stopWaiting: (() => void) | null = null
 
   const publish = (next: RunnerSnapshot) => {
@@ -157,7 +156,7 @@ export function createAnalysisRunner(deps: AnalysisRunnerDeps): AnalysisRunner {
     if (snapshot.run) publish({ ...snapshot, run: { ...snapshot.run, ...patch } })
   }
 
-  // false — фото удалили во время анализа (или база не приняла запись): считать нечего
+  // false - фото удалили во время анализа или запись не прошла
   async function trySave(photoId: string, analysis: PhotoAnalysis, found: NewDetection[]): Promise<boolean> {
     try {
       await deps.saveAnalysis(photoId, analysis, found)
@@ -218,7 +217,7 @@ export function createAnalysisRunner(deps: AnalysisRunnerDeps): AnalysisRunner {
         if (error instanceof DetectCancelledError) return { kind: 'cancelled', done, failed }
         if (error instanceof ModelMissingError) return { kind: 'modelMissing' }
         const code = errorCode(error)
-        // Модель перестала грузиться (воркер перезапустился) — дальше упадёт каждое фото, останавливаемся
+        // Модель не грузится (воркер перезапустился), дальше упадут все фото
         if (code === 'loadFailed') return { kind: 'loadFailed', code }
         console.warn(`Анализ фото ${photoId} не удался:`, error)
         if (await trySave(photoId, failedAnalysis(manifest, code, errorText(error), iou, deps.now()), [])) failed++

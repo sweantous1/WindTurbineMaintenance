@@ -8,8 +8,7 @@ export interface SettingRow {
   value: unknown
 }
 
-// Единственный источник правды для экранов: миссии, профили дронов, фото облёта с находками и настройки.
-// localStorage остаётся только для мелочей интерфейса (язык, фильтры).
+// Все данные приложения здесь, localStorage только для мелочей интерфейса (язык, фильтры)
 export class WtmDatabase extends Dexie {
   missions!: EntityTable<Mission, 'id'>
   droneProfiles!: EntityTable<DroneProfile, 'id'>
@@ -20,8 +19,7 @@ export class WtmDatabase extends Dexie {
 
   constructor(name = 'wtm') {
     super(name)
-    // Индексируются только поля, по которым ищем; остальное хранится как есть.
-    // Новую версию схемы добавлять через this.version(n + 1).stores(...).upgrade(...)
+    // Индексы только по полям поиска. Новая версия схемы: this.version(n + 1).stores(...).upgrade(...)
     this.version(1).stores({
       missions: 'id, status, updatedAt, completedAt',
       droneProfiles: 'id',

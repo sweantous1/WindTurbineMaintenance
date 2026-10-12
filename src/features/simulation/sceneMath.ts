@@ -1,9 +1,8 @@
 import type { LocalFrame, LocalPoint } from '@/lib/geo'
 import type { Vec3 } from '@/domain/flightPath'
 
-// Переход из локальных метров фермы в сцену three.js. Карта, маршрут и 3D считают в одной
-// системе координат (src/lib/geo.ts), поэтому турбины и путь в сцене совпадают с картой.
-// Оси сцены: X — восток, Y — вверх, Z — юг (север — это −Z)
+// Локальные метры фермы (src/lib/geo.ts, общие с картой и маршрутом) -> сцена three.js.
+// Оси сцены: X восток, Y вверх, Z юг (север это -Z)
 
 export type SceneVec = [number, number, number]
 
@@ -11,21 +10,18 @@ export function toScene(p: Vec3): SceneVec {
   return [p.x, p.z, -p.y]
 }
 
-// Поворот вокруг вертикали для объекта, у которого «нос» смотрит на север (−Z) при нулевом
-// повороте. Азимут отсчитывается по часовой стрелке, а поворот вокруг +Y — против неё
+// При нуле нос смотрит на север (-Z). Азимут идёт по часовой, а поворот вокруг +Y против
 export function yawToRotationY(bearingRad: number): number {
   return -bearingRad
 }
 
-// Ротор разворачивается навстречу ветру. Направление ветра в метеорологии — откуда он дует,
-// поэтому нос гондолы (сторона с ротором) смотрит на азимут windFromDeg
+// Метеонаправление ветра указывает, откуда он дует, ротор смотрит туда же: нос гондолы на windFromDeg
 export function nacelleRotationY(windFromDeg: number): number {
   return yawToRotationY((windFromDeg * Math.PI) / 180)
 }
 
-// Обороты ротора по ветру на высоте ступицы: типичная ветроустановка стоит до 3 м/с,
-// флюгирует лопасти выше 25 м/с, между ними держит быстроходность около 7 и не разгоняет
-// концы лопастей быстрее 80 м/с. Для D = 120 м это до ~13 об/мин — как у настоящих машин
+// Обороты по ветру на ступице: стоит до 3 и выше 25 м/с, между ними быстроходность ~7
+// с потолком скорости конца лопасти 80 м/с. Для D = 120 м это до ~13 об/мин
 export const CUT_IN_MS = 3
 export const CUT_OUT_MS = 25
 const TIP_SPEED_RATIO = 7
@@ -66,7 +62,7 @@ export function boundsSize(b: LocalBounds): { width: number; depth: number; cent
   return { width: b.maxX - b.minX, depth: b.maxY - b.minY, center: { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 } }
 }
 
-// ---------- Подложка из тайлов OpenStreetMap ----------
+// Подложка из тайлов OSM
 
 export const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const MAX_MERCATOR_LAT = 85.05112878
@@ -76,10 +72,8 @@ export interface GroundTile {
   x: number
   y: number
   url: string
-  // Прямоугольник тайла в локальных метрах. Локальная система линейна по широте и долготе
-  // отдельно, поэтому края тайла (линии постоянной широты и долготы) в ней — стороны
-  // прямоугольника. Внутри тайла меркатор по широте нелинеен, но на тайле в пару километров
-  // это доли метра
+  // Тайл в локальных метрах. Локальная система линейна по широте и долготе, так что тайл в ней
+  // прямоугольник, а нелинейность меркатора внутри тайла в пару км даёт доли метра
   rect: LocalBounds
 }
 
@@ -100,8 +94,7 @@ export function tileYToLat(y: number, z: number): number {
   return (Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / 2 ** z))) * 180) / Math.PI
 }
 
-// Самый подробный масштаб, при котором рамку закрывают не больше maxTiles тайлов.
-// Ограничение числа тайлов — ещё и вежливость к серверам OSM
+// Самый подробный зум, при котором рамку закрывают не больше maxTiles тайлов
 export function groundTiles(frame: LocalFrame, bounds: LocalBounds, maxTiles = 64, maxZoom = 16): GroundTile[] {
   const sw = frame.toGeo({ x: bounds.minX, y: bounds.minY })
   const ne = frame.toGeo({ x: bounds.maxX, y: bounds.maxY })

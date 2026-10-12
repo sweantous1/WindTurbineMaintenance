@@ -16,7 +16,7 @@ import type { CameraMode } from '../simView'
 import Simulation from '@/pages/Simulation'
 import { DRONE, FARM, HOUR, makeMission, ROUTE, WEATHER } from './fixtures'
 
-// Сцена three.js в happy-dom не рисуется (нет WebGL): здесь проверяется всё вокруг неё
+// В happy-dom нет WebGL, сцену глушим и проверяем всё вокруг неё
 vi.mock('@/features/simulation/scene/SimulationCanvas', () => ({ default: () => null }))
 
 beforeAll(async () => {
@@ -65,7 +65,7 @@ describe('панель 3D-облёта', () => {
     await seek(clock, (second.orbitStartS + second.orbitEndS) / 2)
     expect(getByText('p', 'Облёт турбины 2 из 2 — WTG-B')).toBeTruthy()
     expect(text()).toContain('1 из 2')
-    // Текущая выделена, осмотренная — с галочкой, и экранный диктор слышит это в имени кнопки
+    // Текущая выделена, осмотренная с галочкой и пометкой в aria-label
     const items = Array.from(document.querySelectorAll('ol button'))
     expect(items.map((b) => b.getAttribute('aria-current'))).toEqual([null, 'step'])
     expect(items[0].getAttribute('aria-label')).toMatch(/, осмотрена$/)
@@ -90,7 +90,7 @@ describe('панель 3D-облёта', () => {
   })
 
   it('заряд: полоса с резервом, ниже резерва — янтарный, ниже нуля — «не хватило бы» и число вылетов', async () => {
-    // 35 мин полёта на 10 м/с — маршрут на пару километров укладывается с запасом
+    // 35 мин на 10 м/с, маршрут в пару км укладывается с запасом
     const data = ready(makeMission())
     const clock = createSimClock(data.trajectory.durationS)
     await render(createElement(SimPanel, { data, mission: makeMission(), drone: DRONE, clock }))
@@ -107,7 +107,7 @@ describe('панель 3D-облёта', () => {
     const weakClock = createSimClock(weakData.trajectory.durationS)
     await render(createElement(SimPanel, { data: weakData, mission: makeMission(), drone: weak, clock: weakClock }))
     expect(getByText('[role="alert"]', 'Маршрут не укладывается в один заряд: нужно 3 вылета')).toBeTruthy()
-    // 45% пути — остаток 10%, ниже резерва 20%
+    // 45% пути: остаток 10%, ниже резерва 20%
     await seek(weakClock, weakData.trajectory.durationS * 0.45)
     expect(getByText('p', 'Ниже резерва')).toBeTruthy()
     expect(document.querySelector('[role="meter"] > div')?.className).toContain('bg-amber-500')
@@ -131,7 +131,7 @@ describe('панель 3D-облёта', () => {
     expect(text()).toContain('Порывы на 90 м')
     expect(text()).toContain('15 °C')
     expect(document.querySelector('svg[role="img"][aria-label^="ветер"]')).toBeTruthy()
-    // Маршрут с конфликтом — не «можно лететь», а «на грани»
+    // С конфликтом в маршруте вердикт "на грани", а не "можно лететь"
     expect(getByText('[role="status"]', 'На грани')).toBeTruthy()
     expect(getByText('a', 'Подробнее').getAttribute('href')).toBe('#/weather')
   })
@@ -242,7 +242,7 @@ describe('управление проигрыванием', () => {
     const { clock } = await renderControls()
     const button = document.querySelector<HTMLButtonElement>('button[aria-label="Сначала"]')
     if (!button) throw new Error('нет кнопки')
-    // Пробел на кнопке нажимает её саму — второй раз переключать нельзя
+    // Пробел на кнопке жмёт её саму, второй раз переключать нельзя
     await key('Space', button)
     expect(clock.getSnapshot().playing).toBe(false)
     const select = document.querySelector('select')
@@ -397,7 +397,7 @@ describe('экран 3D-облёта', () => {
     expect(localStorage.getItem('wtm_sim_ground_map')).toBe('0')
     expect(queryByText('a', 'OpenStreetMap')).toBeUndefined()
 
-    // Шкала в конец — поверх сцены итоги
+    // Шкала в конец, поверх сцены итоги
     const range = document.querySelector<HTMLInputElement>('input[type="range"]')!
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
     await act(async () => {
@@ -406,7 +406,7 @@ describe('экран 3D-облёта', () => {
     })
     await waitFor(() => expect(getByText('h2', 'Облёт завершён')).toBeTruthy())
 
-    // «Завершить полёт…» есть и в шапке экрана
+    // Кнопка завершения есть и в шапке экрана
     const buttons = Array.from(document.querySelectorAll('button')).filter((b) => b.textContent === 'Завершить полёт…')
     expect(buttons).toHaveLength(2)
     await click(buttons[0])

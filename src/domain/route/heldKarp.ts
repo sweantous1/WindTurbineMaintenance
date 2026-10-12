@@ -1,7 +1,6 @@
 import type { RouteModel } from './matrix'
 
-// Точное решение динамикой Хелда — Карпа. Только для тестов: память и время растут как 2^n,
-// поэтому в приложении не используется
+// Хелд-Карп, точный оптимум. Только для тестов, растёт как 2^n
 export const HELD_KARP_MAX_N = 12
 
 export interface ExactSolution {
@@ -9,8 +8,7 @@ export interface ExactSolution {
   cost: number
 }
 
-// Оптимум целевой функции модели (длина плюс штрафы за повороты). С ограничением угла
-// состояние помнит ещё и предпоследнюю точку: штраф зависит от тройки подряд
+// Оптимум длины + штрафов. С ограничением угла в состоянии ещё и предпоследняя точка (штраф зависит от тройки)
 export function heldKarp(model: RouteModel): ExactSolution {
   const { n } = model
   if (n > HELD_KARP_MAX_N) throw new Error(`Точный перебор поддерживает до ${HELD_KARP_MAX_N} турбин, получено ${n}`)
@@ -21,7 +19,7 @@ export function heldKarp(model: RouteModel): ExactSolution {
 function plain(model: RouteModel): ExactSolution {
   const { n, size, dist } = model
   const full = (1 << n) - 1
-  // dp[mask * size + last]: лучший путь от взлёта через турбины mask с концом в last
+  // dp[mask * size + last] - лучший путь от взлёта через mask с концом в last
   const dp = new Float64Array((full + 1) * size).fill(Infinity)
   const parent = new Int8Array((full + 1) * size).fill(-1)
   for (let k = 1; k <= n; k++) dp[(1 << (k - 1)) * size + k] = dist[k]
@@ -65,7 +63,7 @@ function plain(model: RouteModel): ExactSolution {
 function withTurns(model: RouteModel): ExactSolution {
   const { n, size, dist } = model
   const full = (1 << n) - 1
-  // Состояние: (mask, last, prev); prev = 0 — предыдущей турбины нет, до last летели от взлёта
+  // (mask, last, prev), prev = 0 - до last летели прямо со взлёта
   const index = (mask: number, last: number, prev: number) => (mask * size + last) * size + prev
   const dp = new Float64Array((full + 1) * size * size).fill(Infinity)
   const parent = new Int8Array((full + 1) * size * size).fill(-1)

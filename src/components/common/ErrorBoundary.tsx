@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 interface ErrorBoundaryProps {
   children: ReactNode
-  // Своя замена вместо карточки «Экран не смог открыться»: для части экрана (3D-сцена),
-  // без которой остальной экран работает
+  // Своя замена карточки ошибки для части экрана (3D-сцена), без которой остальное работает
   fallback?: ReactNode
 }
 
@@ -30,7 +29,7 @@ function ErrorFallback({ error }: { error: Error }) {
   )
 }
 
-// Без этой обёртки любая ошибка при отрисовке экрана оставляет пустое белое окно
+// Без неё любая ошибка отрисовки оставляет пустое белое окно
 export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null }
 

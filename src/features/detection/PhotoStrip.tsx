@@ -24,8 +24,7 @@ export default function PhotoStrip({ items, selectedId, onSelect }: PhotoStripPr
   const { t } = useTranslation()
   const listRef = useRef<HTMLUListElement>(null)
 
-  // Выбранное фото (в том числе после удаления соседнего) должно быть видно в ленте.
-  // Прокручиваем только ленту: scrollIntoView дёрнул бы всю страницу по вертикали
+  // Докручиваем ленту до выбранного фото. Не scrollIntoView - он дёргает всю страницу
   useEffect(() => {
     const list = listRef.current
     if (!selectedId || !list) return

@@ -1,8 +1,8 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { photos } from '@/storage/photos'
 
-// Ссылка на изображение или миниатюру из базы. undefined — ещё читается, null — изображения нет.
-// Ссылка освобождается при смене фото и при размонтировании: снимки по десятку мегабайт
+// undefined - ещё читается, null - изображения нет.
+// URL освобождаем при смене фото и размонтировании, снимки тяжёлые
 export function usePhotoUrl(photoId: string | undefined, kind: 'blob' | 'thumb'): string | null | undefined {
   const [state, setState] = useState<{ key: string; url: string | null } | null>(null)
   const key = photoId ? `${photoId}|${kind}` : ''
@@ -33,7 +33,7 @@ export function usePhotoUrl(photoId: string | undefined, kind: 'blob' | 'thumb')
   return state?.key === key ? state.url : undefined
 }
 
-// Размер элемента в CSS-пикселях; следит за изменением окна и раскладки
+// Размер элемента в CSS-пикселях
 export function useElementSize(ref: RefObject<HTMLElement | null>): { width: number; height: number } | null {
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
 

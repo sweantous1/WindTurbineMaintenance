@@ -19,8 +19,7 @@ import { useSimSnapshot } from '@/features/simulation/useSimClock'
 import { formatDate } from '@/utils'
 import { readLocal, writeLocal } from '@/utils/storage'
 
-// Сцена — отдельный ленивый чанк с three.js: панель и управление появляются, пока он грузится,
-// и работают, даже если WebGL недоступен
+// Сцена с three.js - отдельный ленивый чанк: панель и управление работают, пока он грузится, и без WebGL
 const SimulationCanvas = lazy(() => import('@/features/simulation/scene/SimulationCanvas'))
 
 const GROUND_MAP_KEY = 'wtm_sim_ground_map'
@@ -32,8 +31,8 @@ const GAP_LINKS: Record<SimGap, string> = {
 }
 
 export default function Simulation() {
-  // Диалог завершения живёт вне RequireMission: после записи активная миссия сбрасывается,
-  // и экран миссии исчезает, а окно должно остаться до «Закрыть»
+  // Диалог завершения вне RequireMission: после записи активная миссия сбрасывается,
+  // а окно должно остаться до нажатия "Закрыть"
   const [completing, setCompleting] = useState<Mission | null>(null)
   return (
     <>
@@ -86,7 +85,7 @@ function GapCard({ gap, preFlight }: { gap: SimGap; preFlight: boolean }) {
     <Card>
       <div className="mx-auto max-w-xl space-y-3 py-10 text-center">
         <p className="font-medium text-gray-800">{t(`sim.gaps.${gap}.title`)}</p>
-        {/* После полёта данные миссии не меняются — отправлять исправлять их некуда */}
+        {/* После полёта данные миссии не меняются, ссылка на исправление не нужна */}
         <p className="text-sm text-gray-600">{t(preFlight ? `sim.gaps.${gap}.body` : 'sim.gaps.flownBody')}</p>
         {preFlight && (
           <Link to={GAP_LINKS[gap]} className="inline-block text-sm font-medium text-blue-600 hover:text-blue-700">
@@ -107,10 +106,10 @@ interface SimulationViewProps {
 
 function SimulationView({ data, mission, drone, onComplete }: SimulationViewProps) {
   const { t } = useTranslation()
-  // На старте — пауза в начале; скорость подобрана так, чтобы облёт шёл около двух минут
+  // Стартуем на паузе, скорость подобрана под облёт примерно за две минуты
   const [clock] = useState(() => createSimClock(data.trajectory.durationS))
   const durationS = data.trajectory.durationS
-  // План могли поменять в другом окне: время проигрывания подстраивается, позиция сохраняется
+  // План могли поменять в другом окне - длительность подстраиваем, позиция сохраняется
   useEffect(() => clock.setDuration(durationS), [clock, durationS])
   const snap = useSimSnapshot(clock)
   const [cameraMode, setCameraMode] = useState<CameraMode>('follow')
@@ -124,7 +123,7 @@ function SimulationView({ data, mission, drone, onComplete }: SimulationViewProp
   return (
     <div className="grid grid-cols-1 items-start gap-6 min-[960px]:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-3">
-        {/* isolate: подписи сцены (z-index до 40) не выходят из этого блока поверх шапки и окон */}
+        {/* isolate, чтобы подписи сцены (z-index до 40) не вылезали поверх шапки и окон */}
         <div className="relative isolate h-[calc(100vh-220px)] min-h-[420px] overflow-hidden rounded-xl border border-gray-200 bg-slate-200">
           <ErrorBoundary fallback={<SceneUnavailable clock={clock} />}>
             <Suspense fallback={<p className="flex h-full items-center justify-center text-sm text-gray-600">{t('sim.scene.loading')}</p>}>
@@ -147,7 +146,7 @@ function SimulationView({ data, mission, drone, onComplete }: SimulationViewProp
   )
 }
 
-// Без WebGL сцены нет, но часы должны идти: панель, шкала и итоги работают и без неё
+// Без WebGL сцены нет, но часы должны идти - панель, шкала и итоги работают и без неё
 function SceneUnavailable({ clock }: { clock: SimClock }) {
   const { t } = useTranslation()
   useEffect(() => {

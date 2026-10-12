@@ -4,8 +4,8 @@ import { bbox, bearingDeg, centroid, distPointToSegment, haversineM, makeLocalFr
 
 const RAD = Math.PI / 180
 
-// Эталон — обратная задача Винсенти на эллипсоиде WGS84 (погрешность — доли миллиметра).
-// haversineM считает на сфере и сам отличается от эллипсоида на десятые доли процента
+// Для сверки: обратная задача Винсенти на WGS84 (погрешность доли мм).
+// haversineM считает на сфере и сам расходится с эллипсоидом на десятые доли процента
 function vincentyM(p1: GeoPoint, p2: GeoPoint): number {
   const a = 6378137
   const f = 1 / 298.257223563
@@ -51,7 +51,7 @@ const ORIGINS: GeoPoint[] = [
   { lat: 52, lon: 18.5 },
 ]
 
-// Точки на окружностях вокруг начала координат: каждые 5° по азимуту
+// Точки на окружностях вокруг начала координат через каждые 5° азимута
 function ringPoints(maxRadiusM: number, radiusStepM: number): LocalPoint[] {
   const points: LocalPoint[] = []
   for (let r = radiusStepM; r <= maxRadiusM; r += radiusStepM) {
@@ -60,7 +60,7 @@ function ringPoints(maxRadiusM: number, radiusStepM: number): LocalPoint[] {
   return points
 }
 
-// Наибольшее относительное расхождение длины вектора в локальной системе с эталонным расстоянием
+// Худшее относительное расхождение длины в локальной системе с расстоянием reference
 function maxRelativeError(origin: GeoPoint, maxRadiusM: number, reference: (a: GeoPoint, b: GeoPoint) => number): number {
   const frame = makeLocalFrame(origin)
   let worst = 0
@@ -114,7 +114,7 @@ describe('makeLocalFrame', () => {
   })
 
   // Масштаб по долготе берётся по широте центра, поэтому ошибка растёт линейно с удалением:
-  // около 0,0035% на километр, на 30 км — 0,10% (48°) и 0,12% (52°)
+  // около 0,0035% на км, на 30 км 0,10% (48°) и 0,12% (52°)
   it.each(ORIGINS)('до 30 км от центра расхождение с геодезическим расстоянием меньше 0,12% (широта $lat°)', (origin) => {
     expect(maxRelativeError(origin, 30000, vincentyM)).toBeLessThan(0.0012)
   })
@@ -123,8 +123,8 @@ describe('makeLocalFrame', () => {
     expect(maxRelativeError(origin, 30000, vincentyM)).toBeLessThan(0.0012)
   })
 
-  // Сфера haversineM и эллипсоид расходятся до 0,3% по восточному направлению на этих широтах,
-  // поэтому сверка с haversineM показывает прежде всего модель Земли, а не качество проекции
+  // Сфера и эллипсоид на этих широтах расходятся до 0,3% по востоку, так что сверка
+  // с haversineM показывает скорее модель Земли, чем качество проекции
   it.each(ORIGINS)('против haversineM до 30 км расхождение меньше 0,4% (широта $lat°)', (origin) => {
     expect(maxRelativeError(origin, 30000, haversineM)).toBeLessThan(0.004)
   })
@@ -174,8 +174,8 @@ describe('bearingDeg', () => {
     expect(angleDiffDeg(bearingDeg({ lat: 10, lon: -179.99 }, { lat: 10, lon: 179.99 }), 270)).toBeLessThan(0.01)
   })
 
-  // bearingDeg считает на сфере, а локальная система — на эллипсоиде с разными радиусами
-  // по меридиану и параллели, поэтому по диагоналям азимуты расходятся до ~0,09°
+  // bearingDeg на сфере, а локальная система на эллипсоиде с разными радиусами по меридиану
+  // и параллели, поэтому по диагоналям азимуты расходятся до ~0,09°
   it('всегда в диапазоне [0, 360) и сходится с направлением в локальной системе', () => {
     for (let az = 0; az < 360; az += 15) {
       const target = offsetGeo(base, 500 * Math.sin(az * RAD), 500 * Math.cos(az * RAD))

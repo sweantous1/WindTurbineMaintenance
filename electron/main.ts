@@ -3,13 +3,12 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-// main собирается в ES-модуль ("type": "module" в package.json), а в ESM нет __dirname
+// main собирается как ESM, __dirname там нет
 const currentDir = path.dirname(fileURLToPath(import.meta.url))
 const distDir = path.join(currentDir, '../dist')
 
-// Собранное приложение открывается со своей схемы app://bundle, а не с file://.
-// У file:// нет нормального origin: хуже работают IndexedDB, фоновые потоки (Web Worker)
-// и загрузка файлов модели через fetch.
+// Своя схема app://bundle вместо file:// - у file:// нет нормального origin,
+// из-за этого хуже работают IndexedDB, воркеры и fetch файлов модели
 const APP_SCHEME = 'app'
 const APP_ORIGIN = `${APP_SCHEME}://bundle`
 
@@ -20,9 +19,8 @@ protocol.registerSchemesAsPrivileged([
   },
 ])
 
-// Политика содержимого собранного приложения: код — только свой, из сети — только прогноз,
-// поиск города и тайлы карты. 'wasm-unsafe-eval' нужен onnxruntime-web, blob: — фоновому потоку
-// маршрута и текстурам внутри GLB. В режиме разработки страницу отдаёт Vite, и политика не действует
+// CSP: из сети только прогноз, поиск города и тайлы. wasm-unsafe-eval для onnxruntime-web,
+// blob: для воркера маршрута и текстур в GLB. В dev страницу отдаёт Vite, там CSP нет
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self' 'wasm-unsafe-eval'",
@@ -42,14 +40,13 @@ function registerAppProtocol() {
     const { pathname } = new URL(request.url)
     const relative = decodeURIComponent(pathname).replace(/^\/+/, '') || 'index.html'
     const filePath = path.normalize(path.join(distDir, relative))
-    // Не выпускаем запросы за пределы папки dist
-    // Нет файла — честный 404, а не сетевая ошибка: так, например, движок детекции
-    // отличает «модель не установлена» от сбоя загрузки
+    // Только внутри dist. Нет файла - 404, а не сетевая ошибка: по нему детекция
+    // отличает "модель не установлена" от сбоя загрузки
     if (!filePath.startsWith(distDir + path.sep) || !existsSync(filePath)) {
       return new Response('Not found', { status: 404 })
     }
     const file = await net.fetch(pathToFileURL(filePath).toString())
-    // Заголовок нужен и страницам, и скриптам фоновых потоков: у потока из отдельного файла своя политика
+    // CSP и для скриптов воркеров, у воркера из отдельного файла своя политика
     const headers = new Headers(file.headers)
     headers.set('Content-Security-Policy', CONTENT_SECURITY_POLICY)
     return new Response(file.body, { status: file.status, statusText: file.statusText, headers })
@@ -76,14 +73,14 @@ function createWindow() {
     },
   })
 
-  // Ссылки target=_blank и window.open открываем в системном браузере, а не в окне приложения
+  // target=_blank и window.open открываем в системном браузере
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isHttpUrl(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
 
-  // Не даём окну уйти со страницы приложения: например, на фото, брошенное мимо зоны загрузки.
-  // Сравниваем с текущим адресом, который уже нормализовал Chromium, — так проходит перезагрузка страницы
+  // Не даём уйти со страницы (например, на фото, брошенное мимо зоны загрузки).
+  // Сравниваем с текущим URL, уже нормализованным Chromium, чтобы работала перезагрузка
   const wc = mainWindow.webContents
   const isSamePage = (url: string) => {
     try {
@@ -112,8 +109,7 @@ function createWindow() {
   })
 }
 
-// Политика тайлов OpenStreetMap требует опознаваемый User-Agent и Referer, а со схемы app://
-// Chromium Referer не отправляет — без этого сервер тайлов может отказать приложению
+// OSM требует опознаваемые User-Agent и Referer, а с app:// Chromium Referer не шлёт
 const TILE_URLS = ['https://tile.openstreetmap.org/*', 'https://*.tile.openstreetmap.org/*']
 const APP_REFERER = 'https://github.com/sweantous1/WindTurbineMaintenance'
 
@@ -126,9 +122,8 @@ function identifyTileRequests() {
   })
 }
 
-// Второй экземпляр с тем же профилем не открыл бы IndexedDB (её держит первый процесс)
-// и навсегда остался бы в «Загрузка…». Вместо него поднимаем уже открытое окно.
-// Окно создаётся только в экземпляре с блокировкой, иначе второй успевал бы мелькнуть окном
+// Второй экземпляр не откроет IndexedDB (её держит первый) и зависнет на загрузке,
+// поэтому поднимаем уже открытое окно. Окно создаём только под блокировкой
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {

@@ -67,7 +67,7 @@ describe('фото и находки', () => {
     expect((await missions.get(m.id))?.status).toBe('flown')
     await photos.saveAnalysis(b.id, analysis, [])
     expect((await missions.get(m.id))?.status).toBe('analyzed')
-    // Новое фото — снова есть что разбирать
+    // Новое фото, снова есть что разбирать
     await photos.add(m.id, [prepared('c.jpg')])
     expect((await missions.get(m.id))?.status).toBe('flown')
   })

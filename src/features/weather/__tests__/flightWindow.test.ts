@@ -52,7 +52,7 @@ describe('раскраска окна вылета', () => {
   it('каждый час получает статус проверки', () => {
     const hours = [
       hour('2026-09-25T08:00', 3),
-      hour('2026-09-25T09:00', 10), // 10 из 12 — больше 80% лимита
+      hour('2026-09-25T09:00', 10), // 10 из 12, больше 80% лимита
       hour('2026-09-25T10:00', 13),
       hour('2026-09-25T11:00', null),
     ]
@@ -68,7 +68,7 @@ describe('раскраска окна вылета', () => {
     expect(new Set(looks.map((l) => l.icon)).size).toBe(STATUS_ORDER.length)
     expect(new Set(looks.map((l) => l.labelKey)).size).toBe(STATUS_ORDER.length)
     expect(new Set(looks.map((l) => l.cell)).size).toBe(STATUS_ORDER.length)
-    // «Нет данных» — ещё и пунктирной рамкой
+    // "нет данных" ещё и пунктирной рамкой
     expect(statusLook('insufficient').cell).toContain('border-dashed')
   })
 

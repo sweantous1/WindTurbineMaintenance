@@ -2,8 +2,7 @@ import type { DroneProfile } from '@/domain/types'
 import { formatInputNumber } from '@/features/route/format'
 import { parseDecimal } from './location'
 
-// Форма профиля дрона для настроек. Лежит рядом с погодой: эти числа — лимиты,
-// с которыми сравнивается прогноз, и основа оценки заряда
+// Форма профиля дрона. Лежит в weather, т.к. это лимиты для прогноза и оценки заряда
 
 export type DroneNumericField = 'maxWindMs' | 'maxGustMs' | 'cruiseSpeedMs' | 'enduranceMin' | 'reservePct' | 'maxAltitudeM'
 
@@ -16,8 +15,7 @@ export const DRONE_NUMERIC_FIELDS: readonly DroneNumericField[] = [
   'maxAltitudeM',
 ]
 
-// Границы правдоподобия, а не паспорт конкретного дрона: отсекают опечатки вроде 350 м/с.
-// Резерв меньше 100%: иначе на полёт не остаётся заряда вовсе
+// грубые границы от опечаток вроде 350 м/с, не паспорт дрона; резерв < 100%, иначе летать нечем
 export const DRONE_FIELD_RANGES: Record<DroneNumericField, { min: number; max: number }> = {
   maxWindMs: { min: 1, max: 40 },
   maxGustMs: { min: 1, max: 50 },
@@ -42,7 +40,7 @@ export type DroneFormResult =
   | { ok: true; profile: Omit<DroneProfile, 'id'> }
   | { ok: false; errors: DroneFormErrors }
 
-// Дроби — с десятичным разделителем языка: в русском интерфейсе «12,5», как во всех полях
+// дроби с разделителем языка (12,5 в русском)
 export function droneToForm(p: Omit<DroneProfile, 'id'>, lang: string): DroneFormValues {
   const num = (v: number) => formatInputNumber(v, lang)
   return {
@@ -75,7 +73,7 @@ export function validateDroneForm(v: DroneFormValues): DroneFormResult {
     else numbers[field] = n
   }
 
-  // Порыв не бывает слабее среднего ветра: при таком лимите запрет по ветру не наступит никогда
+  // порыв не может быть слабее среднего ветра
   const { maxWindMs, maxGustMs } = numbers
   if (maxWindMs !== undefined && maxGustMs !== undefined && maxGustMs < maxWindMs) {
     errors.maxGustMs = { key: 'settings.errors.gustBelowWind' }

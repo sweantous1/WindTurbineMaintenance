@@ -13,15 +13,15 @@ export { DEFAULT_ACO_PARAMS, DEFAULT_GA_PARAMS }
 export type { AcoParams, GaParams }
 
 export interface SolveInput {
-  // points[0] — точка взлёта, 1..n — турбины; локальные метры (makeLocalFrame)
+  // [0] - взлёт, 1..n - турбины, локальные метры (makeLocalFrame)
   points: LocalPoint[]
-  // Вернуться к точке взлёта
+  // Возврат на взлёт
   closed: boolean
   algorithm: RouteAlgorithm
   // ACO: iterations, ants, alpha, beta, rho, q, seed; GA: generations, population, mutationRate,
-  // crossoverRate, seed и необязательный selection (0 — турнир, 1 — рулетка); auto: seed
+  // crossoverRate, seed, selection (0 турнир, 1 рулетка); auto: seed
   params?: Record<string, number>
-  // 180 — без ограничения
+  // 180 = без ограничения
   thetaMaxDeg: number
 }
 
@@ -32,28 +32,26 @@ export interface SolveProgress {
 }
 
 export interface SolveResult {
-  // Индексы турбин 1..n в порядке облёта
+  // Турбины 1..n в порядке облёта
   visit: number[]
-  // Длина в плоскости от взлёта (и обратно, если closed), без штрафов
+  // Длина без штрафов, с возвратом если closed
   lengthM: number
   turnViolations: number
   iterations: number
   algorithm: RouteAlgorithm
 }
 
-// Прогресс не чаще 10 раз в секунду: чаще интерфейсу не нужно, а postMessage не бесплатен
+// Не чаще 10 раз в секунду, postMessage не бесплатный
 const PROGRESS_INTERVAL_MS = 100
 
-// «Авто»: число локальных поисков подбирается под n так, чтобы работа была примерно
-// одинаковой (один поиск стоит ~n²): 20 турбин — 20 стартов и 120 встрясок (единицы
-// миллисекунд без ограничения угла, ~20 мс с ним), 200 турбин — 10 поисков
+// auto: число поисков под n, чтобы работа была примерно одинаковой (поиск ~n^2).
+// 20 турбин - 20 стартов + 200 встрясок, 200 турбин - всего 10 поисков
 const AUTO_WORK = 200_000
 const AUTO_MIN_RUNS = 10
 const AUTO_KICKS_PER_TURBINE = 6
-// На малых n поиск дешёвый, а воронки оптимума при ограничении угла узкие — встрясок побольше
+// На малых n поиск дешёвый, а с ограничением угла воронки узкие - встрясок больше
 const AUTO_MIN_KICKS = 200
-// Результат встряски становится новой отправной точкой, если он хуже лучшего не более чем
-// на 5%: так поиск перебирается через «стенки» штрафов и не уходит далеко от лучшего
+// Принимаем результат встряски, если он хуже лучшего не больше чем на 5%, так поиск перелезает через штрафы
 const ILS_ACCEPT_WORSE = 0.05
 const SCRAMBLE_MIN = 3
 const SCRAMBLE_SPREAD = 6
@@ -104,8 +102,7 @@ export function solveRoute(
   }
 }
 
-// Вход приходит и через postMessage, где типы TypeScript уже ничего не гарантируют:
-// вместо «Cannot read properties of undefined» — внятная причина
+// Вход приходит через postMessage, типы там ничего не гарантируют
 function validateInput(input: SolveInput): void {
   if (!Array.isArray(input.points) || input.points.length === 0) throw new Error('Для расчёта маршрута нужна точка взлёта')
   for (const p of input.points) {
@@ -120,7 +117,7 @@ function validateInput(input: SolveInput): void {
   }
 }
 
-// До двух турбин все порядки перебираются напрямую
+// До двух турбин просто перебор
 function solveTiny(model: RouteModel): number[] {
   if (model.n === 0) return []
   if (model.n === 1) return [1]
@@ -130,11 +127,11 @@ function solveTiny(model: RouteModel): number[] {
 function polishTwoOpt(model: RouteModel, out: SearchOutcome, stop: () => boolean): number[] {
   const path = pathFromVisit(model, out.visit)
   twoOpt(model, path, stop)
-  // Проверка на всякий случай: доводка не должна ухудшать найденное
+  // На всякий случай: доводка не должна ухудшать
   return pathCost(model, path) <= out.cost ? visitFromPath(model, path) : Array.from(out.visit)
 }
 
-// 2-opt и Or-opt по очереди, пока хоть один находит улучшение
+// 2-opt и Or-opt по очереди, пока есть улучшения
 function localSearch(model: RouteModel, path: Int32Array, stop: () => boolean): void {
   for (;;) {
     twoOpt(model, path, stop)
@@ -142,9 +139,8 @@ function localSearch(model: RouteModel, path: Int32Array, stop: () => boolean): 
   }
 }
 
-// «Авто»: «ближайший сосед» с каждой (или с каждой k-й) первой турбины + локальный поиск,
-// затем встряски (попеременно «двойной мост» и перемешивание участка) с повторным поиском.
-// Встряски берут случайность из ГПСЧ с seed, так что результат детерминирован
+// auto: мультистарт ближайшего соседа + локальный поиск, потом встряски (double bridge / перемешивание участка).
+// rng с seed, так что результат детерминирован
 function solveAuto(model: RouteModel, seed: number, hooks: SearchHooks): { visit: number[]; iterations: number } {
   const { n } = model
   const runs = Math.max(AUTO_MIN_RUNS, Math.floor(AUTO_WORK / (n * n)))
@@ -191,8 +187,7 @@ function solveAuto(model: RouteModel, seed: number, hooks: SearchHooks): { visit
   return { visit: visitFromPath(model, best), iterations }
 }
 
-// Первые турбины для мультистарта: все, а если их слишком много — равномерная выборка
-// по удалённости от взлёта, начиная с ближайшей
+// Стартовые турбины: все или равномерная выборка по удалённости от взлёта
 function pickStarts(model: RouteModel, count: number): number[] {
   const { n, dist } = model
   const byDistance = Array.from({ length: n }, (_, k) => k + 1).sort((a, b) => dist[a] - dist[b] || a - b)
@@ -200,8 +195,7 @@ function pickStarts(model: RouteModel, count: number): number[] {
   return Array.from({ length: count }, (_, k) => byDistance[Math.floor((k * n) / count)])
 }
 
-// «Двойной мост» на турбинах path[1..n]: A B C D → A C B D. Такую перестройку
-// 2-opt и Or-opt за один ход не делают, поэтому она выбивает поиск из локального минимума
+// double bridge на path[1..n]: A B C D -> A C B D, 2-opt и Or-opt так за один ход не умеют
 function doubleBridge(path: Int32Array, n: number, rng: Rng): void {
   const p1 = randInt(rng, n - 1)
   const p2 = p1 + 1 + randInt(rng, n - 1 - p1)
@@ -211,19 +205,19 @@ function doubleBridge(path: Int32Array, n: number, rng: Rng): void {
   path.set(reordered, 1)
 }
 
-// Перемешивание короткого участка: при ограничении угла у хороших маршрутов бывают узкие
-// «воронки», куда двойной мост не попадает, а случайный порядок участка — попадает
+// Перемешать короткий участок: с ограничением угла так находятся узкие воронки,
+// куда double bridge не попадает
 function scrambleSegment(path: Int32Array, n: number, rng: Rng): void {
   const len = Math.min(n, SCRAMBLE_MIN + randInt(rng, SCRAMBLE_SPREAD))
   const start = 1 + randInt(rng, n - len + 1)
   shuffleInPlace(path.subarray(start, start + len), rng)
 }
 
-// ---------- Параметры от пользователя ----------
+// Параметры от пользователя
 
 type Range = { min: number; max: number; integer?: boolean }
 
-// Нечисловое значение — берётся значение по умолчанию, выход за границы — обрезается
+// Не число -> fallback, выход за границы обрезаем
 function readNumber(params: Record<string, number> | undefined, key: string, fallback: number, range: Range): number {
   const raw = params?.[key]
   if (typeof raw !== 'number' || !Number.isFinite(raw)) return fallback

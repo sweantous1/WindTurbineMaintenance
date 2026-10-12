@@ -11,8 +11,8 @@ interface FarmDefaultsFormProps {
   onChange: (patch: Partial<FarmDefaults>) => void
 }
 
-// Параметры турбин, для которых в файле нет своих значений; от них зависят высота
-// и радиус облёта, поэтому после правки план пересчитывается
+// Значения для турбин, у которых в файле своих нет. От них зависят высота и радиус облёта,
+// так что после изменения план пересчитывается
 export default function FarmDefaultsForm({ defaults, disabled, onChange }: FarmDefaultsFormProps) {
   const { t } = useTranslation()
   const m = t('routePlan.units.m')

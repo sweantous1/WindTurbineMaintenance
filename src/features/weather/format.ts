@@ -1,8 +1,7 @@
 import type { WeatherSnapshot } from '@/domain/types'
 
-// Время часов Open-Meteo — местное время фермы строкой '2026-09-24T14:00' без зоны.
-// Разбираем её как есть и форматируем в UTC: через часовой пояс компьютера час вылета
-// «уехал» бы на разницу поясов между оператором и фермой
+// Время от Open-Meteo - местное время фермы без зоны ('2026-09-24T14:00').
+// Форматируем в UTC, чтобы час не сдвигался на пояс компьютера
 
 export const DASH = '—'
 
@@ -13,7 +12,7 @@ export function formatNumber(value: number | null | undefined, lang: string, dig
   const key = `${lang}|${digits}`
   let f = numberFormats.get(key)
   if (!f) {
-    // 'negative' — без «-0» у значений, округлившихся до нуля
+    // без -0 у значений, округлённых до нуля
     f = new Intl.NumberFormat(lang, { maximumFractionDigits: digits, signDisplay: 'negative' })
     numberFormats.set(key, f)
   }
@@ -39,7 +38,7 @@ export function parseLocalTime(time: string): LocalTimeParts | null {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-// Цифры местного времени как UTC-момент: удобно для арифметики и Intl с timeZone 'UTC'
+// местное время как UTC-момент, для арифметики и Intl с timeZone 'UTC'
 function asUtc(p: LocalTimeParts): Date {
   return new Date(Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute))
 }
@@ -70,19 +69,19 @@ function dateFormat(lang: string, opts: Intl.DateTimeFormatOptions): Intl.DateTi
   return f
 }
 
-// «чт, 25 сент.»
+// "чт, 25 сент."
 export function formatDay(time: string, lang: string): string {
   const p = parseLocalTime(time)
   return p ? dateFormat(lang, { weekday: 'short', day: 'numeric', month: 'short' }).format(asUtc(p)) : DASH
 }
 
-// «25 сент.» — для подписей оси, где места мало
+// "25 сент." для подписей оси
 export function formatDayShort(time: string, lang: string): string {
   const p = parseLocalTime(time)
   return p ? dateFormat(lang, { day: 'numeric', month: 'short' }).format(asUtc(p)) : DASH
 }
 
-// «чт, 25 сент., 14:00»
+// "чт, 25 сент., 14:00"
 export function formatDayTime(time: string, lang: string): string {
   const p = parseLocalTime(time)
   return p ? `${formatDay(time, lang)}, ${formatClock(time)}` : DASH
@@ -97,7 +96,7 @@ export function addHours(time: string, hours: number): string {
 export const COMPASS_POINTS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
 export type CompassPoint = (typeof COMPASS_POINTS)[number]
 
-// Направление ветра — откуда дует, как в метеосводках
+// откуда дует, как в метеосводках
 export function compassPoint(deg: number | null | undefined): CompassPoint | null {
   if (deg == null || !Number.isFinite(deg)) return null
   const normalized = ((deg % 360) + 360) % 360
@@ -115,9 +114,8 @@ export function formatUtcOffset(seconds: number): string {
 
 const zoneNames = new Map<string, string>()
 
-// Название пояса на языке интерфейса: «Москва, стандартное время», а не Europe/Moscow.
-// Общее название (без «летнее»), потому что смещение рядом берётся из снимка. У пояса без
-// названия (Etc/GMT-3) или незнакомого движку Intl остаётся идентификатор IANA
+// Название пояса на языке интерфейса вместо Europe/Moscow, без летнего/зимнего (смещение из снимка).
+// Если у Intl названия нет (Etc/GMT-3 и т.п.), остаётся IANA-идентификатор
 export function formatTimeZone(timezone: string, lang: string): string {
   const key = `${lang}|${timezone}`
   const cached = zoneNames.get(key)
@@ -129,20 +127,19 @@ export function formatTimeZone(timezone: string, lang: string): string {
       .find((p) => p.type === 'timeZoneName')?.value
     if (part && !/^(GMT|UTC)([+-]|$)/.test(part)) name = part
   } catch {
-    // Неизвестный пояс: показываем как пришёл от Open-Meteo
+    // неизвестный пояс, оставляем как есть
   }
   zoneNames.set(key, name)
   return name
 }
 
-// Текущее время фермы в шкале часов снимка. Open-Meteo подписывает весь ряд одним смещением
-// utc_offset_seconds, без перехода на летнее время, поэтому и «сейчас» считаем по нему:
-// по имени пояса после перехода текущий час ряда оказался бы «прошедшим» или наоборот
+// Текущее время фермы в шкале снимка: Open-Meteo даёт весь ряд с одним utc_offset_seconds
+// без перехода на летнее время, поэтому и сейчас считаем по нему, а не по имени пояса
 export function farmLocalNow(s: Pick<WeatherSnapshot, 'timezone' | 'utcOffsetSeconds'>, now: Date = new Date()): string {
   return fromUtc(new Date(now.getTime() + s.utcOffsetSeconds * 1000))
 }
 
-// Смещение пояса в момент instant по его имени; null — пояс незнаком движку Intl
+// смещение пояса на момент instant; null, если Intl пояс не знает
 function zoneOffsetSeconds(timezone: string, instant: Date): number | null {
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -162,8 +159,7 @@ function zoneOffsetSeconds(timezone: string, instant: Date): number | null {
   }
 }
 
-// В горизонте прогноза пояс фермы переводит часы: подписи ряда идут по смещению снимка,
-// и после перехода расходятся со стенными часами фермы. Сдвиг в секундах или null
+// сдвиг в секундах, если в горизонте прогноза на ферме переводят часы, иначе null
 export function offsetShiftInForecast(s: Pick<WeatherSnapshot, 'timezone' | 'utcOffsetSeconds' | 'hourly'>): number | null {
   for (const h of [s.hourly[0], s.hourly[s.hourly.length - 1]]) {
     const p = h && parseLocalTime(h.time)
@@ -174,7 +170,7 @@ export function offsetShiftInForecast(s: Pick<WeatherSnapshot, 'timezone' | 'utc
   return null
 }
 
-// Час уже прошёл на ферме: текущий час (14:00 при 14:35) ещё не прошёл
+// текущий час (14:00 при 14:35) прошедшим не считается
 export function isPastHour(
   time: string,
   s: Pick<WeatherSnapshot, 'timezone' | 'utcOffsetSeconds'>,
@@ -186,7 +182,7 @@ export function isPastHour(
 
 export type AgeUnit = 'justNow' | 'minutes' | 'hours' | 'days'
 
-// Возраст снимка для подписи «обновлено 25 мин назад»; null — дата не читается
+// для подписи "обновлено 25 мин назад"; null, если дату не разобрать
 export function snapshotAge(fetchedAt: string, now: Date = new Date()): { unit: AgeUnit; count: number } | null {
   const ms = Date.parse(fetchedAt)
   if (Number.isNaN(ms)) return null
@@ -198,7 +194,7 @@ export function snapshotAge(fetchedAt: string, now: Date = new Date()): { unit: 
   return { unit: 'days', count: Math.floor(hours / 24) }
 }
 
-// Длительность в целых минутах, разложенная на часы и минуты; null — не конечна
+// минуты -> часы и минуты; null для бесконечных и отрицательных
 export function splitMinutes(min: number): { h: number; m: number } | null {
   if (!Number.isFinite(min) || min < 0) return null
   const total = Math.round(min)

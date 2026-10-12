@@ -15,7 +15,7 @@ function isPermutation(visit: number[], n: number): boolean {
   return [...visit].sort((a, b) => a - b).every((v, k) => v === k + 1) && visit.length === n
 }
 
-// Стоимость найденного маршрута и оптимум в той же целевой функции (длина + штрафы)
+// Стоимость маршрута и оптимум в одной целевой функции (длина + штрафы)
 function costAndOptimum(input: SolveInput, visit: number[]) {
   const model = createRouteModel(input.points, input.closed, input.thetaMaxDeg)
   return { cost: visitCost(model, visit), optimum: heldKarp(model).cost }
@@ -57,7 +57,7 @@ describe('«Авто»', () => {
   })
 
   it('с ограничением угла 21 точка укладывается в четверть секунды', () => {
-    // Штрафы делают поиск заметно дороже (больше встрясок и ходов), но он идёт в воркере
+    // Со штрафами поиск заметно дороже, но он всё равно в воркере
     const points = randomPoints(mulberry32(21), 21)
     for (const theta of [90, 45]) {
       const started = performance.now()
@@ -90,7 +90,7 @@ describe('ACO и GA', () => {
     const runs = [1, 2, 3].map((seed) =>
       solveRoute({ points, closed: true, algorithm: 'aco', thetaMaxDeg: 180, params: { seed, iterations: 30 } }),
     )
-    // За 30 итераций муравьи на 40 турбинах не сходятся к одному маршруту при разных seed
+    // За 30 итераций на 40 турбинах разные seed дают разные маршруты
     expect(new Set(runs.map((r) => r.visit.join(','))).size).toBeGreaterThan(1)
   })
 
@@ -131,9 +131,8 @@ describe('ACO и GA', () => {
 })
 
 describe('ограничение угла поворота', () => {
-  // Две параллельные цепочки по три турбины. Кратчайший путь — «змейка» с поворотами
-  // под 90° у каждой турбины; с пределом 60° выгоднее пройти вдоль одного ряда и
-  // вернуться вдоль другого — всего два крутых поворота
+  // Два параллельных ряда по три турбины: кратчайший путь - змейка с поворотом на 90 градусов у каждой турбины,
+  // с пределом 60 выгоднее пройти по одному ряду и вернуться по другому (два крутых поворота)
   const points: LocalPoint[] = [
     { x: 0, y: 0 },
     { x: 100, y: 0 },
@@ -156,13 +155,13 @@ describe('ограничение угла поворота', () => {
     expect(limited.visit).not.toEqual(free.visit)
     expect(limited.turnViolations).toBeLessThan(5)
     expect(limited.lengthM).toBeGreaterThan(free.lengthM)
-    // И это оптимум целевой функции с штрафами
+    // И это оптимум со штрафами
     expect(visitCost(strictModel, limited.visit)).toBeCloseTo(heldKarp(strictModel).cost, 6)
   })
 
   it('ряд с взлётом посередине: сначала к ближнему краю, разворот неизбежен — ровно одно нарушение', () => {
-    // Турбины через 100 м от 0 до 1000, взлёт в 450: 450 до левого края и 1000 обратно
-    // вдоль ряда = 1450 м (с правого края было бы 1550). Разворот на краю — 180°
+    // Турбины через 100 м от 0 до 1000, взлёт в 450: 450 до левого края + 1000 вдоль ряда = 1450 м
+    // (с правого края 1550), разворот на краю 180 градусов
     const line: LocalPoint[] = [{ x: 450, y: 0 }, ...Array.from({ length: 11 }, (_, k) => ({ x: k * 100, y: 0 }))]
     for (const algorithm of ['auto', 'aco', 'ga'] as const) {
       const result = solveRoute({ points: line, closed: false, algorithm, thetaMaxDeg: 90 })
@@ -204,7 +203,7 @@ describe('вырожденные случаи', () => {
       expect(one.visit).toEqual([1])
       expect(one.lengthM).toBeCloseTo(100, 9)
 
-      // Сначала дальняя, потом ближняя — длиннее, чем наоборот
+      // Сначала дальняя, потом ближняя - длиннее
       const two = solveRoute({
         points: [takeoff, { x: 200, y: 0 }, { x: 100, y: 0 }],
         closed: false,
@@ -251,11 +250,11 @@ describe('прогресс и остановка', () => {
   })
 
   it.each(['auto', 'aco', 'ga'] as const)('%s: прогресс согласован — номер растёт, лучшая длина не растёт, итог не хуже', (algorithm) => {
-    // Без ограничения угла стоимость равна длине, поэтому лучшая длина может только уменьшаться
+    // Без ограничения угла стоимость = длина, так что лучшая длина только уменьшается
     const points = randomPoints(mulberry32(12), 41)
     const events: SolveProgress[] = []
     let clock = 0
-    // Часы идут по 150 мс за вызов: троттлинг пропускает каждое событие, и видно их все
+    // Часы идут по 150 мс за вызов, так троттлинг не отбрасывает ни одного события
     const now = vi.spyOn(performance, 'now').mockImplementation(() => (clock += 150))
     try {
       const result = solveRoute({ points, closed: true, algorithm, thetaMaxDeg: 180, params: { iterations: 15, generations: 15 } }, (p) =>

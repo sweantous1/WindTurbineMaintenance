@@ -26,8 +26,7 @@ import {
 } from './chartData'
 import { formatClock, formatDayShort, formatDayTime, formatNumber, parseLocalTime } from './format'
 
-// Первые три цвета категориальной палитры различимы при всех видах цветослепоты;
-// порывы вдобавок пунктиром. Лимиты — «тревожный» красный, отличимый от серий
+// первые три цвета различимы при цветослепоте, порывы ещё и пунктиром; лимиты красным
 const COLORS = {
   transit: '#2a78d6',
   top: '#eb6834',
@@ -72,7 +71,7 @@ export default function WindChart({ hours, altitudes, limits, selectedTime }: Wi
     gust: t('weatherScreen.chart.gust'),
   }
 
-  // Полночь подписываем датой, остальные деления — временем
+  // полночь подписываем датой, остальное временем
   const tickFormatter = (time: string) => (parseLocalTime(time)?.hour === 0 ? formatDayShort(time, lang) : formatClock(time))
   const xAxis = (
     <XAxis
@@ -179,7 +178,7 @@ export default function WindChart({ hours, altitudes, limits, selectedTime }: Wi
               stroke={COLORS.axis}
               tickLine={false}
             />
-            {/* Подсказка общая с графиком ветра (syncId) и уже содержит осадки: вторая дублировала бы её */}
+            {/* тултип общий через syncId, осадки уже есть в тултипе ветра */}
             <Tooltip content={() => null} cursor={{ fill: 'rgba(17, 24, 39, 0.06)' }} />
             <ReferenceLine y={limits.maxPrecipMmH} stroke={COLORS.limit} strokeWidth={1.5} />
             {hasSelected && <ReferenceLine x={selectedTime} stroke={COLORS.selected} strokeWidth={1.5} strokeDasharray="3 3" />}

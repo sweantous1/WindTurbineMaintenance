@@ -12,8 +12,7 @@ const statusConfig: Record<GeneralStatus | MissionStatus, { bg: string; text: st
   processing: { bg: 'bg-blue-100', text: 'text-blue-800' },
   failed: { bg: 'bg-red-100', text: 'text-red-800' },
   draft: { bg: 'bg-gray-100', text: 'text-gray-800' },
-  // У миссии это «Час вылета выбран»: данные заданы, но допуск к полёту даёт только вердикт прогноза,
-  // поэтому не зелёный
+  // У миссии это "час вылета выбран", но допуск даёт только прогноз, поэтому не зелёный
   ready: { bg: 'bg-sky-100', text: 'text-sky-800' },
   'in-progress': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
   low: { bg: 'bg-green-100', text: 'text-green-800' },
@@ -29,7 +28,7 @@ const statusConfig: Record<GeneralStatus | MissionStatus, { bg: string; text: st
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const { t } = useTranslation()
-  // Запись из старой базы может нести статус, которого нет в перечне
+  // В старой базе может быть статус, которого нет в перечне
   const config = statusConfig[status] ?? statusConfig.draft
 
   return (

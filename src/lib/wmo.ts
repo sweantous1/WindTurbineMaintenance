@@ -5,7 +5,7 @@ export const WMO_CODES: readonly number[] = [
 
 const KNOWN = new Set(WMO_CODES)
 
-// Ключ перевода описания погоды; словари — src/i18n/features/wmo.*.json
+// Ключ перевода описания погоды, словари в src/i18n/features/wmo.*.json
 export function wmoKey(code: number | null | undefined): string {
   return code != null && KNOWN.has(code) ? `wmo.${code}` : 'wmo.unknown'
 }

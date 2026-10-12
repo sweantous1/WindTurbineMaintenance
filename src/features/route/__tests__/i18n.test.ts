@@ -7,7 +7,7 @@ import { ALGORITHMS, PARAM_DEFS } from '../optimizerParams'
 
 type Dict = { [key: string]: string | Dict }
 
-// Исходники экрана: ключи перевода ищутся прямо в коде, чтобы опечатка в ключе не дошла до интерфейса
+// ключи перевода ищем прямо в исходниках экрана, чтобы опечатка не дошла до UI
 const featureSources = import.meta.glob<string>(['../*.tsx', '../*.ts'], { query: '?raw', import: 'default', eager: true })
 const sources = [routerSource, ...Object.values(featureSources)]
 
@@ -24,7 +24,7 @@ function flatten(d: Dict, prefix = ''): Map<string, string> {
 const ruKeys = flatten(ru as Dict)
 const enKeys = flatten(en as Dict)
 
-// Ключ с плюралом хранится как key_one, key_few…; в коде он пишется без суффикса
+// плюральные ключи хранятся как key_one, key_few..., а в коде пишутся без суффикса
 const exists = (keys: Map<string, string>, key: string) => keys.has(key) || keys.has(`${key}_other`)
 
 // satisfies Record: новый код ошибки импорта без перевода не соберётся
@@ -73,7 +73,7 @@ describe('словари экрана маршрута', () => {
   it('подстановки в текстах одинаковы на обоих языках', () => {
     const vars = (s: string) => [...s.matchAll(/{{(\w+)}}/g)].map((m) => m[1]).sort()
     for (const [key, value] of ruKeys) expect(vars(enKeys.get(key) ?? ''), key).toEqual(vars(value))
-    // Ошибка импорта называет файл: иначе после двух неудачных попыток не понять, о каком речь
+    // в ошибке импорта есть имя файла, чтобы после пары неудачных попыток было понятно, о каком речь
     expect(vars(ruKeys.get('routePlan.importErrors.withFile') ?? '')).toEqual(['name', 'reason'])
     expect(vars(ruKeys.get('routePlan.import.weatherReset') ?? '')).toEqual(['km'])
   })

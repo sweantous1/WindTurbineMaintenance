@@ -8,7 +8,7 @@ import { formatDate } from '@/utils'
 import { formatLocalHour, formatValue, routeKm, turbineCount } from './missionView'
 
 interface MissionStepperProps {
-  // undefined — миссии нет: шаги показываются как план работы, доступно только создание
+  // undefined - миссии нет: шаги как план работы, доступно только создание
   mission: Mission | undefined
   onCreate: () => void
   // Нужны только при миссии
@@ -30,12 +30,12 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
   const lang = i18n.resolvedLanguage ?? 'ru'
   const navigate = useNavigate()
   const steps = missionSteps(mission)
-  // Текущий шаг — первый невыполненный из обязательных: 3D-облёт можно пропустить
+  // Текущий - первый невыполненный обязательный шаг (3D-облёт можно пропустить)
   const current = mission ? steps.find((s) => !s.done && !s.optional)?.key : 'mission'
   const hasRoute = !!mission?.route && mission.route.order.length > 0
 
   const actionFor = (s: MissionStep): (() => void) | undefined => {
-    // 3D проигрывает маршрут — без него открывать нечего
+    // Без маршрута в 3D показывать нечего
     if (s.key === 'simulation' && !hasRoute) return undefined
     if (s.key === 'mission') return mission ? onOpenSettings : onCreate
     if (!mission) return s.key === 'history' ? () => navigate('/history') : undefined
@@ -68,8 +68,8 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
     }
   }
 
-  // Шаг погоды «готов», когда час выбран, но это не допуск к полёту: вердикт на этот час —
-  // в карточке прогноза под шагами, и об этом нужно сказать рядом с зелёной галочкой
+  // Выбранный час ещё не допуск к полёту, вердикт в карточке прогноза под шагами,
+  // поэтому рядом с галочкой подсказка
   const noteFor = (s: MissionStep): string | null =>
     mission && s.key === 'weather' && s.done ? t('mission.steps.weather.verdictHint') : null
 
@@ -129,7 +129,7 @@ export default function MissionStepper({ mission, onCreate, onOpenSettings, onCo
                   {content}
                 </button>
               ) : (
-                // Без opacity: полупрозрачный серый текст падал ниже 4,5:1, неактивность и так видна по рамке
+                // Без opacity: полупрозрачный серый не дотягивает до 4,5:1, неактивность и так видна по рамке
                 <div aria-current={isCurrent ? 'step' : undefined} className={`h-full rounded-lg border p-3 ${tone}`}>
                   {content}
                 </div>

@@ -69,12 +69,12 @@ describe('время фермы', () => {
   it('текущее время на ферме — по часовому поясу фермы, а не компьютера', () => {
     const now = new Date('2026-09-24T16:20:00Z')
     expect(farmLocalNow(MOSCOW, now)).toBe('2026-09-24T19:20')
-    // Незнакомый движку пояс — по смещению из снимка
+    // неизвестный пояс считаем по смещению из снимка
     expect(farmLocalNow({ timezone: 'Mars/Olympus', utcOffsetSeconds: 3600 }, now)).toBe('2026-09-24T17:20')
   })
 
-  // Находка: Open-Meteo подписывает весь ряд одним смещением, без перехода на зимнее время.
-  // Снимок получен 23.10 (+2), смотрим 26.10 в 09:30Z: по часам ряда это 11:30, а не 10:30
+  // у Open-Meteo весь ряд с одним смещением: снимок от 23.10 (+2), смотрим 26.10 в 09:30Z,
+  // по часам ряда это 11:30, а не 10:30
   it('«сейчас» и прошедшие часы — по смещению снимка, а не по переходу на зимнее время', () => {
     const berlin = { timezone: 'Europe/Berlin', utcOffsetSeconds: 7200 }
     const now = new Date('2026-10-26T09:30:00Z')
@@ -89,7 +89,7 @@ describe('время фермы', () => {
   it('перевод часов в горизонте прогноза замечается', () => {
     const hourly = (from: string, to: string) => [{ time: from }, { time: to }] as Parameters<typeof offsetShiftInForecast>[0]['hourly']
     const berlin = { timezone: 'Europe/Berlin', utcOffsetSeconds: 7200 }
-    // 23.10 → 29.10: 25.10 Берлин переходит на +1
+    // 23.10 -> 29.10, 25.10 Берлин переходит на +1
     expect(offsetShiftInForecast({ ...berlin, hourly: hourly('2026-10-23T12:00', '2026-10-29T12:00') })).toBe(-3600)
     expect(offsetShiftInForecast({ ...berlin, hourly: hourly('2026-10-20T12:00', '2026-10-22T12:00') })).toBeNull()
     expect(offsetShiftInForecast({ ...MOSCOW, hourly: hourly('2026-10-23T12:00', '2026-10-29T12:00') })).toBeNull()

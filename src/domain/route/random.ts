@@ -1,8 +1,7 @@
-// Свой генератор вместо Math.random: при том же seed расчёт повторяется точь-в-точь,
-// и маршрут из сохранённой миссии можно пересчитать и получить тот же результат
+// Свой ГПСЧ вместо Math.random, чтобы по seed маршрут сохранённой миссии пересчитывался один в один
 export type Rng = () => number
 
-// mulberry32: 32-битное состояние, период 2^32 — для перестановок из сотен точек достаточно
+// mulberry32, период 2^32 - для сотен точек хватает
 export function mulberry32(seed: number): Rng {
   let state = Math.trunc(seed) >>> 0
   return () => {
@@ -19,7 +18,7 @@ export function randInt(rng: Rng, maxExclusive: number): number {
   return Math.floor(rng() * maxExclusive)
 }
 
-// Тасование Фишера — Йетса на месте
+// Фишер-Йетс на месте
 export function shuffleInPlace<T extends { length: number; [i: number]: number }>(arr: T, rng: Rng): T {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = randInt(rng, i + 1)

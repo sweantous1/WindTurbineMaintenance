@@ -5,13 +5,12 @@ import type { LocalPoint } from '@/lib/geo'
 import type { SimTurbine } from '../simData'
 import { FRAME_PRIORITY, type LabelRegistry } from './droneFrame'
 
-// Подписи над роторами — обычный DOM поверх холста: слой рендерит React вне Canvas, а положения
-// каждый кадр проставляет LabelProjector внутри Canvas прямо в style. Html из drei не подошёл:
-// он заводит по React-корню на подпись, и при уходе со страницы корни падали на removeChild
+// Подписи обычным DOM поверх холста, позиции каждый кадр пишет в style LabelProjector.
+// Html из drei не берём: он создаёт React-корень на каждую подпись и падает на removeChild при уходе
 const LABEL_LIFT_M = 10
 const PAD_RADIUS_M = 9
 const PAD_LIFT_M = 0.5
-// Подписи чуть за краем кадра ещё видны наполовину — прячем с запасом
+// Подпись чуть за краем кадра ещё видна наполовину, прячем с запасом
 const EDGE_NDC = 1.2
 
 interface LabelLayerProps {
@@ -20,7 +19,7 @@ interface LabelLayerProps {
   registry: LabelRegistry
 }
 
-// Подписи дублируют список «Порядок облёта» в панели, поэтому скрыты от экранного диктора
+// Дублируют список порядка облёта в панели, поэтому aria-hidden
 export function LabelLayer({ turbines, currentVisit, registry }: LabelLayerProps) {
   return (
     <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden" aria-hidden="true">
@@ -41,15 +40,13 @@ export function LabelLayer({ turbines, currentVisit, registry }: LabelLayerProps
   )
 }
 
-// Проекция точки над ротором в пиксели холста; подписи позади камеры и далеко за краем кадра скрыты
+// Проекция точки над ротором в пиксели холста, подписи за камерой и далеко за краем прячем
 export function LabelProjector({ turbines, registry }: { turbines: readonly SimTurbine[]; registry: LabelRegistry }) {
   const camera = useThree((s) => s.camera)
   const size = useThree((s) => s.size)
   const [v] = useState(() => new Vector3())
   useFrame(() => {
-    // lookAt камеры (за дроном и в OrbitControls) обновляет матрицу до поворота, а рендер пересчитает
-    // её только при отрисовке: без этого подписи проецировались бы с поворотом прошлого кадра
-    // и на облёте отставали от турбин на десятки пикселей
+    // После lookAt матрица камеры ещё старая (рендер пересчитает её позже), без этого подписи отстают на кадр
     camera.updateMatrixWorld()
     for (const t of turbines) {
       const el = registry.elements.get(t.id)
@@ -70,7 +67,7 @@ export function LabelProjector({ turbines, registry }: { turbines: readonly SimT
 }
 
 function TurbineLabel({ turbine: t, current }: { turbine: SimTurbine; current: boolean }) {
-  // Турбина вне маршрута — без номера и бледнее
+  // Турбина вне маршрута без номера и бледнее
   if (t.visitIndex === null) {
     return <span className="whitespace-nowrap rounded bg-white/60 px-1 text-[10px] text-gray-600 select-none">{t.name}</span>
   }
@@ -88,7 +85,7 @@ function TurbineLabel({ turbine: t, current }: { turbine: SimTurbine; current: b
   )
 }
 
-// Метка «H» на земле в точке взлёта: текстура рисуется на холсте, без шрифтов из сети
+// Метка H в точке взлёта, текстура рисуется на canvas без сетевых шрифтов
 export function TakeoffPad({ at }: { at: LocalPoint }) {
   const { geometry, material } = useMemo(() => {
     const canvas = document.createElement('canvas')

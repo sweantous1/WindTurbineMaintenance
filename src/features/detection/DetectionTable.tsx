@@ -23,8 +23,7 @@ export default function DetectionTable({ analysis, detections, total, selectedId
   const scrollRef = useRef<HTMLDivElement>(null)
   const bodyRef = useRef<HTMLTableSectionElement>(null)
 
-  // Рамку выбрали на снимке — строка должна оказаться в видимой части таблицы.
-  // Прокручиваем только таблицу: страница не должна уезжать от снимка, по которому кликнули
+  // Докручиваем до выбранной строки только саму таблицу, чтобы страница не уезжала от снимка
   useEffect(() => {
     const box = scrollRef.current
     const row = Array.from(bodyRef.current?.rows ?? []).find((r) => r.dataset.detectionId === selectedId)
@@ -37,7 +36,7 @@ export default function DetectionTable({ analysis, detections, total, selectedId
   }, [selectedId])
 
   if (!analysis) return <Empty text={t('defects.table.notAnalyzed')} />
-  // У архивной миссии кнопки повтора нет — не отправляем к ней
+  // У архивной миссии нет кнопки повтора
   if (analysis.status === 'failed') return <Empty text={readOnly ? t('defects.table.failedReadOnly') : t('defects.table.failed')} />
   if (total === 0) return <Empty text={t('defects.table.noneFound')} />
 
@@ -47,7 +46,7 @@ export default function DetectionTable({ analysis, detections, total, selectedId
       {detections.length === 0 ? (
         <Empty text={t('defects.table.empty')} />
       ) : (
-        // relative: иначе скрытые подписи sr-only растягивают страницу; высота ограничена — шапка остаётся видна
+        // relative, иначе sr-only подписи растягивают страницу; max-h чтобы шапка оставалась на виду
         <div ref={scrollRef} className="relative max-h-[26rem] overflow-auto rounded-lg border border-gray-100">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-gray-50">
@@ -75,7 +74,7 @@ export default function DetectionTable({ analysis, detections, total, selectedId
                     }`}
                   >
                     <td className={`border-l-4 py-2 pl-2 pr-2 ${high ? 'border-l-red-500' : 'border-l-transparent'}`}>
-                      {/* Кнопка — чтобы выбрать находку и с клавиатуры */}
+                      {/* Кнопка, чтобы выбирать и с клавиатуры */}
                       <button
                         type="button"
                         aria-pressed={selected}

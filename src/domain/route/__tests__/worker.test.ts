@@ -29,7 +29,7 @@ describe('воркер маршрута', () => {
       expect(last.result.visit).toEqual([1, 2, 3])
       expect(last.result.lengthM).toBeCloseTo(300, 9)
     }
-    // Первый отчёт о прогрессе уходит сразу, дальше — не чаще раза в 100 мс
+    // Первый прогресс сразу, дальше не чаще раза в 100 мс
     expect(out.length).toBeGreaterThan(1)
     expect(out.slice(0, -1).every((m) => m.type === 'progress')).toBe(true)
   })

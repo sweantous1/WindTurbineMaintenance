@@ -1,6 +1,6 @@
 import type { GeoPoint } from './types'
 
-// Классы дефектов в приложении. Модель может называть их иначе — сопоставление в manifest.classMap
+// Классы дефектов приложения; имена из модели сопоставляются через manifest.classMap
 export const APP_DEFECT_CLASSES = ['crack', 'corrosion', 'erosion', 'lightning', 'contamination', 'delamination', 'other'] as const
 export type AppDefectClass = (typeof APP_DEFECT_CLASSES)[number]
 
@@ -29,7 +29,7 @@ export interface PhotoAnalysis {
   modelVersion: string
   backend?: 'webgpu' | 'wasm'
   analyzedAt: string
-  // Порог, с которым сохранены находки; ползунок в интерфейсе фильтрует выше него без повторного прогона
+  // Порог при сохранении; ползунок в UI фильтрует выше него без повторного прогона
   minConfidence: number
   iou: number
   tiles: number
@@ -53,7 +53,7 @@ export interface PhotoRecord {
   analysis?: PhotoAnalysis
 }
 
-// Само изображение и миниатюра хранятся отдельно от записи о фото, чтобы списки не тянули мегабайты
+// Картинка и миниатюра отдельно от записи, чтобы списки не тянули мегабайты
 export interface PhotoBlobRecord {
   id: string
   blob: Blob
@@ -80,8 +80,7 @@ export interface Detection {
 
 export type DetectionPatch = Partial<Pick<Detection, 'severity' | 'reviewed' | 'note' | 'defectClass'>>
 
-// Опасность по умолчанию — от класса, не от уверенности модели: это разные величины.
-// Оператор правит её после проверки снимка.
+// Опасность по умолчанию зависит от класса, а не от уверенности модели; оператор потом правит
 const DEFAULT_SEVERITY: Record<AppDefectClass, Severity> = {
   lightning: 4,
   crack: 3,

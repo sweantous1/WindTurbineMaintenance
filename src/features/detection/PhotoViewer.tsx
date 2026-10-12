@@ -15,12 +15,12 @@ interface PhotoViewerProps {
   zoomed: boolean
 }
 
-// Снимок вписан через object-contain, а SVG поверх — с viewBox по натуральному размеру
-// и preserveAspectRatio «meet»: оба вписываются одинаково, и рамки в пикселях оригинала ложатся точно
+// object-contain у картинки и viewBox + meet у SVG вписываются одинаково,
+// поэтому рамки в пикселях оригинала ложатся точно
 export default function PhotoViewer({ photo, detections, selectedId, onSelect, labelText, ariaLabel, zoomed }: PhotoViewerProps) {
   const { t } = useTranslation()
   const url = usePhotoUrl(photo.id, 'blob')
-  // Снимок на 45 Мп декодируется заметное время: до события load рамки висели бы над пустым полем
+  // 45 Мп декодируются долго, рамки показываем только после load
   const [shown, setShown] = useState<{ url: string; ok: boolean } | null>(null)
   const loaded = !!url && shown?.url === url && shown.ok
   const broken = !!url && shown?.url === url && !shown.ok
@@ -31,11 +31,11 @@ export default function PhotoViewer({ photo, detections, selectedId, onSelect, l
   const selected = selectedId ? detections.find((d) => d.id === selectedId) : undefined
   const zoom = zoomed && selected && box ? zoomToBox(selected, natural, box) : NO_ZOOM
   const fit = box ? fitScale(natural, box) : 0
-  // Линии и подписи одной толщины на экране при любом размере снимка и приближении
+  // Толщина линий и подписей на экране не зависит от размера снимка и зума
   const unitsPerPx = fit > 0 ? 1 / (fit * zoom.scale) : Math.max(natural.width, natural.height) / 800
   const style = useMemo(() => overlayStyle(unitsPerPx), [unitsPerPx])
   const laid = useMemo(() => layoutOverlay(detections, natural, style, labelText), [detections, natural, style, labelText])
-  // Выбранная рамка — поверх остальных
+  // Выбранная рамка поверх остальных
   const items = selected ? [...laid.filter((it) => it.item.id !== selected.id), ...laid.filter((it) => it.item.id === selected.id)] : laid
 
   const onKey = (e: KeyboardEvent, id: string) => {
@@ -93,7 +93,7 @@ export default function PhotoViewer({ photo, detections, selectedId, onSelect, l
                     }}
                     onKeyDown={(e) => onKey(e, item.id)}
                   >
-                    {/* Своя отметка фокуса с клавиатуры: обводку фокуса у элементов SVG рисуют не все браузеры */}
+                    {/* Свой фокус-ринг: у элементов SVG его рисуют не все браузеры */}
                     <g className="invisible group-focus-visible:visible" pointerEvents="none">
                       <rect
                         x={x - style.selectedStrokeWidth * 2}
@@ -116,7 +116,7 @@ export default function PhotoViewer({ photo, detections, selectedId, onSelect, l
                       />
                     </g>
                     {isSelected && (
-                      // Светлая обводка под выбранной рамкой: её видно и на тёмном, и на светлом фоне
+                      // Белая подложка, чтобы рамку было видно на любом фоне
                       <rect x={x} y={y} width={w} height={h} fill="none" stroke="#ffffff" strokeWidth={style.selectedStrokeWidth * 2} />
                     )}
                     <rect
@@ -127,7 +127,7 @@ export default function PhotoViewer({ photo, detections, selectedId, onSelect, l
                       fill="transparent"
                       stroke={color}
                       strokeWidth={isSelected ? style.selectedStrokeWidth : style.strokeWidth}
-                      // Выбранная рамка лежит сверху: кликается только по контуру, чтобы рамки внутри неё оставались доступны
+                      // Выбранная лежит сверху, кликается только контур - иначе не достать рамки внутри
                       pointerEvents={isSelected ? 'visibleStroke' : 'all'}
                     />
                     <rect x={label.x} y={label.y} width={label.width} height={label.height} fill={color} />

@@ -1,5 +1,5 @@
-// Числа для экрана маршрута в формате языка интерфейса; бесконечность — «∞»
-// (оценка заряда даёт её, когда против ветра не долететь)
+// Форматирование чисел для экрана маршрута. Бесконечность выводим как ∞
+// (оценка заряда даёт её, если против ветра не долететь)
 
 const formatters = new Map<string, Intl.NumberFormat>()
 
@@ -19,7 +19,7 @@ export function formatNumber(value: number, lang: string, digits = 0): string {
   return formatter(lang, digits).format(value)
 }
 
-// Короткие маршруты — с сотыми, длинные — с десятыми
+// короткие маршруты с сотыми, длинные с десятыми
 export function formatKm(lengthM: number, lang: string): string {
   const km = lengthM / 1000
   return formatNumber(km, lang, Math.abs(km) < 10 ? 2 : 1)
@@ -44,7 +44,7 @@ export function formatInputNumber(value: number, lang: string): string {
   return sep === '.' ? s : s.replace('.', sep)
 }
 
-// Координаты — всегда с точкой и 6 знаками (~10 см): их копируют в другие программы
+// координаты всегда с точкой и 6 знаками (~10 см), их копируют в другие программы
 export function formatCoord(value: number): string {
   return value.toFixed(6)
 }

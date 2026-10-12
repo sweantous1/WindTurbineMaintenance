@@ -70,7 +70,7 @@ describe('оценка заряда', () => {
     expect(e.batteryWorstPct).toBe(e.batteryPct)
     expect(e.usablePct).toBe(80)
     expect(e.sorties).toBe(1)
-    // Попутный или отрицательный ветер худший случай не улучшает, null — как штиль
+    // Попутный или отрицательный ветер худший случай не улучшает, null как штиль
     expect(estimateMission(10_000, drone, -4).timeWorstMin).toBe(e.timeMin)
     expect(estimateMission(10_000, drone, null).timeWorstMin).toBe(e.timeMin)
   })
@@ -82,7 +82,7 @@ describe('оценка заряда', () => {
     expect(e.timeWorstMin).toBeCloseTo(125 / 3, 9)
     expect(e.batteryWorstPct).toBeCloseTo(2500 / 21, 9)
     expect(e.sorties).toBe(2)
-    // 4 вылета: 3 × 80% < 250% ≤ 4 × 80%
+    // 4 вылета: 3 * 80% < 250% <= 4 * 80%
     expect(estimateMission(21_000, drone, 6).sorties).toBe(4)
   })
 
@@ -91,7 +91,7 @@ describe('оценка заряда', () => {
     expect(e.timeWorstMin).toBe(Infinity)
     expect(e.batteryWorstPct).toBe(Infinity)
     expect(e.sorties).toBe(Infinity)
-    // Чуть быстрее порога — долететь можно, пусть и за много вылетов
+    // Чуть быстрее порога долететь можно, хоть и за много вылетов
     expect(Number.isFinite(estimateMission(10_000, drone, 9.4).sorties)).toBe(true)
   })
 
@@ -129,19 +129,19 @@ describe('оценка часа', () => {
   })
 
   it('ровно на границах: 0,8 лимита — на грани, лимит — нельзя', () => {
-    // 0,8 × 12 в двоичной арифметике = 9,600000000000001: значение 9,6 из прогноза обязано попасть в «на грани»
+    // 0.8 * 12 = 9.600000000000001, а 9.6 из прогноза должно быть "на грани"
     expect(assessHour(hour({}, 9.6), ctx).reasons).toEqual([
       { code: 'wind', severity: 'marginal', value: 9.6, limit: 12, altM: 90 },
     ])
     expect(assessHour(hour({}, 9.59), ctx).status).toBe('ok')
     expect(assessHour(hour({}, 12), ctx).reasons[0]).toMatchObject({ code: 'wind', severity: 'no', value: 12 })
-    // Порыв при лимите 14: 0,8 × 14 = 11,200000000000001
+    // Порыв при лимите 14: 0.8 * 14 = 11.200000000000001
     const gustLimits = { ...ctx, limits: { ...limits, maxGustMs: 14 } }
     expect(assessHour(hour({}, 5.6, 11.2), gustLimits).reasons).toEqual([
       { code: 'gust', severity: 'marginal', value: 11.2, limit: 14, altM: 90 },
     ])
     expect(assessHour(hour({}, 7, 14), gustLimits).reasons[0]).toMatchObject({ code: 'gust', severity: 'no' })
-    // Осадки при лимите 3 мм/ч: 0,8 × 3 = 2,4000000000000004
+    // Осадки при лимите 3 мм/ч: 0.8 * 3 = 2.4000000000000004
     const wetLimits = { ...ctx, limits: { ...limits, maxPrecipMmH: 3 } }
     expect(assessHour(hour({ precipitationMm: 2.4 }), wetLimits).reasons).toEqual([
       { code: 'precip', severity: 'marginal', value: 2.4, limit: 3 },
@@ -153,7 +153,7 @@ describe('оценка часа', () => {
     expect(a.windByAlt[0].ms).toBeCloseTo(4.17, 2)
     expect(a.status).toBe('ok')
     expect(a.reasons).toEqual([])
-    // Те же числа, прочитанные как м/с (ошибка эталона), дали бы запрет
+    // Те же числа, прочитанные как м/с, дали бы запрет
     expect(assessHour(hour({}, 15, 20), ctx).status).toBe('no')
   })
 
@@ -174,7 +174,7 @@ describe('оценка часа', () => {
     expect(a.windByAlt.map((w) => w.altM)).toEqual([30, 60, 120])
     expect(a.status).toBe('no')
     expect(a.reasons.find((r) => r.code === 'wind')).toMatchObject({ severity: 'no', value: 12.5, altM: 120 })
-    // Порыв на 120 м: 12,5 + (8 − 5) = 15,5 при лимите 15
+    // Порыв на 120 м: 12.5 + (8 - 5) = 15.5 при лимите 15
     expect(a.reasons.find((r) => r.code === 'gust')).toMatchObject({ severity: 'no', altM: 120 })
     expect(a.reasons.find((r) => r.code === 'gust')?.value).toBeCloseTo(15.5, 9)
   })
@@ -195,7 +195,7 @@ describe('оценка часа', () => {
     expect(assessHour(hour({ precipitationMm: 0.5 }), ctx).reasons[0]).toMatchObject({ code: 'precip', severity: 'marginal' })
     expect(assessHour(hour({ precipitationMm: 0.4 }), ctx).reasons[0]).toMatchObject({ code: 'precip', severity: 'marginal' })
     expect(assessHour(hour({ precipitationMm: 0.3 }), ctx).status).toBe('ok')
-    // Лимит 0 мм/ч: сухо — можно, любая капля — нельзя
+    // Лимит 0 мм/ч: сухо можно, любая капля нельзя
     const dryOnly = { ...ctx, limits: { ...limits, maxPrecipMmH: 0 } }
     expect(assessHour(hour({ precipitationMm: 0 }), dryOnly).status).toBe('ok')
     expect(assessHour(hour({ precipitationMm: 0.1 }), dryOnly).reasons[0]).toMatchObject({ code: 'precip', severity: 'no' })
@@ -210,7 +210,7 @@ describe('оценка часа', () => {
       { code: 'visibility', severity: 'no', value: 2.5, limit: 3 },
     ])
     expect(assessHour(hour({ visibilityKm: 3 }), ctx).status).toBe('ok')
-    // Пропуски в неветровых полях проверку не валят и не выдают «недостаточно данных»
+    // Пропуски в неветровых полях не дают "недостаточно данных"
     expect(assessHour(hour({ temperatureC: null, visibilityKm: null, precipitationMm: null }), ctx).status).toBe('ok')
   })
 
@@ -218,16 +218,15 @@ describe('оценка часа', () => {
     const a = assessHour(hour(), { ...ctx, plan: plan({ maxAltM: 130 }) })
     expect(a.status).toBe('no')
     expect(a.reasons).toContainEqual({ code: 'altitude', severity: 'no', value: 130, limit: 120, altM: 130 })
-    // Потолок — минимум из миссии и дрона
+    // Потолок - минимум из миссии и дрона
     const low = assessHour(hour(), { ...ctx, drone: { ...drone, maxAltitudeM: 100 }, plan: plan() })
     expect(low.reasons).toContainEqual({ code: 'altitude', severity: 'no', value: 110, limit: 100, altM: 110 })
-    // Ровно на потолке — можно
+    // Ровно на потолке можно
     expect(assessHour(hour(), { ...ctx, plan: plan({ maxAltM: 120 }) }).status).toBe('ok')
   })
 
   it('без плана высота миссии выше потолка прижимается к нему, как в плане полёта', () => {
-    // План ведёт транзит по потолку (buildFlightPlan), поэтому до построения маршрута тот же
-    // час не должен быть «нельзя», а после — «можно»
+    // Как в buildFlightPlan: вердикт не должен меняться после построения маршрута
     const noPlan = assessHour(hour(), { ...ctx, flightAltitudeM: 150 })
     expect(noPlan.status).toBe('ok')
     expect(noPlan.reasons).toEqual([])
@@ -235,7 +234,7 @@ describe('оценка часа', () => {
     // Ветер оценивается на потолке, а не на недостижимых 150 м
     const windy = hour({ windMs: { '10': 5, '80': 8, '120': 11, '180': 14 } }, 5, 8)
     expect(assessHour(windy, { ...ctx, flightAltitudeM: 150 }).reasons.find((r) => r.code === 'wind')).toMatchObject({ altM: 120, value: 11 })
-    // Потолок — общий для миссии и дрона
+    // Потолок общий для миссии и дрона
     const lowDrone = assessHour(hour(), { ...ctx, drone: { ...drone, maxAltitudeM: 100 }, flightAltitudeM: 130 })
     expect(lowDrone.windByAlt.map((w) => w.altM)).toEqual([100])
     expect(lowDrone.reasons).toEqual([])
@@ -248,7 +247,7 @@ describe('оценка часа', () => {
     const a = assessHour(hour(), { ...ctx, plan: plan({ conflicts: [conflict, { ...conflict, segmentIndex: 5 }] }) })
     expect(a.status).toBe('marginal')
     expect(a.reasons).toEqual([{ code: 'conflict', severity: 'marginal', value: 2, limit: 0 }])
-    // Запреты по погоде по-прежнему идут первыми
+    // Погодные запреты идут первыми
     const wet = assessHour(hour({ precipitationMm: 1 }), { ...ctx, plan: plan({ conflicts: [conflict] }) })
     expect(wet.status).toBe('no')
     expect(wet.reasons.map((r) => r.code)).toEqual(['precip', 'conflict'])
@@ -269,7 +268,7 @@ describe('оценка часа', () => {
   it('заряд считается по худшему ветру среди высот плана', () => {
     const h = hour({ windMs: { '10': 2, '80': 4, '120': 6, '180': 7 } }, 2, 2.4)
     const a = assessHour(h, { ...ctx, plan: plan({ altitudeLevelsM: [60, 90], maxAltM: 120 }) })
-    // На 120 м — 6 м/с, путевая 4 м/с
+    // На 120 м 6 м/с, путевая 4 м/с
     expect(a.estimate?.timeWorstMin).toBeCloseTo(125 / 3, 9)
     expect(a.reasons).toContainEqual({ code: 'battery', severity: 'marginal', value: a.estimate?.batteryWorstPct, limit: 80, altM: 120 })
   })
@@ -308,11 +307,11 @@ describe('оценка часа', () => {
     expect(a.status).toBe('insufficient')
     expect(a.windByAlt).toEqual([{ altM: 90, ms: null, gustMs: null, extrapolated: false }])
 
-    // Недостаток данных важнее «на грани», но «нельзя» важнее недостатка
+    // Нехватка данных важнее "на грани", но "нельзя" важнее нехватки
     expect(assessHour({ ...noUpper, precipitationMm: 0.45 }, ctx).status).toBe('insufficient')
     expect(assessHour({ ...noUpper, temperatureC: -20 }, ctx).status).toBe('no')
 
-    // Не хватает ветра хотя бы на одной высоте плана — тоже недостаточно, даже если на других всё есть
+    // Нет ветра хотя бы на одной высоте плана - тоже недостаточно данных
     const no180 = hour({ windMs: { '10': 3, '80': 3, '120': 3, '180': null } })
     const withPlan = assessHour(no180, { ...ctx, plan: plan({ altitudeLevelsM: [60, 90], maxAltM: 150 }) })
     expect(withPlan.status).toBe('no')
@@ -320,7 +319,7 @@ describe('оценка часа', () => {
     const inCeiling = { ...ctx, limits: { ...limits, maxAltitudeM: 200 }, drone: { ...drone, maxAltitudeM: 200 } }
     expect(assessHour(no180, { ...inCeiling, plan: plan({ altitudeLevelsM: [60, 90], maxAltM: 150 }) }).status).toBe('insufficient')
 
-    // Нет порыва у земли — оценить порывы нельзя
+    // Нет порыва у земли - порывы не оценить
     expect(assessHour(hour({ gustMs10: null }), ctx).status).toBe('insufficient')
   })
 

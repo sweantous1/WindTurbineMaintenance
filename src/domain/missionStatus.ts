@@ -5,15 +5,14 @@ export const POST_FLIGHT: readonly MissionStatus[] = ['flown', 'analyzed', 'arch
 
 export const isPreFlight = (status: MissionStatus) => PRE_FLIGHT.includes(status)
 
-// Статус до полёта вычисляется из данных: его нельзя «забыть» обновить
+// Статус до полёта считается из данных, чтобы его нельзя было забыть обновить
 export function derivePreFlightStatus(m: Pick<Mission, 'route' | 'weather' | 'departureTime'>): MissionStatus {
   if (!m.route || m.route.order.length === 0) return 'draft'
   if (!m.weather || !m.departureTime) return 'planned'
   return 'ready'
 }
 
-// После полёта полётные данные только читаются: погода, маршрут, ферма, лимиты и час вылета
-// — это запись о том, что было. Менять можно только заметки (а позже — фото и детекции).
+// После полёта данные полёта только для чтения, правятся лишь заметки и название
 const POST_FLIGHT_EDITABLE: ReadonlySet<keyof MissionPatch> = new Set(['notes', 'name'])
 
 export function canEdit(status: MissionStatus, field: keyof MissionPatch): boolean {
@@ -31,11 +30,11 @@ export type MissionStepKey = 'mission' | 'farm' | 'route' | 'weather' | 'simulat
 export interface MissionStep {
   key: MissionStepKey
   done: boolean
-  // Шаг можно пропустить: текущим он не становится
+  // Необязательный шаг, текущим не становится
   optional?: boolean
 }
 
-// Шаги сценария для главной; статус каждого шага вычисляется из данных миссии
+// Шаги сценария для главной, статусы из данных миссии
 export function missionSteps(m: Mission | undefined): MissionStep[] {
   const flown = m ? !isPreFlight(m.status) : false
   return [
@@ -43,7 +42,7 @@ export function missionSteps(m: Mission | undefined): MissionStep[] {
     { key: 'farm', done: !!m?.farm && m.farm.turbines.length > 0 },
     { key: 'route', done: !!m?.route && m.route.order.length > 0 },
     { key: 'weather', done: !!m?.weather && !!m?.departureTime },
-    // 3D-облёт — просмотр плана перед вылетом; после полёта этот этап позади
+    // 3D-облёт - просмотр плана перед вылетом, после полёта уже позади
     { key: 'simulation', done: flown, optional: true },
     { key: 'complete', done: flown },
     { key: 'detection', done: m?.status === 'analyzed' || m?.status === 'archived' },

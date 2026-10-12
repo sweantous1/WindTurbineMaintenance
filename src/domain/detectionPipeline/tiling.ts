@@ -1,4 +1,4 @@
-// Прямоугольник фрагмента в пикселях оригинала
+// Фрагмент в пикселях оригинала
 export interface TileRect {
   x: number
   y: number
@@ -7,11 +7,11 @@ export interface TileRect {
 }
 
 export interface TilingOptions {
-  // Сторона фрагмента: модель обучена на кусках 640×640 в исходном масштабе кадра
+  // Модель обучена на кусках 640x640 без масштабирования
   tile: number
-  // Доля перекрытия соседних фрагментов, 0..1 (не включая 1)
+  // Перекрытие соседей, [0, 1)
   overlap: number
-  // Кадр с большей стороной не длиннее этой обрабатывается целиком за один проход
+  // Кадр с большей стороной до этой гоняем целиком за один проход
   singlePassMaxSide: number
 }
 
@@ -21,14 +21,14 @@ function assertSide(value: number, name: string): void {
   if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} должен быть положительным: ${value}`)
 }
 
-// Начала фрагментов вдоль одной оси: шаг step, последний прижат к краю, чтобы не было ни дыр, ни выхода за кадр
+// Старты по оси с шагом step, последний прижат к краю (без дыр и выхода за кадр)
 function axisStarts(length: number, tile: number, step: number): number[] {
   if (length <= tile) return [0]
   const count = Math.ceil((length - tile) / step) + 1
   return Array.from({ length: count }, (_, i) => Math.min(i * step, length - tile))
 }
 
-// Разбиение кадра на фрагменты; порядок — по строкам сверху вниз, в строке слева направо
+// Порядок: строки сверху вниз, в строке слева направо
 export function planTiles(width: number, height: number, options: Partial<TilingOptions> = {}): TileRect[] {
   const { tile, overlap, singlePassMaxSide } = { ...DEFAULT_TILING, ...options }
   assertSide(width, 'width')

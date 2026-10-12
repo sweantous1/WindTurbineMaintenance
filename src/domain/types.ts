@@ -1,5 +1,5 @@
-// Предметная модель приложения. Единицы измерения — в именах полей (M — метры, Ms — м/с, Km, Pct...).
-// Координаты хранятся в WGS84 (lat, lon); для расчётов их переводят в локальные метры (src/lib/geo.ts).
+// Единицы в именах полей: M - метры, Ms - м/с, Km, Pct...
+// Координаты в WGS84, для расчётов переводятся в локальные метры (src/lib/geo.ts)
 
 export interface GeoPoint {
   lat: number
@@ -14,7 +14,7 @@ export interface Turbine {
   lat: number
   lon: number
   groundAltM?: number
-  // Если не заданы — берутся из Farm.defaults
+  // Если не заданы, берутся из Farm.defaults
   hubHeightM?: number
   rotorDiameterM?: number
 }
@@ -71,15 +71,15 @@ export interface RoutePlan {
   algorithm: RouteAlgorithm
   // ACO: iterations, ants, alpha, beta, rho, q, seed; GA: generations, population, mutationRate, crossoverRate, seed
   params: Record<string, number>
-  // Максимальный угол поворота, градусы; 180 — без ограничения
+  // Макс. угол поворота в градусах, 180 - без ограничения
   thetaMaxDeg: number
   returnToTakeoff: boolean
-  // Порядок облёта — id турбин
+  // Порядок облёта, id турбин
   order: string[]
   // Длина плана полёта целиком (взлёт, транзит, облёты, возврат), м
   lengthM: number
   turnViolations: number
-  // 'edited' — порядок или ферму правили руками после расчёта
+  // 'edited' - порядок или ферму правили руками после расчёта
   source: 'auto' | 'edited'
   computedAt: string
 }
@@ -141,7 +141,7 @@ export interface FlightWaypoint {
 }
 
 export interface FlightConflict {
-  // Отрезок транзита проходит слишком близко к турбине, которую не облетают на этом отрезке
+  // Отрезок плана проходит слишком близко к турбине
   segmentIndex: number
   turbineId: string
   distanceM: number
@@ -181,10 +181,9 @@ export interface Mission {
   takeoff?: GeoPoint
   route?: RoutePlan
   weather?: WeatherSnapshot
-  // Выбранный час вылета — значение WeatherHour.time
+  // Выбранный час вылета, значение WeatherHour.time
   departureTime?: string
-  // Профиль дрона на момент завершения полёта: правка профиля в настройках
-  // не должна задним числом менять вердикт и оценку заряда облетанной миссии
+  // Профиль дрона на момент полёта, чтобы правка настроек не меняла задним числом вердикт и заряд
   droneSnapshot?: DroneProfile
   notes?: string
 }

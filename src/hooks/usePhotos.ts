@@ -18,7 +18,7 @@ export function useDetections(missionId: string | undefined): Detection[] | unde
   )
 }
 
-// Число находок по миссиям — для истории и главной
+// Число находок по миссиям для истории и главной
 export function useDetectionCounts(): Map<string, number> | undefined {
   return useLiveQuery(async () => {
     const counts = new Map<string, number>()

@@ -6,13 +6,13 @@ import { FAR_FROM_FARM_M } from '@/features/weather/location'
 
 // Ручная правка фермы на карте и замена фермы импортом
 
-// Дальше этого старую точку взлёта для новой фермы предлагаем перенести: скорее всего,
-// ферма другая, а локальная система координат точна примерно до 30 км от центра
+// дальше этого предлагаем перенести взлёт к новой ферме: скорее всего ферма другая,
+// а локальные координаты точны примерно до 30 км от центра
 export const FAR_TAKEOFF_M = 10_000
 
 const NUMBERED_ID = /^t(\d+)$/i
 
-// Номер новой турбины — больше всех «tN» и «TN» среди id и имён, чтобы не совпасть ни с одной
+// номер больше всех tN/TN среди id и имён, чтобы не было совпадений
 function nextTurbineNumber(turbines: readonly Turbine[]): number {
   let max = turbines.length
   for (const t of turbines) {
@@ -53,7 +53,7 @@ export function moveTurbine(farm: Farm, id: string, p: GeoPoint): Farm {
     farm,
     farm.turbines.map((t) => {
       if (t.id !== id) return t
-      // Высота рельефа из файла относится к старой точке — на новом месте она неизвестна
+      // высота рельефа из файла была для старой точки, на новом месте она неизвестна
       const { groundAltM, ...rest } = t
       void groundAltM
       return { ...rest, lat: p.lat, lon: p.lon }
@@ -65,31 +65,30 @@ export function setFarmDefaults(farm: Farm, patch: Partial<FarmDefaults>): Farm 
   return { ...farm, defaults: { ...farm.defaults, ...patch } }
 }
 
-// Насколько точка далеко от центра импортируемой фермы; undefined — точки нет
+// расстояние от точки до центра импортируемой фермы; undefined, если точки нет
 function distanceToImportM(p: GeoPoint | undefined, imp: Pick<FarmImport, 'turbines'>): number | undefined {
   if (!p || imp.turbines.length === 0) return undefined
   return haversineM(p, centroid(imp.turbines))
 }
 
-// Насколько сохранённая точка взлёта далеко от центра импортируемой фермы; undefined — взлёт не задан
+// undefined, если взлёт не задан
 export function importTakeoffDistanceM(takeoff: GeoPoint | undefined, imp: Pick<FarmImport, 'turbines'>): number | undefined {
   return distanceToImportM(takeoff, imp)
 }
 
-// То же для места сохранённого прогноза; undefined — прогноза нет
+// то же для точки прогноза; undefined, если прогноза нет
 export function importWeatherDistanceM(weather: Pick<WeatherSnapshot, 'location'> | undefined, imp: Pick<FarmImport, 'turbines'>): number | undefined {
   return distanceToImportM(weather?.location, imp)
 }
 
-// Прогноз дальше этого от новой фермы описывает чужую погоду — порог тот же, что у экрана погоды
+// прогноз дальше этого уже про чужую погоду; порог как на экране погоды
 export function importDropsWeather(weather: Pick<WeatherSnapshot, 'location'> | undefined, imp: Pick<FarmImport, 'turbines'>): boolean {
   const distM = importWeatherDistanceM(weather, imp)
   return distM !== undefined && distM > FAR_FROM_FARM_M
 }
 
-// Замена фермы импортом: маршрут сбрасывается, взлёт по умолчанию — центр новой фермы.
-// Далёкий прогноз сбрасывается вместе с часом вылета, выбранным по нему: иначе после нового
-// маршрута у миссии снова был бы «Час вылета выбран» по погоде другого места
+// маршрут сбрасываем, взлёт по умолчанию в центр новой фермы. Далёкий прогноз сбрасываем
+// вместе с выбранным по нему часом вылета, он был бы по погоде другого места
 export function importPatch(m: Pick<Mission, 'farm' | 'takeoff' | 'weather'>, imp: FarmImport, opts: { moveTakeoff: boolean }): MissionPatch {
   const farm = farmFromImport(imp, m.farm)
   const takeoff = !m.takeoff || opts.moveTakeoff ? farm.center : m.takeoff

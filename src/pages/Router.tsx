@@ -44,7 +44,7 @@ import {
 } from '@/features/route/routeLogic'
 import { stateAfter, undoPatch, type FarmState } from '@/features/route/undo'
 
-// Раньше ручной маршрут хранился в localStorage; теперь маршрут — часть миссии в IndexedDB
+// Чистим устаревший ключ ручного маршрута, маршрут хранится в миссии в IndexedDB
 try {
   localStorage.removeItem('wtm_route_data')
 } catch (error) {
@@ -56,9 +56,9 @@ const EDITED_FIELDS = ['farm', 'route', 'takeoff', 'flightAltitudeM'] as const s
 
 const KML_ACCEPT = '.kml,.kmz,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz'
 
-// Сколько держится уведомление с кнопкой «Отменить»
+// Сколько держится уведомление с кнопкой отмены
 const UNDO_TOAST_MS = 8000
-// Ошибка импорта длинная и объясняет, какой файл нужен: за общие 3 с её не прочесть
+// Ошибка импорта длинная, за стандартные 3 с её не прочесть
 const IMPORT_ERROR_TOAST_MS = 10_000
 
 function downloadText(fileName: string, text: string, mime: string): void {
@@ -69,7 +69,7 @@ function downloadText(fileName: string, text: string, mime: string): void {
   document.body.appendChild(a)
   a.click()
   a.remove()
-  // Загрузка стартует асинхронно — ссылку освобождаем с запасом
+  // Загрузка стартует асинхронно, ссылку освобождаем с запасом
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
@@ -85,7 +85,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
   const { id: missionId, farm, route, flightAltitudeM } = mission
   const savedTakeoff = mission.takeoff
   const editable = EDITED_FIELDS.every((f) => canEdit(mission.status, f))
-  // Потолок — меньшее из ограничений миссии и дрона; пока профиль грузится — ограничение миссии
+  // Потолок - меньшее из лимитов миссии и дрона, пока профиль грузится берём лимит миссии
   const ceilingM = drone ? effectiveLimits(mission.limits, drone).maxAltitudeM : mission.limits.maxAltitudeM
   const turbineCount = farm?.turbines.length ?? 0
   const takeoff = savedTakeoff ?? farm?.center
@@ -97,7 +97,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
   const order = useMemo(() => (farm && route ? cleanOrder(farm, route.order) : []), [farm, route])
   const plan = useMemo(() => (ctx && route ? planFor(ctx, route.order, route.returnToTakeoff) : undefined), [ctx, route])
 
-  // Черновик настроек оптимизатора: применяется кнопкой «Построить маршрут»
+  // Черновик настроек оптимизатора, применяется кнопкой построения маршрута
   const [settings, setSettings] = useState<Settings>(() => settingsFromRoute(route))
   const routeSettings = useMemo(() => settingsFromRoute(route), [route])
   const changedFromRoute = !!route && !sameSettings(settings, routeSettings)
@@ -111,7 +111,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
   const [pendingImport, setPendingImport] = useState<FarmImport | null>(null)
   const [applying, setApplying] = useState(false)
 
-  // Уход с экрана или смена миссии останавливают расчёт: воркер завершается сразу
+  // При уходе с экрана или смене миссии воркер останавливается сразу
   useEffect(() => () => solveRef.current?.cancel(), [])
 
   const reportError = useCallback(
@@ -126,9 +126,8 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     [t],
   )
 
-  // Правки идут строго по очереди, и каждая читает миссию из базы заново: иначе две быстрые
-  // правки (клики по карте, перестановки) прочли бы одно и то же состояние, и вторая затёрла бы первую.
-  // true — патч сохранён; false — сохранять было нечего или не удалось (ошибка уже показана)
+  // Правки по очереди, каждая заново читает миссию из базы, иначе быстрая вторая затрёт первую.
+  // true - патч сохранён, false - сохранять нечего или ошибка (она уже показана)
   const queue = useRef<Promise<unknown>>(Promise.resolve())
   const edit = useCallback(
     (makePatch: (m: Mission) => MissionPatch | null): Promise<boolean> => {
@@ -152,8 +151,8 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     [missionId, reportError],
   )
 
-  // Перенос и удаление турбины можно отменить: маркер легко сдвинуть случайно, а координаты
-  // и высота рельефа из файла после этого пропадают
+  // Перенос и удаление турбины можно отменить: маркер легко сдвинуть случайно,
+  // а координаты и высота рельефа из файла потеряются
   const offerUndo = useCallback(
     (message: string, before: FarmState, after: FarmState) => {
       let used = false
@@ -189,7 +188,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     (turbineId: string, change: (farm: Farm) => Farm, messageKey: 'routePlan.undo.moved' | 'routePlan.undo.deleted') => {
       const undo: { before?: FarmState; after?: FarmState; name?: string } = {}
       return edit((m) => {
-        // Турбину уже удалили в другом окне — менять нечего, маршрут не помечаем изменённым
+        // Турбину уже удалили в другом окне, менять нечего и маршрут не помечаем изменённым
         const turbine = m.farm?.turbines.find((tb) => tb.id === turbineId)
         if (!m.farm || !turbine) return null
         const patch = farmEditPatch(m, change(m.farm), ceilingM)
@@ -205,8 +204,8 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     [edit, ceilingM, offerUndo, t],
   )
 
-  // Длина в маршруте должна совпадать с планом: высоту или профиль дрона могли поменять
-  // на другом экране. Пересчёт идёт по свежей миссии, поэтому повторно не срабатывает
+  // Длина маршрута должна совпадать с планом (высоту или дрон могли поменять на другом экране).
+  // Считаем по свежей миссии, так что повторно не срабатывает
   useEffect(() => {
     if (!editable || !drone || solving || !route || !plan || !lengthDrifted(route, plan)) return
     void edit((m) => {
@@ -240,7 +239,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
       if (!m.farm || !m.route) return null
       const current = cleanOrder(m.farm, m.route.order)
       const next = moveIdInOrder(current, turbineId, delta)
-      // Уже на краю списка — маршрут не трогаем и не помечаем изменённым
+      // Уже на краю списка, ничего не меняем
       return next.every((id, i) => id === current[i]) ? null : orderPatch(m, next, ceilingM)
     })
 
@@ -260,7 +259,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     try {
       setPendingImport(await readFarmFile(file))
     } catch (error) {
-      // Имя файла — чтобы при нескольких неудачных попытках было видно, о каком речь
+      // С именем файла, чтобы при нескольких неудачных попытках было понятно, о каком речь
       toast.error(t('routePlan.importErrors.withFile', { name: file.name, reason: importErrorText(error) }), {
         autoClose: IMPORT_ERROR_TOAST_MS,
       })
@@ -275,7 +274,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
     setApplying(true)
     const saved = await edit((m) => importPatch(m, imp, { moveTakeoff }))
     setApplying(false)
-    // Не сохранилось — окно остаётся открытым, ошибка уже показана
+    // Не сохранилось - окно не закрываем, ошибка уже показана
     if (!saved) return
     toast.success(t('routePlan.import.done', { count: imp.turbines.length }))
     setPendingImport(null)
@@ -305,7 +304,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
       const result = await handle.promise
       const outcome: { stale: boolean; route?: RoutePlan } = { stale: false }
       const saved = await edit((current) => {
-        // Пока шёл расчёт, ферму или взлёт могли поменять в другом окне — такой порядок уже не про неё
+        // Пока шёл расчёт, ферму или взлёт могли поменять в другом окне, тогда порядок уже неактуален
         const currentTakeoff = effectiveTakeoff(current)
         if (!current.farm || !currentTakeoff || solveSignature(current.farm, currentTakeoff) !== solveSignature(snapshot.farm, snapshot.takeoff)) {
           outcome.stale = true
@@ -313,7 +312,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
         }
         const fresh: RouteContext = { ...snapshot, farm: current.farm, flightAltitudeM: current.flightAltitudeM }
         outcome.route = routeFromSolve(fresh, result, used, new Date().toISOString()).route
-        // Точка взлёта, от которой считали, сохраняется: иначе она уедет вместе с центром фермы
+        // Сохраняем точку взлёта, от которой считали, иначе она уедет вместе с центром фермы
         return { route: outcome.route, ...(current.takeoff ? {} : { takeoff: snapshot.takeoff }) }
       })
       if (outcome.stale) {
@@ -323,7 +322,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
         toast.success(t('routePlan.build.done', { km: formatKm(outcome.route.lengthM, lang) }))
       }
     } catch (error) {
-      // Сюда доходят только ошибки самого расчёта: сохранение ловит и показывает edit
+      // Сюда доходят только ошибки расчёта, ошибки сохранения показывает edit
       if (error instanceof SolveCancelledError) return
       console.error('Расчёт маршрута не удался:', error)
       toast.error(t('routePlan.errors.solveFailed'))
@@ -357,7 +356,7 @@ function RoutePlanner({ mission }: { mission: Mission }) {
   const pickFile = () => fileInput.current?.click()
   const busy = solving !== null
   const hasTurbines = turbineCount > 0
-  // 3D проигрывает тот же план: без турбин в нём показывать нечего
+  // Без турбин в плане в 3D показывать нечего
   const can3d = (plan?.turbineOrder.length ?? 0) > 0
 
   return (

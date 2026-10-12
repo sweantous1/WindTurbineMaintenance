@@ -19,7 +19,7 @@ import Home from '@/pages/Home'
 import History from '@/pages/History'
 import { cleanup, click, getByText, getInput, queryByText, render, submit, typeInto, waitFor } from './render'
 
-// Карточку прогноза делает другой шаг; здесь проверяется только главная вокруг неё
+// Карточка прогноза тестируется отдельно, здесь только главная вокруг неё
 vi.mock('@/features/forecast/FlightForecastCard', () => ({ default: () => null }))
 
 const route: RoutePlan = {
@@ -234,7 +234,7 @@ describe('параметры миссии', () => {
     await submit(form())
     expect(document.activeElement).toBe(getInput('mission-settings-altitude'))
 
-    // Ошибок несколько — фокус на первой сверху, её могло прокрутить из вида
+    // Ошибок несколько, фокус на первой сверху (она может быть вне видимой области)
     await typeInto(getInput('mission-settings-name'), '  ')
     save.focus()
     await submit(form())
@@ -276,7 +276,7 @@ describe('параметры миссии', () => {
     const error = vi.spyOn(toast, 'error')
     const m = await missions.create({ name: 'Гонка' })
     await render(createElement(MissionSettingsDialog, { mission: m, isOpen: true, onClose: () => {} }))
-    // Форма открыта по снимку «до полёта», а миссию тем временем завершили
+    // Форма открыта по снимку до полёта, а миссию тем временем завершили
     await missions.complete(m.id, { force: true })
     await typeInto(getInput('mission-settings-altitude'), '100')
     await submit(form())
@@ -338,7 +338,7 @@ describe('переключатель миссий', () => {
     expect(items.length).toBe(3)
     for (const item of items) {
       expect(item.className).toContain('focus-visible:ring-2')
-      // Фон при фокусе почти не отличался от белого и перекрывал голубую подсветку выбранной
+      // Фон при фокусе не меняется, чтобы не перекрывать подсветку выбранной
       expect(item.className).not.toMatch(/(^|\s)focus:bg-/)
     }
     expect(getByText('button[role="menuitemradio"]', 'Вторая').className).toContain('bg-blue-50')
@@ -372,7 +372,7 @@ describe('главная', () => {
     const badge = getByText('span', 'Час вылета выбран')
     expect(badge.className).not.toMatch(/green/)
     expect(document.body.textContent).not.toContain('Готова к полёту')
-    // Шаг погоды выполнен, но рядом сказано, где смотреть, можно ли лететь
+    // Шаг погоды выполнен, но рядом подсказка, где смотреть, можно ли лететь
     const weatherStep = getByText('li', 'Погода и час вылета')
     expect(weatherStep.textContent).toContain('готово')
     expect(weatherStep.textContent).toContain('Можно ли лететь — в карточке «Прогноз полёта» ниже')
@@ -434,7 +434,7 @@ describe('главная', () => {
     expect(document.body.textContent).toContain('Маршрут готов')
     expect(document.body.textContent).toContain('95 м')
     expect(document.body.textContent).toContain('8,4 км')
-    // 3D-облёт не обещается «скоро»: шаг необязательный и ведёт на экран 3D
+    // Шаг 3D необязательный и ведёт на экран 3D
     expect(document.body.textContent).not.toContain('скоро')
     const simStep = getByText('li', '3D-облёт')
     expect(simStep.textContent).toContain('по желанию')
@@ -445,7 +445,7 @@ describe('главная', () => {
     await click(getByText('.fixed button', 'Завершить полёт'))
     await waitFor(() => expect(getByText('p', 'Нет погоды — всё равно завершить?')).toBeTruthy())
     await click(getByText('button', 'Всё равно завершить'))
-    // Активная миссия сброшена, а диалог остаётся открытым до «Закрыть»
+    // Активная миссия сброшена, а диалог открыт до нажатия "Закрыть"
     await waitFor(() => expect(document.activeElement?.textContent).toBe('Закрыть'))
     await waitFor(() => expect(getByText('.fixed button', 'Открыть историю')).toBeTruthy())
     await waitFor(() => expect(getByText('h2', 'Нет активной миссии')).toBeTruthy())
@@ -501,7 +501,7 @@ describe('история', () => {
 
     await click(rowOf('Черновая').querySelector<HTMLButtonElement>('button[title="Удалить"]')!)
     expect(getByText('.fixed p', 'Отменить это нельзя')).toBeTruthy()
-    // Escape — это отмена: миссия на месте
+    // Escape = отмена, миссия на месте
     await pressEscape(getByText('.fixed button', 'Отмена'))
     expect(document.querySelector('.fixed')).toBeNull()
     expect(await missions.get(draft.id)).toBeTruthy()
@@ -520,7 +520,7 @@ describe('история', () => {
       .querySelector<HTMLButtonElement>('button[title="Удалить"]')!
     trash.focus()
     await click(trash)
-    // В окне autoFocus на «Отмене» — раньше Modal запоминал именно её
+    // autoFocus на отмене не должен менять, куда Modal вернёт фокус
     expect(document.activeElement?.textContent).toBe('Отмена')
     await pressEscape(getByText('.fixed button', 'Отмена'))
     expect(document.querySelector('.fixed')).toBeNull()
@@ -562,7 +562,7 @@ describe('история', () => {
 })
 
 describe('окно и фокус', () => {
-  // children в Modal обязательный, а createElement передаёт их третьим аргументом — типы этого не видят
+  // children в Modal обязательный, а createElement передаёт их третьим аргументом, типы этого не видят
   const Dialog = Modal as (props: { isOpen: boolean; onClose: () => void; title: string; children?: ReactNode }) => ReactNode
 
   // Кнопка исчезает, пока окно открыто (пункт меню, карточка завершённой миссии)

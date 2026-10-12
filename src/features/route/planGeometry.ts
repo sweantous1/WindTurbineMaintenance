@@ -3,25 +3,24 @@ import { orbitRadiusM, turbineHubM } from '@/domain/flightPlan'
 import { bbox } from '@/lib/geo'
 import { cleanOrder } from './routeLogic'
 
-// Геометрия плана для карты и тексты про отрезки плана — без Leaflet, чтобы проверялось тестами
+// Геометрия плана для карты и описания отрезков. Без Leaflet, чтобы покрыть тестами
 
 export type LatLngTuple = [number, number]
 
 export interface PlanLines {
-  // Транзит без конфликтов — пунктир
+  // транзит без конфликтов (пунктир)
   transit: LatLngTuple[][]
-  // Отрезки плана (перелёты и дуги облёта), проходящие слишком близко к башне, — красным
+  // перелёты и дуги облёта слишком близко к башне (красным)
   conflict: LatLngTuple[][]
-  // Конфликт на вертикальном отрезке (подъём или спуск на месте): в плане это точка
+  // конфликт на вертикальном отрезке (подъём или спуск на месте), в плане это точка
   conflictPoints: LatLngTuple[]
 }
 
 const tuple = (p: GeoPoint): LatLngTuple => [p.lat, p.lon]
 const samePlace = (a: GeoPoint, b: GeoPoint) => a.lat === b.lat && a.lon === b.lon
 
-// Дуги облёта рисуются окружностями отдельно (orbitCircles), здесь — перелёты и те дуги,
-// что задевают соседнюю башню: иначе такой конфликт был бы в сводке, но не на карте.
-// Соседние отрезки одного вида склеиваются в одну линию: меньше слоёв на карте
+// Дуги облёта рисует orbitCircles, тут только перелёты и дуги, задевающие соседнюю башню.
+// Соседние отрезки одного вида склеиваем в одну линию, чтобы было меньше слоёв
 export function planLines(plan: FlightPlan): PlanLines {
   const conflictSegments = new Set(plan.conflicts.map((c) => c.segmentIndex))
   const lines: PlanLines = { transit: [], conflict: [], conflictPoints: [] }
@@ -69,7 +68,7 @@ export function orderNumbers(order: readonly string[]): Map<string, number> {
 
 export type EndpointRef = { kind: 'takeoff' } | { kind: 'landing' } | { kind: 'turbine'; id: string }
 
-// Откуда и куда ведёт отрезок плана — чтобы описать конфликт словами, а не номером отрезка
+// откуда и куда ведёт отрезок, чтобы описать конфликт словами, а не номером
 export function segmentEndpoints(plan: FlightPlan, index: number): { from: EndpointRef; to: EndpointRef; vertical: boolean } | undefined {
   const a: FlightWaypoint | undefined = plan.waypoints[index]
   const b: FlightWaypoint | undefined = plan.waypoints[index + 1]
@@ -81,8 +80,8 @@ export function segmentEndpoints(plan: FlightPlan, index: number): { from: Endpo
   return { from: ref(a), to: ref(b), vertical: samePlace(a, b) }
 }
 
-// Турбина, дугой облёта которой идёт отрезок; undefined — это не облёт. Конфликт на облёте
-// описывается иначе, чем на перелёте: «T1 → T1» читалось бы как ошибка
+// Турбина, вокруг которой идёт дуга; undefined, если это не облёт.
+// Конфликт на облёте описываем отдельно, "T1 -> T1" выглядело бы как ошибка
 export function orbitSegmentTurbine(plan: FlightPlan, index: number): string | undefined {
   const a = plan.waypoints[index]
   const b = plan.waypoints[index + 1]
@@ -90,8 +89,8 @@ export function orbitSegmentTurbine(plan: FlightPlan, index: number): string | u
   return a.turbineId
 }
 
-// Где стоит вертикальный отрезок (подъём или спуск на месте). Спуск к посадке — «посадка»:
-// его начало над точкой взлёта без турбины, и по началу он назывался бы «взлёт», как и подъём
+// Где стоит вертикальный отрезок. Спуск к посадке считаем посадкой: его начало над взлётом,
+// и по началу он назывался бы взлётом, как подъём
 export function verticalPlace(ends: { from: EndpointRef; to: EndpointRef }): EndpointRef {
   return ends.to.kind === 'landing' ? ends.to : ends.from
 }

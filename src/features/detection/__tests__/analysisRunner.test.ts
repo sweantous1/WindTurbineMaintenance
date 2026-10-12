@@ -36,7 +36,7 @@ const result = (over: Partial<DetectResult> = {}): DetectResult => ({
 
 type Step = { result: DetectResult } | { error: Error } | { manual: true }
 
-// Движок без воркера: для каждого кадра — заранее заданный ответ; «manual» ждёт отмены
+// Движок без воркера: ответы по кадрам заданы заранее, manual ждёт отмены
 function fakeEngine(steps: Record<string, Step>, load: () => Promise<{ backend: 'wasm' | 'webgpu'; manifest: typeof MANIFEST }> = async () => ({ backend: 'wasm', manifest: MANIFEST })) {
   const calls: { image: string; confidence: number; iou: number }[] = []
   const engine: Pick<DetectionEngine, 'load' | 'detect'> = {

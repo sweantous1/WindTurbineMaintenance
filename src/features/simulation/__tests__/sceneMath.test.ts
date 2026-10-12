@@ -13,7 +13,7 @@ import {
   yawToRotationY,
 } from '../sceneMath'
 
-// Направление «носа» объекта в сцене после поворота на угол вокруг +Y (нос при нуле — на −Z)
+// Куда смотрит нос после поворота вокруг +Y (при нуле нос на -Z)
 function noseAfter(rotationY: number): { x: number; z: number } {
   return { x: -Math.sin(rotationY), z: -Math.cos(rotationY) }
 }

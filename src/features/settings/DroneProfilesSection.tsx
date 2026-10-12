@@ -40,10 +40,10 @@ export default function DroneProfilesSection() {
   const profiles = useDroneProfiles()
   const allMissions = useMissions()
   const activeMission = useActiveMission()
-  // После возвращения на экран открыт тот профиль, правки к которому не сохранили
+  // при возврате на экран открываем профиль с несохранёнными правками
   const [selectedId, setSelectedId] = useState<string>(() => getDroneDraft()?.selectedId ?? DEFAULT_DRONE_PROFILE_ID)
   const [pendingDelete, setPendingDelete] = useState<DroneProfile | null>(null)
-  // Форма сообщает о несохранённых правках: переход к другому профилю их молча стёр бы
+  // форма сообщает о несохранённых правках, чтобы не потерять их при смене профиля
   const [formDirty, setFormDirty] = useState(false)
   const [pendingSelect, setPendingSelect] = useState<string | null>(null)
 
@@ -55,14 +55,13 @@ export default function DroneProfilesSection() {
     )
   }
 
-  // Профиль по умолчанию — первым, остальные по имени
+  // профиль по умолчанию первым, остальные по имени
   const sorted = [...profiles].sort((a, b) =>
     a.id === DEFAULT_DRONE_PROFILE_ID ? -1 : b.id === DEFAULT_DRONE_PROFILE_ID ? 1 : a.name.localeCompare(b.name, lang),
   )
   const selected = selectedId === NEW ? null : (profiles.find((p) => p.id === selectedId) ?? sorted[0] ?? null)
-  // Ключ из содержимого профиля: после сохранения (или правки в другом окне) форма
-  // перечитывает профиль из базы, а не держит введённый текст вроде «12,50». Язык — в ключе:
-  // дроби в полях пишутся через разделитель языка
+  // ключ по содержимому, чтобы после сохранения форма перечитала профиль из базы;
+  // язык тоже в ключе - от него зависит десятичный разделитель
   const baseKey = selected ? JSON.stringify(selected) : NEW
   const formKey = `${baseKey}|${lang}`
   const draftKey = selected ? selected.id : NEW
@@ -79,8 +78,7 @@ export default function DroneProfilesSection() {
     ? droneToForm({ ...selected, name: name(selected) }, lang)
     : droneToForm({ ...DEFAULT_DRONE_PROFILE, name: t('settings.drones.newName') }, lang)
 
-  // Длина маршрута зависит от потолка профиля: без пересчёта главная и история показывали бы
-  // старую. Сбой пересчёта не отменяет сохранения — сообщаем о нём отдельно
+  // длина маршрута зависит от потолка профиля; ошибка пересчёта сохранение не отменяет
   const recompute = async (profileId: string) => {
     try {
       await missions.recomputeRouteLengths(profileId)
@@ -90,8 +88,7 @@ export default function DroneProfilesSection() {
   }
 
   const save = async (profile: Omit<DroneProfile, 'id'>) => {
-    // Нетронутое переведённое имя встроенного профиля не записываем: в базе остаётся
-    // встроенное, и в другом языке профиль снова покажется на нём
+    // нетронутое переведённое имя встроенного профиля не пишем, пусть переводится и дальше
     const keepName = selected !== null && hasBuiltinName(selected) && profile.name === name(selected)
     const next = keepName ? { ...profile, name: selected.name } : profile
     let saved: DroneProfile
@@ -116,7 +113,7 @@ export default function DroneProfilesSection() {
     setPendingDelete(null)
     setSelectedId(DEFAULT_DRONE_PROFILE_ID)
     toast.success(t('settings.drones.deleted', { name: name(p) }))
-    // Миссии удалённого профиля теперь считаются по профилю по умолчанию
+    // миссии удалённого профиля переходят на профиль по умолчанию
     await recompute(p.id)
   }
 
@@ -238,7 +235,7 @@ function Badge({ children, tone = 'gray' }: { children: string; tone?: 'gray' | 
 
 interface DroneProfileFormProps {
   initial: DroneFormValues
-  // Несохранённые правки, с которыми ушли с экрана
+  // несохранённые правки с прошлого захода
   draft?: DroneFormValues
   onDraftChange: (values: DroneFormValues | null) => void
   isNew: boolean
@@ -271,7 +268,7 @@ function DroneProfileForm({
   const errors = result.ok ? {} : result.errors
   const dirty = (Object.keys(values) as (keyof DroneFormValues)[]).some((k) => values[k] !== initial[k])
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
-  // Размонтирование черновик не стирает: так правки переживают уход с экрана
+  // при размонтировании черновик не чистим, чтобы правки пережили уход с экрана
   useEffect(() => onDraftChange(dirty ? values : null), [dirty, values, onDraftChange])
 
   const shown = (field: keyof DroneFormValues): FieldError | undefined =>
